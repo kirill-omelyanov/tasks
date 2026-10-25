@@ -1,19 +1,6 @@
 import { Command, CommanderError } from "commander";
 
-import { claimCommand } from "./commands/claim.js";
-import { deleteCommand } from "./commands/delete.js";
-import { depCommand } from "./commands/dep.js";
-import { initCommand } from "./commands/init.js";
-import { listCommand } from "./commands/list.js";
-import { moveCommand } from "./commands/move.js";
-import { newCommand } from "./commands/new.js";
-import { readyCommand } from "./commands/ready.js";
-import { reindexCommand } from "./commands/reindex.js";
-import { releaseCommand } from "./commands/release.js";
-import { showCommand } from "./commands/show.js";
 import { skillCommand } from "./commands/skill.js";
-import { statusCommand } from "./commands/status.js";
-import { validateCommand } from "./commands/validate.js";
 import { ExitCode, TaskError, isTaskError } from "./errors.js";
 import { emitJson, ui, writeErr } from "./output.js";
 
@@ -30,27 +17,16 @@ export function buildCli(): Command {
     .name("tasks")
     .description(
       "Local, git-versioned task manager for AI coding agents.\n\n" +
-        "Task state lives in .tasks/ as markdown with YAML frontmatter. Every read\n" +
-        "command supports --json; errors are JSON on stderr under --json, and exit\n" +
-        "codes are meaningful (0 ok, 2 usage, 3 not found, 4 conflict).",
+        "Task state lives in .tasks/ as one directory per task with a markdown\n" +
+        "manifest. Every command that produces output supports --json; errors\n" +
+        "are JSON on stderr under --json, and exit codes are meaningful\n" +
+        "(0 ok, 2 usage, 3 not found, 4 conflict).",
     )
     .version(VERSION, "-v, --version")
     .showHelpAfterError("(run `tasks --help` for usage)")
     .enablePositionalOptions();
 
-  program.addCommand(initCommand());
-  program.addCommand(newCommand());
-  program.addCommand(listCommand());
-  program.addCommand(showCommand());
-  program.addCommand(readyCommand());
-  program.addCommand(claimCommand());
-  program.addCommand(releaseCommand());
-  program.addCommand(statusCommand());
-  program.addCommand(depCommand());
-  program.addCommand(moveCommand());
-  program.addCommand(deleteCommand());
-  program.addCommand(reindexCommand());
-  program.addCommand(validateCommand());
+  // Commands are registered here, one block per module, as they land.
   program.addCommand(skillCommand());
 
   return program;
@@ -64,7 +40,9 @@ function wantsJson(argv: string[]): boolean {
 export function reportError(error: unknown, argv: string[]): number {
   const taskError = isTaskError(error)
     ? error
-    : TaskError.internal(error instanceof Error ? error.message : String(error));
+    : TaskError.internal(
+        error instanceof Error ? error.message : String(error),
+      );
 
   if (wantsJson(argv)) {
     // Structured errors go to stderr so stdout stays clean for parseable output.
@@ -73,7 +51,11 @@ export function reportError(error: unknown, argv: string[]): number {
     writeErr(ui.error(taskError.message));
   }
 
-  if (!isTaskError(error) && error instanceof Error && process.env.TASKS_DEBUG) {
+  if (
+    !isTaskError(error) &&
+    error instanceof Error &&
+    process.env.TASKS_DEBUG
+  ) {
     writeErr(ui.dim(error.stack ?? ""));
   }
 
@@ -94,7 +76,10 @@ export async function run(argv: string[]): Promise<number> {
   } catch (error) {
     if (error instanceof CommanderError) {
       // --help and --version are successful exits that commander models as throws.
-      if (error.code === "commander.helpDisplayed" || error.code === "commander.help") {
+      if (
+        error.code === "commander.helpDisplayed" ||
+        error.code === "commander.help"
+      ) {
         return ExitCode.Success;
       }
       if (error.code === "commander.version") return ExitCode.Success;

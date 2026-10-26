@@ -10,6 +10,7 @@ import {
   startDirectory,
 } from "../context.js";
 import { isDirectory, pathExists, writeFileAtomic } from "../core/fs-utils.js";
+import { touchSession } from "../core/sessions.js";
 import type { SkillInstallResult } from "../core/skill.js";
 import {
   SKILLS_RELATIVE_DIR,
@@ -143,6 +144,9 @@ export function initCommand(): Command {
       if ((await fs.mkdir(locks, { recursive: true })) !== undefined) {
         created.push(locks);
       }
+      // Every command that knows a session touches the registry of the tree
+      // it runs in; the tree exists from this point on.
+      if (identity.session) await touchSession(tasksDir, identity.session);
 
       // The skill is what makes an agent reach for the CLI unprompted, so it
       // ships with the scaffold. An existing install is left alone, as the

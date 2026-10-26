@@ -536,14 +536,15 @@ describe("init", () => {
     expect(await sandbox.read(".tasks/.gitignore")).toBe(".locks/\n");
   });
 
-  it("opens no tree and writes no heartbeat", async () => {
+  it("touches the registry of the new tree when a session is known", async () => {
     sandbox = await makeSandbox();
-    const result = await sandbox.session("s1")("init", "--no-skill");
-    expect(result.code).toBe(ExitCode.Success);
-    expect(await sandbox.exists(".tasks/.locks/sessions")).toBe(false);
-
     const bad = await sandbox.run("init", "--no-skill", "--session", "a b");
     expect(bad.code).toBe(ExitCode.Usage);
+    expect(await sandbox.exists(".tasks")).toBe(false);
+
+    const result = await sandbox.session("s1")("init", "--no-skill");
+    expect(result.code).toBe(ExitCode.Success);
+    expect(await sandbox.exists(".tasks/.locks/sessions/s1")).toBe(true);
   });
 });
 

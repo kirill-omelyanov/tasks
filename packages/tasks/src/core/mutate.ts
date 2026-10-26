@@ -32,17 +32,33 @@ export async function withMutation<T>(
   fn: (fresh: Fresh) => Promise<T>,
   options: MutationOptions = {},
 ): Promise<T> {
-  return withTreeLock(load.project.tasksDir, async () => {
+  const result = await withTreeLock(load.project.tasksDir, async () => {
     const before = await context.projects.reload(load);
     context.gates.invalidate();
 
-    const result = await fn({ load: before, tree: before.tree, now: nowIso() });
+    const value = await fn({ load: before, tree: before.tree, now: nowIso() });
 
     const after = await context.projects.reload(before);
     context.gates.invalidate();
     if (options.refreshIndex !== false) {
       await refreshIndexFor(snapshotFromContext(context), after);
     }
-    return result;
+    return value;
   });
+
+  // A write into a listed tree can change what the local overview says
+  // (`blocked by backend:x` comes and goes with that task), so the local
+  // index follows it too, under its own lock, once the foreign one is free.
+  if (options.refreshIndex !== false && !load.local) {
+    const local = context.projects.local;
+    await withTreeLock(local.project.tasksDir, async () => {
+      await context.projects.reload(local);
+      context.gates.invalidate();
+      await refreshIndexFor(
+        snapshotFromContext(context),
+        context.projects.local,
+      );
+    });
+  }
+  return result;
 }

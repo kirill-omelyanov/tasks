@@ -178,3 +178,14 @@ describe("heartbeat", () => {
     expect(touched).toEqual([sandbox.tasksDir, path.join(backend, ".tasks")]);
   });
 });
+
+describe("init with a session", () => {
+  it("touches the registry of the tree it just created", async () => {
+    sandbox = await treeSandbox({});
+    await fs.rm(sandbox.tasksDir, { recursive: true, force: true });
+
+    const result = await sandbox.run("init", "--no-skill", "--session", "s1");
+    expect(result.code).toBe(0);
+    expect((await readSession(sandbox.tasksDir, "s1")).exists).toBe(true);
+  });
+});

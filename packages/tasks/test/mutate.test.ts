@@ -91,3 +91,21 @@ describe("withMutation", () => {
     ).toBe("free");
   });
 });
+
+describe("withMutation on a listed tree", () => {
+  it("refreshes the local index.md after the foreign write", async () => {
+    sandbox = await treeSandbox({
+      tasks: { a: { depends_on: ["../backend:x"] } },
+      projects: { backend: "../backend" },
+    });
+    await sandbox.project("backend", "../backend", { tasks: { x: {} } });
+    await sandbox.write(".tasks/index.md", "stale\n");
+    const context = await openContext(command({ dir: sandbox.dir }));
+    const backend = (await context.trees())[1]!;
+
+    await withMutation(context, backend, async () => undefined);
+
+    expect(await sandbox.read(".tasks/index.md")).not.toContain("stale");
+    expect(await sandbox.exists(".tasks/.locks/tree.lock")).toBe(false);
+  });
+});

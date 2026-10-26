@@ -11,6 +11,7 @@ import { sessionCheckCommand } from "./commands/session-check.js";
 import { sessionEndCommand } from "./commands/session-end.js";
 import { showCommand } from "./commands/show.js";
 import { skillCommand } from "./commands/skill.js";
+import { transitionCommands } from "./commands/transitions.js";
 import { treeCommand } from "./commands/tree.js";
 import { validateCommand } from "./commands/validate.js";
 import { ExitCode, TaskError, isTaskError } from "./errors.js";
@@ -64,11 +65,14 @@ export function buildCli(): Command {
   program.addCommand(sessionEndCommand());
   program.addCommand(sessionCheckCommand());
 
-  program.addCommand(skillCommand());
+  // transitions
+  for (const command of transitionCommands()) program.addCommand(command);
 
   // validate
   program.addCommand(validateCommand());
   program.addCommand(reindexCommand());
+
+  program.addCommand(skillCommand());
 
   return program;
 }

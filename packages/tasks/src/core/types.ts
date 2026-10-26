@@ -554,10 +554,13 @@ export type ProjectState =
 /** The two fields that hold references. */
 export type GateField = "depends_on" | "finishes_after";
 
-/** A reference another tree holds that a command could not rewrite. */
+/** A reference a command could not rewrite. */
 export interface UnrewrittenRefJson {
-  /** The project path or alias of the tree holding the reference. */
-  project: string;
+  /**
+   * The alias or project path of the tree holding the reference; `null` for
+   * the local tree.
+   */
+  project: string | null;
   task: string;
   field: GateField;
   ref: string;

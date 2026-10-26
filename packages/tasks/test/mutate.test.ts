@@ -109,3 +109,28 @@ describe("withMutation on a listed tree", () => {
     expect(await sandbox.exists(".tasks/.locks/tree.lock")).toBe(false);
   });
 });
+
+it("renders a listed tree's index from that tree's own point of view", async () => {
+  sandbox = await treeSandbox({
+    tasks: { a: { depends_on: ["../backend:x"] } },
+    projects: { backend: "../backend" },
+  });
+  const backendRoot = await sandbox.project("backend", "../backend", {
+    tasks: { x: { depends_on: ["y"] }, y: {} },
+  });
+  await sandbox.runWith({ cwd: backendRoot }, "reindex");
+  const before = await sandbox.read("../backend/.tasks/index.md");
+
+  const context = await openContext(command({ dir: sandbox.dir }));
+  const backend = (await context.trees())[1]!;
+  await withMutation(context, backend, async () => undefined);
+
+  expect(await sandbox.read("../backend/.tasks/index.md")).toBe(before);
+  const check = await sandbox.runWith(
+    { cwd: backendRoot },
+    "validate",
+    "--json",
+  );
+  const findings = check.json<{ findings: Array<{ kind: string }> }>().findings;
+  expect(findings.map((f) => f.kind)).not.toContain("index-stale");
+});

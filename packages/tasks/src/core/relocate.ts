@@ -1038,8 +1038,7 @@ async function rewriteTree(
     return {
       rewritten: written.map(toJson),
       unrewritten: left.map((rewrite) => ({
-        // The type has no null: the local tree is named by its own path.
-        project: project ?? ".",
+        project,
         task: rewrite.task,
         field: rewrite.field,
         ref: rewrite.from,

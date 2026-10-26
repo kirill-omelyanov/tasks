@@ -1,9 +1,10 @@
 import type { CommandContext } from "../context.js";
 import type { DerivedTask, TreeSnapshot } from "./derive.js";
 import { deriveTree } from "./derive.js";
-import type { GateResolver } from "./gates.js";
+import { GateResolver } from "./gates.js";
 import { refreshIndex } from "./index-md.js";
-import type { LoadedTree, Projects } from "./projects.js";
+import type { LoadedTree } from "./projects.js";
+import { Projects } from "./projects.js";
 import { livenessForTree } from "./sessions.js";
 import { lastLogEntry } from "./workspace.js";
 
@@ -80,8 +81,19 @@ export async function refreshIndexFor(
   source: SnapshotSource,
   load: LoadedTree,
 ): Promise<boolean> {
-  const { derived } = await snapshotTree(source, load, null);
-  return refreshIndex(load.tree, derived);
+  // A tree's index is rendered from that tree's own point of view: its
+  // references resolve from its root and its foreign ids carry its aliases.
+  // Rendered from a listing tree, `validate` run inside the listed tree would
+  // call the result stale.
+  const own = load.local ? source : ownSource(load);
+  const target = load.local ? load : own.projects.local;
+  const { derived } = await snapshotTree(own, target, null);
+  return refreshIndex(target.tree, derived);
+}
+
+function ownSource(load: LoadedTree): SnapshotSource {
+  const projects = new Projects(load.tree);
+  return { projects, gates: new GateResolver(projects) };
 }
 
 export function snapshotFromContext(context: CommandContext): SnapshotSource {

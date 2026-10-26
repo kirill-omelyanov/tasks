@@ -165,11 +165,6 @@ export function parsePhaseMappings(
 /** What became of `README.md`: replaced only while it is v1's scaffold. */
 export type ReadmeOutcome = "replaced" | "kept" | "absent";
 
-/** A reference left as written; `project` is `null` for the local tree. */
-export type MigrateUnrewrittenJson = Omit<UnrewrittenRefJson, "project"> & {
-  project: string | null;
-};
-
 /** What `migrate --json` prints. */
 export interface MigrateJson {
   /** The `.tasks/` directory of the migrated tree. */
@@ -185,7 +180,7 @@ export interface MigrateJson {
   /** References rewritten, in the migrated tree and in other trees. */
   rewritten: RewrittenRefJson[];
   /** References kept as written: they block until someone edits them. */
-  unrewritten: MigrateUnrewrittenJson[];
+  unrewritten: UnrewrittenRefJson[];
   readme: ReadmeOutcome;
   /** The `scope` written to `config.yml`, from v1's `active_phase`. */
   scope: string | null;
@@ -242,7 +237,7 @@ export interface Migration {
   statuses: Record<string, Status>;
   /** The migrated tree's own references, live tasks only. */
   rewritten: RewrittenRefJson[];
-  unrewritten: MigrateUnrewrittenJson[];
+  unrewritten: UnrewrittenRefJson[];
   readme: ReadmeOutcome;
   scope: string | null;
   /** v1's `active_phase` when it named no phase directory, else `null`. */
@@ -258,7 +253,7 @@ export interface Migration {
 /** References into the migrated tree that other trees hold. */
 export interface ReferencesInto {
   rewritten: RewrittenRefJson[];
-  unrewritten: MigrateUnrewrittenJson[];
+  unrewritten: UnrewrittenRefJson[];
 }
 
 /* ------------------------------------------------------------------------ */
@@ -865,7 +860,7 @@ async function plan(source: Source): Promise<Plan> {
   const rewriter = new ReferenceRewriter(project.root, ids);
   const writes: FileWrite[] = [];
   const rewritten: RewrittenRefJson[] = [];
-  const unrewritten: MigrateUnrewrittenJson[] = [];
+  const unrewritten: UnrewrittenRefJson[] = [];
   const inProgress: string[] = [];
   const paused: string[] = [];
 
@@ -1186,7 +1181,7 @@ export async function rewriteReferencesInto(
     }
   }
 
-  const unrewritten: MigrateUnrewrittenJson[] = [];
+  const unrewritten: UnrewrittenRefJson[] = [];
   for (const load of readOnly.values()) {
     for (const site of await referencesInto(projects, load, migration)) {
       unrewritten.push({
@@ -1207,7 +1202,7 @@ export async function rewriteReferencesInto(
 /** The printed consequences, in the order a person should read them. */
 function consequencesOf(
   migration: Migration,
-  unrewritten: readonly MigrateUnrewrittenJson[],
+  unrewritten: readonly UnrewrittenRefJson[],
 ): string[] {
   const qualify = (id: string) => qualifyId(migration.qualifier, id);
   const out: string[] = [];

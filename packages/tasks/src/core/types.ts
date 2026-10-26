@@ -192,7 +192,10 @@ export type GateReason = (typeof GATE_REASONS)[number];
 /**
  * One reference, resolved. `ref` is the stored form; `project` is the alias
  * when the target tree is a listed project, `null` for the local tree, and
- * the bare relative path for a tree reached without an alias.
+ * the project path relative to the local root for a tree reached without an
+ * alias. `satisfied` follows the gate the reference was resolved for: the
+ * start gate in `StartGate.refs` (`DONE` only), the finish gate in
+ * `FinishGate.refs` (`DONE` or `CANCELLED`).
  */
 export interface ResolvedRef {
   ref: string;
@@ -202,7 +205,7 @@ export interface ResolvedRef {
   satisfied: boolean;
   /** `null` when satisfied. */
   reason: GateReason | null;
-  /** The target's status when it exists and parses, else `null`. */
+  /** The target's status when it is live and parses, else `null`. */
   status: Status | null;
 }
 
@@ -533,14 +536,22 @@ export const CASCADING_COMMANDS: readonly TransitionCommand[] = [
   "cancel",
 ];
 
-export type ProjectState = "ok" | "not-checked-out" | "unsupported-version";
+/** How a tree listed or referenced from here loaded; see `core/projects.ts`. */
+export type ProjectState =
+  | "ok"
+  | "not-checked-out"
+  | "unresolved"
+  | "unsupported-version";
+
+/** The two fields that hold references. */
+export type GateField = "depends_on" | "finishes_after";
 
 /** A reference another tree holds that a command could not rewrite. */
 export interface UnrewrittenRefJson {
   /** The project path or alias of the tree holding the reference. */
   project: string;
   task: string;
-  field: "depends_on" | "finishes_after";
+  field: GateField;
   ref: string;
 }
 
@@ -548,7 +559,7 @@ export interface RewrittenRefJson {
   /** `null` for the local tree. */
   project: string | null;
   task: string;
-  field: "depends_on" | "finishes_after";
+  field: GateField;
   from: string;
   to: string;
 }

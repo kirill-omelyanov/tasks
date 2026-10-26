@@ -18,6 +18,7 @@ import {
 import type {
   BlockedByJson,
   FinishGate,
+  GateField,
   GateReason,
   ResolvedRef,
   StartGate,
@@ -33,7 +34,7 @@ import { isOpen } from "./types.js";
  * is unsatisfied, and a reference that does not parse never aborts a query.
  */
 
-export type GateField = "depends_on" | "finishes_after";
+export type { GateField } from "./types.js";
 
 export const GATE_FIELDS: readonly GateField[] = [
   "depends_on",

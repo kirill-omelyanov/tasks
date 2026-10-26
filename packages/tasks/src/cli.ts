@@ -1,6 +1,8 @@
 import { Command, CommanderError } from "commander";
 
+import { reindexCommand } from "./commands/reindex.js";
 import { skillCommand } from "./commands/skill.js";
+import { validateCommand } from "./commands/validate.js";
 import { ExitCode, TaskError, isTaskError } from "./errors.js";
 import { ui, writeErr } from "./output.js";
 
@@ -41,6 +43,10 @@ export function buildCli(): Command {
 
   // Commands are registered here, one block per module, as they land.
   program.addCommand(skillCommand());
+
+  // validate
+  program.addCommand(validateCommand());
+  program.addCommand(reindexCommand());
 
   return program;
 }

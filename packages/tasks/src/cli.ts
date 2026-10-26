@@ -11,6 +11,7 @@ import { heartbeatCommand } from "./commands/heartbeat.js";
 import { initCommand } from "./commands/init.js";
 import { listCommand } from "./commands/list.js";
 import { logCommand } from "./commands/log.js";
+import { migrateCommand } from "./commands/migrate.js";
 import { mineCommand } from "./commands/mine.js";
 import { moveCommand } from "./commands/move.js";
 import { newCommand } from "./commands/new.js";
@@ -96,6 +97,9 @@ export function buildCli(): Command {
 
   // move
   program.addCommand(moveCommand());
+
+  // migrate
+  program.addCommand(migrateCommand());
 
   program.addCommand(skillCommand());
 

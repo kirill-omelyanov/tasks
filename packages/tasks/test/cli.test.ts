@@ -11,6 +11,7 @@ import { LIST_FILTERS } from "../src/commands/list.js";
 import type { ResumeJson } from "../src/commands/resume.js";
 import type { ShowJson } from "../src/commands/show.js";
 import { readSession } from "../src/core/sessions.js";
+import { SKILLS_RELATIVE_DIR, SKILL_NAME } from "../src/core/skill.js";
 import {
   configTemplate,
   gitignoreTemplate,
@@ -1553,5 +1554,125 @@ describe("session-check", () => {
       "state-older-than-log",
     ]);
     expect(json.warnings.every((warning) => warning.id === "stale")).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------------------ */
+/* Paths no other suite runs                                                */
+/* ------------------------------------------------------------------------ */
+
+describe("human output not covered elsewhere", () => {
+  it("claim --next prints the task it took", async () => {
+    sandbox = await treeSandbox({ tasks: { a: {}, b: { status: "BACKLOG" } } });
+    const result = await sandbox.session("s1")("claim", "--next");
+    expect(result.code).toBe(ExitCode.Success);
+    expect(plain(result.stdout)).toBe("✓ claim a: TODO → IN_PROGRESS\n");
+  });
+
+  it("handoff prints the transition and whom the task now waits for", async () => {
+    sandbox = await treeSandbox({
+      tasks: { a: { status: "IN_PROGRESS", state: true }, "a/part": {} },
+    });
+    const result = await sandbox.run("handoff", "a", "alice", "-m", "review");
+    expect(result.code).toBe(ExitCode.Success);
+    expect(plain(result.stdout)).toBe(
+      "✓ handoff a to alice: IN_PROGRESS → PAUSED\n  now holds 1 task\n",
+    );
+  });
+
+  it("after add, list and rm speak of finishes_after", async () => {
+    sandbox = await treeSandbox({
+      tasks: { epic: {}, part: {}, dropped: { status: "CANCELLED" } },
+    });
+
+    const added = await sandbox.run("after", "add", "epic", "part", "dropped");
+    expect(added.code).toBe(ExitCode.Success);
+    expect(plain(added.stdout)).toBe(
+      "✓ after add epic: part, dropped\n  finishes after: part, dropped\n",
+    );
+
+    const listed = await sandbox.run("after", "list", "epic");
+    expect(listed.code).toBe(ExitCode.Success);
+    const rows = plain(listed.stdout).split("\n");
+    expect(rows[0]).toBe("epic finishes_after");
+    // A cancelled join satisfies the finish gate; an open one does not.
+    expect(rows.find((row) => row.includes("part"))).toMatch(
+      /part\s+no\s+not-done \(TODO\)/,
+    );
+    expect(rows.find((row) => row.includes("dropped"))).toMatch(
+      /dropped\s+yes\s+CANCELLED/,
+    );
+
+    const removed = await sandbox.run("after", "rm", "epic", "part");
+    expect(removed.code).toBe(ExitCode.Success);
+    expect(plain(removed.stdout)).toBe(
+      "✓ after rm epic: part\n  finishes after: dropped\n",
+    );
+  });
+});
+
+describe("skill install", () => {
+  const skillDir = path.join(SKILLS_RELATIVE_DIR, SKILL_NAME);
+
+  it("installs the bundled skill and reports the files as JSON", async () => {
+    sandbox = await treeSandbox({});
+    const result = await sandbox.run("skill", "install", "--json");
+    expect(result.code).toBe(ExitCode.Success);
+    const json = result.json<{
+      installed: boolean;
+      dir: string;
+      files: string[];
+    }>();
+    const dir = path.join(sandbox.dir, skillDir);
+    expect(json).toMatchObject({ installed: true, dir });
+    expect(json.files).toEqual(
+      expect.arrayContaining([
+        path.join(dir, "SKILL.md"),
+        path.join(dir, "reference", "convention.md"),
+      ]),
+    );
+    const skill = await sandbox.read(path.join(skillDir, "SKILL.md"));
+    expect(skill.startsWith("---\n")).toBe(true);
+    expect(skill).toContain("name: tasks");
+  });
+
+  it("leaves an existing install alone, since it may have been edited", async () => {
+    sandbox = await treeSandbox({});
+    await sandbox.write(path.join(skillDir, "SKILL.md"), "edited by hand\n");
+
+    const json = await sandbox.run("skill", "install", "--json");
+    expect(json.code).toBe(ExitCode.Success);
+    expect(json.json()).toEqual({
+      installed: false,
+      dir: path.join(sandbox.dir, skillDir),
+      files: [],
+      skipped: "exists",
+    });
+    const human = await sandbox.run("skill", "install");
+    expect(plain(human.stdout)).toBe(
+      `• Skill already installed at ${skillDir}. Use --force to refresh.\n`,
+    );
+    expect(await sandbox.read(path.join(skillDir, "SKILL.md"))).toBe(
+      "edited by hand\n",
+    );
+  });
+
+  it("refreshes an install with --force and lists what it wrote", async () => {
+    sandbox = await treeSandbox({});
+    await sandbox.write(path.join(skillDir, "SKILL.md"), "stale\n");
+
+    const result = await sandbox.run("skill", "install", "--force");
+    expect(result.code).toBe(ExitCode.Success);
+    const lines = plain(result.stdout).trimEnd().split("\n");
+    expect(lines[0]).toBe(`✓ Installed the tasks skill at ${skillDir}`);
+    expect(lines.slice(1).map((line) => line.trim())).toEqual(
+      expect.arrayContaining([
+        path.join(skillDir, "SKILL.md"),
+        path.join(skillDir, "reference", "convention.md"),
+      ]),
+    );
+    expect(await sandbox.read(path.join(skillDir, "SKILL.md"))).toContain(
+      "name: tasks",
+    );
   });
 });

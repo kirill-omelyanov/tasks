@@ -136,6 +136,9 @@ function renderMigration(result: MigrateJson, migration: Migration): string {
 
 export function migrateCommand(): Command {
   return new Command("migrate")
+    .summary(
+      "upgrade a .tasks v1 tree to v2, once: this tree or a project it lists",
+    )
     .description(
       "upgrade a .tasks v1 tree to v2, once: this tree, or a project it lists;\n" +
         "every task moves to <phase>/<id>/task.md, ids in depends_on become paths,\n" +

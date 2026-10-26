@@ -177,6 +177,9 @@ async function writeResumePoint(
 
 export function stateCommand(): Command {
   return new Command("state")
+    .summary(
+      "replace a task's state.md from standard input, or edit it with --edit",
+    )
     .description(
       "replace a task's state.md, its resume point, with standard input, or\n" +
         "edit it in $VISUAL / $EDITOR with --edit; no transition, no log entry,\n" +

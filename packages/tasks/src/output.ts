@@ -561,7 +561,11 @@ export function renderSessionCheck(result: SessionCheckJson): string {
   );
   lines.push(
     ...result.warnings.map((warning) =>
-      ui.warn(`${warning.id}: ${warning.message}`),
+      ui.warn(
+        warning.message.startsWith(`${warning.id}:`)
+          ? warning.message
+          : `${warning.id}: ${warning.message}`,
+      ),
     ),
   );
   lines.push(

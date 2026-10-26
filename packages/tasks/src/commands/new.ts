@@ -97,6 +97,9 @@ function parsePriority(value: string | undefined): Priority {
 
 export function newCommand(): Command {
   return new Command("new")
+    .summary(
+      "create a task at <path>; an existing group at the path becomes the task",
+    )
     .description(
       "create a task at <path>, in TODO (BACKLOG under a BACKLOG parent);\n" +
         "groups are created on demand, and an existing group at the path\n" +

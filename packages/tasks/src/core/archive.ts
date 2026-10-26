@@ -231,6 +231,7 @@ function refusal(
     liveness,
   };
   return TaskError.conflict(`${message} Pass --force to override.`, {
+    kind: "authorization",
     ...details,
   });
 }

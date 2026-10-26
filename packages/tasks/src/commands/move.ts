@@ -14,6 +14,9 @@ interface MoveCommandOptions {
 
 export function moveCommand(): Command {
   return new Command("move")
+    .summary(
+      "relocate a task or group and rewrite references to it in every listed tree",
+    )
     .description(
       "relocate a task or a group to a new path in the same tree; references\n" +
         "to everything it moves are rewritten in this tree and in every listed\n" +

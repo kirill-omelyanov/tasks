@@ -23,6 +23,7 @@ interface JsonOptions {
 
 export function archiveCommand(): Command {
   return new Command("archive")
+    .summary("move a resolved task and its subtree to .tasks/.archive/")
     .description(
       "move a resolved task and its subtree to .tasks/.archive/, where it\n" +
         "satisfies no gate and keeps its path reserved; refused while a\n" +
@@ -63,6 +64,7 @@ export function archiveCommand(): Command {
 
 export function restoreCommand(): Command {
   return new Command("restore")
+    .summary("move an archived task and its subtree back to the live tree")
     .description(
       "move an archived task and its archived subtree back to the live tree;\n" +
         "never under a resolved parent, never onto a live task",
@@ -100,6 +102,9 @@ export function restoreCommand(): Command {
 
 export function purgeCommand(): Command {
   return new Command("purge")
+    .summary(
+      "delete an archive entry for good and release the path it reserves",
+    )
     .description(
       "delete an archive entry for good and release the path it reserves;\n" +
         "names the live tasks whose references would reach a task recreated there",
@@ -139,6 +144,7 @@ export function purgeCommand(): Command {
 
 export function deleteCommand(): Command {
   return new Command("delete")
+    .summary("remove a never-worked task without archiving it")
     .description(
       "remove a never-worked task without archiving it: only its creation in\n" +
         "the log, no state.md, nothing beneath it, no live task referencing it",

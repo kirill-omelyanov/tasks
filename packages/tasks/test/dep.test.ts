@@ -412,6 +412,7 @@ describe("authorization of dependency edits", () => {
     const other = await s.session("s1")("dep", "add", "w", "b", "--json");
     expect(other.code).toBe(4);
     expect(errorOf(other).details).toEqual({
+      kind: "authorization",
       id: "w",
       claimed_by: "tester",
       claimed_session: "s2",

@@ -129,6 +129,7 @@ describe("state <task> from standard input", () => {
     const result = await s.session("s1")("state", "w", "--json");
     expect(result.code).toBe(4);
     expect(errorOf(result).details).toEqual({
+      kind: "authorization",
       id: "w",
       claimed_by: "tester",
       claimed_session: "s2",

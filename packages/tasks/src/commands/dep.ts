@@ -20,6 +20,8 @@ import { emitJson, renderDepList, ui, writeOut } from "../output.js";
 
 /** What distinguishes `dep` from `after`: the field and how to speak of it. */
 interface GateSpec {
+  /** The one line the command list shows. */
+  summary: string;
   name: "dep" | "after";
   field: GateField;
   /** `<task> depends on <ref>`. */
@@ -31,6 +33,7 @@ interface GateSpec {
 
 const DEP: GateSpec = {
   name: "dep",
+  summary: "edit and inspect depends_on, the start gate",
   field: "depends_on",
   verb: "depends on",
   negated: "does not depend on",
@@ -41,6 +44,8 @@ const DEP: GateSpec = {
 
 const AFTER: GateSpec = {
   name: "after",
+  summary:
+    "edit and inspect finishes_after, the finish gate beyond the children",
   field: "finishes_after",
   verb: "finishes after",
   negated: "does not finish after",
@@ -309,6 +314,7 @@ async function listGate(
 function gateCommand(spec: GateSpec): Command {
   // Before the subcommands: they inherit the override when created.
   const group = new Command(spec.name)
+    .summary(spec.summary)
     .description(spec.description)
     .exitOverride();
 

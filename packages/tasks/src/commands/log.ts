@@ -153,6 +153,9 @@ async function listSince(
 
 export function logCommand(): Command {
   return new Command("log")
+    .summary(
+      "append a narrative log entry to a task, or list entries since a time (--since)",
+    )
     .description(
       'append a narrative entry to a task\'s log.md (tasks log <task> "<text>"),\n' +
         "or list the entries since a time across the local tree and every\n" +

@@ -695,13 +695,15 @@ describe("cycles", () => {
     });
     const { projects, gates } = await open();
 
+    // `thru` and `../bare:z` wait on each other, but the bare tree is not
+    // listed under `projects:`, so that edge is not traversable and no cycle
+    // is reported for it.
     expect(await gates.findCycles(projects.local)).toEqual([
       ["a", "b"],
       ["c", "d", "e"],
       ["loop", "backend:back"],
       ["p", "p/child", "q"],
       ["s"],
-      ["thru", "../bare:z"],
     ]);
   });
 

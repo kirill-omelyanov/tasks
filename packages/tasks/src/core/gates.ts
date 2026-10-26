@@ -526,9 +526,11 @@ export class GateResolver {
 
   /**
    * What a node waits for: the targets of its `depends_on` and
-   * `finishes_after` that are live tasks in a tree that loaded, then its
-   * live children. A malformed task's references cannot be read; only its
-   * children are known.
+   * `finishes_after` that are live tasks in the local tree or in a tree
+   * listed under `projects:`, then its live children. A cross-tree edge is
+   * never assumed traversable: a tree reached only by a bare path is read for
+   * the gate it satisfies, but contributes no edge to the cycle graph. A
+   * malformed task's references cannot be read; only its children are known.
    */
   private async prerequisites(
     ctx: GraphContext,
@@ -541,6 +543,7 @@ export class GateResolver {
         for (const ref of task.frontmatter[field]) {
           const { target } = await this.resolution(node.tree, ref);
           if (target === null) continue;
+          if (!target.tree.local && target.tree.alias === null) continue;
           const next = graphNode(ctx, target.tree, target.id);
           if (hasLiveTask(next.tree.tree, next.id) && !out.has(next.key)) {
             out.set(next.key, next);

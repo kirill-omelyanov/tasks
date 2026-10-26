@@ -45,6 +45,7 @@ import {
   FINDING_KINDS,
   INDEX_FILENAME,
   LOG_FILENAME,
+  MOVING_MARKER_FILENAME,
 } from "./types.js";
 import { hasConflictMarkers } from "./workspace.js";
 
@@ -68,16 +69,6 @@ export interface ValidationOptions {
   /** Regenerate `index.md` when it exists: the only repair there is. */
   fix?: boolean;
 }
-
-/**
- * The marker a relocation that copies across filesystems writes into the
- * destination directory before copying, holding the source's path relative
- * to `.tasks/` on one line (`.archive/<id>` for an archived source), and
- * removes once the source is gone. A directory that still carries it is the
- * trace of an interrupted move. A dot name is never a group or a task, so
- * the scanner treats it as workspace content.
- */
-export const MOVING_MARKER = ".moving";
 
 const SEVERITY: Record<FindingKind, FindingSeverity> = {
   malformed: "error",
@@ -529,7 +520,9 @@ function markerSource(line: string): MarkerSource | null {
 async function movingFindings(tree: Tree): Promise<FindingJson[]> {
   const marked = await mapBatched(liveDirectories(tree), async (entry) => ({
     entry,
-    content: await readRegularFile(path.join(entry.dir, MOVING_MARKER)),
+    content: await readRegularFile(
+      path.join(entry.dir, MOVING_MARKER_FILENAME),
+    ),
   }));
 
   const out: FindingJson[] = [];
@@ -537,7 +530,7 @@ async function movingFindings(tree: Tree): Promise<FindingJson[]> {
     if (content === null) continue;
     // A group holds no task of its own: the finding is about the tree.
     const subject = entry.task ? entry.id : null;
-    const marker = shown(tree, path.join(entry.dir, MOVING_MARKER));
+    const marker = shown(tree, path.join(entry.dir, MOVING_MARKER_FILENAME));
     const destination = `${entry.id} (${shown(tree, entry.dir)})`;
     const line = (content.split("\n")[0] ?? "").trim();
     const source = markerSource(line);

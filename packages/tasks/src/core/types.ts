@@ -103,6 +103,14 @@ export const DESIGN_FILENAME = "design.md";
 export const PLAN_FILENAME = "plan.md";
 export const LOG_FILENAME = "log.md";
 
+/**
+ * Written into a destination directory while a subtree is copied across
+ * filesystems (its content names the source path); removed when the copy and
+ * the removal of the source are complete. A surviving marker is how a task
+ * present twice is told from two unrelated tasks.
+ */
+export const MOVING_MARKER_FILENAME = ".moving";
+
 /** The workspace vocabulary beside `task.md`, in reading order. */
 export const WORKSPACE_FILENAMES = [
   STATE_FILENAME,

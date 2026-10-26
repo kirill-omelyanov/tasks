@@ -214,7 +214,11 @@ const HOLDING_COMMANDS: ReadonlySet<TransitionCommand> = new Set([
  */
 const NEXT_ROUNDS = 3;
 
-const NO_CLAIM = {
+/**
+ * The claim fields of an unclaimed task. Exported for `move`, whose defer
+ * under a `BACKLOG` parent clears claims as the cascade does.
+ */
+export const NO_CLAIM = {
   claimed_by: null,
   claimed_at: null,
   claimed_session: null,
@@ -736,8 +740,11 @@ function targetOf(run: Run, task: Task): Status {
 /* Authorization                                                            */
 /* ------------------------------------------------------------------------ */
 
-/** The claimant rule: the same actor, and its session when the claim has one. */
-function isClaimant(fm: Frontmatter, identity: Identity): boolean {
+/**
+ * The claimant rule: the same actor, and its session when the claim has one.
+ * Exported for `move`, which applies it to every task it relocates.
+ */
+export function isClaimant(fm: Frontmatter, identity: Identity): boolean {
   return (
     fm.claimed_by === identity.actor &&
     (fm.claimed_session === null || fm.claimed_session === identity.session)
@@ -966,8 +973,15 @@ function holdsSubtree(task: Task): boolean {
 /* Cascades                                                                 */
 /* ------------------------------------------------------------------------ */
 
-/** The status a cascade gives a descendant, or `null` when it is not reached. */
-function cascadeTarget(command: TransitionCommand, task: Task): Status | null {
+/**
+ * The status a cascade gives a descendant, or `null` when it is not reached.
+ * Exported for `move`, which defers a subtree it places under a `BACKLOG`
+ * parent exactly as `defer` would.
+ */
+export function cascadeTarget(
+  command: TransitionCommand,
+  task: Task,
+): Status | null {
   const status = task.frontmatter.status;
   switch (command) {
     case "defer":
@@ -1413,6 +1427,19 @@ function stateRefusal(
   );
 }
 
+/**
+ * The claims a cascade would reach, as its refusal names them; shared with
+ * `move`, whose refusal over work in progress carries the same `claims`.
+ */
+export function claimsText(claims: CascadeClaimDetails["claims"]): string {
+  return claims
+    .map((claim) => {
+      const session = claim.session === null ? "" : ` s:${claim.session}`;
+      return `${claim.id} (claimed by ${claim.claimant}${session}, ${claim.liveness})`;
+    })
+    .join(", ");
+}
+
 function cascadeClaimRefusal(
   run: Run,
   task: Task,
@@ -1420,14 +1447,8 @@ function cascadeClaimRefusal(
 ): TaskError {
   const shown = run.shown(task.id);
   const details: CascadeClaimDetails = { id: shown, claims };
-  const listed = claims
-    .map((claim) => {
-      const session = claim.session === null ? "" : ` s:${claim.session}`;
-      return `${claim.id} (claimed by ${claim.claimant}${session}, ${claim.liveness})`;
-    })
-    .join(", ");
   return TaskError.conflict(
-    `${run.command} ${shown} would reach work in progress: ${listed}. Wait for the claimant to pause, or pass --force.`,
+    `${run.command} ${shown} would reach work in progress: ${claimsText(claims)}. Wait for the claimant to pause, or pass --force.`,
     { ...details, kind: "cascade-claim" },
   );
 }

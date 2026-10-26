@@ -259,6 +259,16 @@ export class Projects {
     return out;
   }
 
+  /**
+   * Every tree that loaded during this command — the local tree first, then
+   * listed trees and trees a stored reference reached by a bare path, in the
+   * order they loaded — each as of its latest reload. `move` reads the
+   * read-only ones among them for references it can report but not rewrite.
+   */
+  knownTrees(): LoadedTree[] {
+    return [...this.trees.values()];
+  }
+
   /* ---------------------------------------------------------------------- */
 
   private configuredPath(alias: string): string {

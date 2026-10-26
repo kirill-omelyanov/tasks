@@ -12,6 +12,7 @@ import { initCommand } from "./commands/init.js";
 import { listCommand } from "./commands/list.js";
 import { logCommand } from "./commands/log.js";
 import { mineCommand } from "./commands/mine.js";
+import { moveCommand } from "./commands/move.js";
 import { newCommand } from "./commands/new.js";
 import { readyCommand } from "./commands/ready.js";
 import { reindexCommand } from "./commands/reindex.js";
@@ -92,6 +93,9 @@ export function buildCli(): Command {
   program.addCommand(restoreCommand());
   program.addCommand(purgeCommand());
   program.addCommand(deleteCommand());
+
+  // move
+  program.addCommand(moveCommand());
 
   program.addCommand(skillCommand());
 

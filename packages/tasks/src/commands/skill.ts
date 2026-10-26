@@ -2,7 +2,14 @@ import path from "node:path";
 
 import { Command } from "commander";
 
-import { globalOptions, startDirectory } from "../context.js";
+import {
+  globalOptions,
+  resolveCommandIdentity,
+  startDirectory,
+} from "../context.js";
+import { detectTreeVersion } from "../core/config.js";
+import { findProject } from "../core/discovery.js";
+import { touchSession } from "../core/sessions.js";
 import {
   SKILLS_RELATIVE_DIR,
   SKILL_NAME,
@@ -30,8 +37,30 @@ export function skillCommand(): Command {
         options: { force?: boolean; json?: boolean },
         command: Command,
       ) => {
-        const root = startDirectory(globalOptions(command));
+        const global = globalOptions(command);
+
+        const root = startDirectory(global);
+
+        // Like every command: a bad --as or --session is a usage error before
+
+        // anything is written, and a known session leaves its heartbeat in the
+
+        // v2 tree at the target, when there is one.
+
+        const identity = await resolveCommandIdentity(global, root);
+
         const result = await installSkill(root, { force: options.force });
+
+        if (identity.session) {
+          const project = await findProject(root);
+
+          if (
+            project &&
+            (await detectTreeVersion(project.tasksDir)).kind === "v2"
+          ) {
+            await touchSession(project.tasksDir, identity.session);
+          }
+        }
 
         if (options.json) {
           emitJson({

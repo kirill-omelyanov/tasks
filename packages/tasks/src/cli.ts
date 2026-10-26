@@ -1,9 +1,18 @@
 import { Command, CommanderError } from "commander";
 
+import {
+  archiveCommand,
+  deleteCommand,
+  purgeCommand,
+  restoreCommand,
+} from "./commands/archive.js";
+import { afterCommand, depCommand } from "./commands/dep.js";
 import { heartbeatCommand } from "./commands/heartbeat.js";
 import { initCommand } from "./commands/init.js";
 import { listCommand } from "./commands/list.js";
+import { logCommand } from "./commands/log.js";
 import { mineCommand } from "./commands/mine.js";
+import { newCommand } from "./commands/new.js";
 import { readyCommand } from "./commands/ready.js";
 import { reindexCommand } from "./commands/reindex.js";
 import { resumeCommand } from "./commands/resume.js";
@@ -11,6 +20,7 @@ import { sessionCheckCommand } from "./commands/session-check.js";
 import { sessionEndCommand } from "./commands/session-end.js";
 import { showCommand } from "./commands/show.js";
 import { skillCommand } from "./commands/skill.js";
+import { stateCommand } from "./commands/state.js";
 import { transitionCommands } from "./commands/transitions.js";
 import { treeCommand } from "./commands/tree.js";
 import { validateCommand } from "./commands/validate.js";
@@ -71,6 +81,17 @@ export function buildCli(): Command {
   // validate
   program.addCommand(validateCommand());
   program.addCommand(reindexCommand());
+
+  // structure
+  program.addCommand(newCommand());
+  program.addCommand(depCommand());
+  program.addCommand(afterCommand());
+  program.addCommand(logCommand());
+  program.addCommand(stateCommand());
+  program.addCommand(archiveCommand());
+  program.addCommand(restoreCommand());
+  program.addCommand(purgeCommand());
+  program.addCommand(deleteCommand());
 
   program.addCommand(skillCommand());
 

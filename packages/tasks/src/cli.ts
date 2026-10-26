@@ -1,7 +1,17 @@
 import { Command, CommanderError } from "commander";
 
+import { heartbeatCommand } from "./commands/heartbeat.js";
+import { initCommand } from "./commands/init.js";
+import { listCommand } from "./commands/list.js";
+import { mineCommand } from "./commands/mine.js";
+import { readyCommand } from "./commands/ready.js";
 import { reindexCommand } from "./commands/reindex.js";
+import { resumeCommand } from "./commands/resume.js";
+import { sessionCheckCommand } from "./commands/session-check.js";
+import { sessionEndCommand } from "./commands/session-end.js";
+import { showCommand } from "./commands/show.js";
 import { skillCommand } from "./commands/skill.js";
+import { treeCommand } from "./commands/tree.js";
 import { validateCommand } from "./commands/validate.js";
 import { ExitCode, TaskError, isTaskError } from "./errors.js";
 import { ui, writeErr } from "./output.js";
@@ -42,6 +52,18 @@ export function buildCli(): Command {
     );
 
   // Commands are registered here, one block per module, as they land.
+  // cli
+  program.addCommand(initCommand());
+  program.addCommand(showCommand());
+  program.addCommand(resumeCommand());
+  program.addCommand(readyCommand());
+  program.addCommand(mineCommand());
+  program.addCommand(listCommand());
+  program.addCommand(treeCommand());
+  program.addCommand(heartbeatCommand());
+  program.addCommand(sessionEndCommand());
+  program.addCommand(sessionCheckCommand());
+
   program.addCommand(skillCommand());
 
   // validate
@@ -81,13 +103,34 @@ export function reportError(error: unknown, argv: string[]): number {
   return taskError.exitCode;
 }
 
+/** A command and every command beneath it. */
+function commandTree(command: Command): Command[] {
+  return [command, ...command.commands.flatMap(commandTree)];
+}
+
 export async function run(argv: string[]): Promise<number> {
   const program = buildCli();
-  program.exitOverride();
-  program.configureOutput({
-    writeOut: (str) => process.stdout.write(str),
-    writeErr: (str) => process.stderr.write(str),
-  });
+  const json = wantsJson(argv);
+  // `addCommand` copies no settings to the command it adds, so a parse error
+  // inside a subcommand (an unknown option, a missing argument) would exit
+  // the process with commander's code 1 and print text under --json. Every
+  // command throws instead, so the usage code and the envelope below apply.
+  for (const command of commandTree(program)) {
+    command.exitOverride();
+    command.configureOutput({
+      writeOut: (str) => process.stdout.write(str),
+      // Under --json the envelope written below is all that reaches stderr.
+      writeErr: (str) => {
+        if (!json) process.stderr.write(str);
+      },
+    });
+    // `-C`, `--as` and `--session` work after any command name, so every
+    // command's help lists them.
+    command.configureHelp({
+      ...command.configureHelp(),
+      showGlobalOptions: true,
+    });
+  }
 
   try {
     await program.parseAsync(argv, { from: "user" });

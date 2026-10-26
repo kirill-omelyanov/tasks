@@ -3,21 +3,30 @@ import path from "node:path";
 import type { Command } from "commander";
 
 import { detectTreeVersion } from "./core/config.js";
+import type { DerivedTask } from "./core/derive.js";
 import type { Project } from "./core/discovery.js";
 import { requireProject } from "./core/discovery.js";
 import { GateResolver } from "./core/gates.js";
-import type { LoadedTree } from "./core/projects.js";
+import { assertTaskPath, resolveSuffix } from "./core/ids.js";
+import type { LoadedTree, ProjectLoad } from "./core/projects.js";
 import { Projects } from "./core/projects.js";
 import {
   housekeepSessions,
   resolveIdentity,
+  resolveSession,
   touchSession,
 } from "./core/sessions.js";
+import { snapshotFromContext, snapshotTree } from "./core/snapshot.js";
+import type { Task } from "./core/task.js";
 import type { Tree } from "./core/tree.js";
-import { loadTree } from "./core/tree.js";
+import { findTask, hasLiveTask, isGroup, loadTree } from "./core/tree.js";
 import type { Identity } from "./core/types.js";
-import { CONVENTION_VERSION, CONFIG_FILENAME } from "./core/types.js";
-import { TaskError } from "./errors.js";
+import {
+  CONVENTION_VERSION,
+  CONFIG_FILENAME,
+  SESSION_ENV,
+} from "./core/types.js";
+import { TaskError, isTaskError } from "./errors.js";
 import { ui, writeErr } from "./output.js";
 
 /** The options every command accepts, declared once on the program. */
@@ -150,4 +159,194 @@ export async function heartbeat(
   }
   await housekeepSessions(projects.local.tree);
   return touched;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Helpers the commands share                                               */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * The session a session command (`heartbeat`, `session-end`) acts for:
+ * `--session`, else `TASKS_SESSION`. Checked before the tree is opened, so a
+ * call without one is refused without touching the disk.
+ */
+export function requireSession(command: Command, name: string): string {
+  const session = resolveSession({ session: globalOptions(command).session });
+  if (session === null) {
+    throw TaskError.usage(
+      `${name} needs a session: pass --session <token> or set ${SESSION_ENV}.`,
+      { command: name, env: SESSION_ENV },
+    );
+  }
+  return session;
+}
+
+/** `--scope`, `--all`: how a scoped query names its local scope. */
+export interface ScopeOptions {
+  scope?: string;
+  all?: boolean;
+}
+
+/** A live task, a malformed one, or a group of the tree sits at `id`. */
+function namesTreePath(tree: Tree, id: string): boolean {
+  return hasLiveTask(tree, id) || isGroup(tree, id);
+}
+
+/**
+ * The local scope of `ready`, `list` and `tree`: `--scope` when given, none
+ * under `--all`, else the configured `scope`. A scope is a path of the local
+ * tree and applies to it alone; listed projects are never scoped.
+ *
+ * An explicit `--scope` must name a task or group of the local tree, so a
+ * typo fails instead of answering with a silent empty set. A configured
+ * scope that names nothing (its epic was archived or moved) is applied as
+ * written, with a diagnostic, so `config.yml` gets fixed rather than every
+ * overview failing until it is.
+ */
+export function resolveScope(
+  context: CommandContext,
+  options: ScopeOptions,
+): string | null {
+  if (options.scope !== undefined) {
+    if (options.all) {
+      throw TaskError.usage(
+        "--scope and --all contradict each other: --all lifts the scope that --scope sets.",
+        { scope: options.scope },
+      );
+    }
+    const scope = assertTaskPath(options.scope, "scope");
+    if (!namesTreePath(context.tree, scope)) {
+      throw TaskError.notFound(
+        `No task or group "${scope}" in ${context.project.tasksDir}; a scope is a path of the local tree.`,
+        { scope },
+      );
+    }
+    return scope;
+  }
+  if (options.all) return null;
+
+  const configured = context.tree.config.scope;
+  if (configured !== null && !namesTreePath(context.tree, configured)) {
+    writeErr(
+      ui.warn(
+        `scope "${configured}" in ${path.join(context.project.tasksDir, CONFIG_FILENAME)} names no task or group of this tree; no local task is in scope.`,
+      ),
+    );
+  }
+  return configured;
+}
+
+/**
+ * The tree behind a command-line alias, or the error that says why there is
+ * none: an absent checkout is not found, a v1 or unsupported tree is refused
+ * like a local one, and an unreadable configuration reports its own error.
+ */
+function availableTree(target: ProjectLoad): LoadedTree {
+  if (target.kind === "ok") return target;
+  const name = target.alias ?? target.relPath;
+  const details = { alias: target.alias, path: target.relPath };
+  switch (target.kind) {
+    case "not-checked-out":
+      throw TaskError.notFound(
+        `Project ${name} (${target.relPath}) is not checked out: ${target.dir} does not exist.`,
+        { ...details, reason: "not-checked-out" },
+      );
+    case "unsupported-version":
+      if (target.version === 1) {
+        throw TaskError.usage(
+          `Project ${name} is a .tasks v1 tree. Run \`tasks migrate ${name}\` once to upgrade it to v${CONVENTION_VERSION}.`,
+          { ...details, version: 1, upgrade: `tasks migrate ${name}` },
+        );
+      }
+      throw TaskError.usage(
+        `Project ${name} declares .tasks version ${target.version}, which is not supported; this tasks implements v${CONVENTION_VERSION}.`,
+        { ...details, version: target.version },
+      );
+    case "unresolved":
+      if (target.cause !== null) throw target.cause;
+      throw TaskError.notFound(
+        `Project ${name} (${target.relPath}) has no .tasks/ tree at ${target.dir}.`,
+        { ...details, reason: "unresolved-project" },
+      );
+  }
+}
+
+/**
+ * Resolve a path or suffix inside one tree, as `resolveTaskId` does, with
+ * candidates and messages qualified by the tree's alias: in a listed project
+ * the ids the user must type next carry it.
+ */
+function resolveIdIn(
+  projects: Projects,
+  load: LoadedTree,
+  rest: string,
+  argument: string,
+): string {
+  const { tree } = load;
+  const qualify = (id: string) => projects.qualify(load, id);
+  const live = [...tree.byId.keys(), ...tree.malformedById.keys()];
+  try {
+    return resolveSuffix(rest, live, { argument, qualify });
+  } catch (err) {
+    if (!isTaskError(err) || err.code !== "NOT_FOUND") throw err;
+    let archived: string | null = null;
+    try {
+      archived = resolveSuffix(rest, [
+        ...tree.archivedById.keys(),
+        ...tree.archivedMalformedById.keys(),
+      ]);
+    } catch {
+      // Nothing (or several things) archived either: the original stands.
+    }
+    if (archived === null) throw err;
+    const shown = qualify(archived);
+    throw TaskError.notFound(
+      `${shown} is archived. Restore it with \`tasks restore ${shown}\` first.`,
+      { argument, id: shown, archived: true },
+    );
+  }
+}
+
+/** A `<task>` argument, resolved: the tree that holds it and the task. */
+export interface TaskTarget {
+  load: LoadedTree;
+  task: Task;
+}
+
+/**
+ * Resolve a `<task>` argument: `alias:path` in a listed project, a bare path
+ * in the local tree only, each by the suffix rule. Ambiguity is a usage
+ * error naming the candidates, a path that exists only under `.archive/` is
+ * not found, and a malformed manifest is a conflict naming the file.
+ */
+export async function resolveTaskArgument(
+  context: CommandContext,
+  arg: string,
+): Promise<TaskTarget> {
+  const { target, path: rest } = await context.projects.resolveArgument(arg);
+  const load = availableTree(target);
+  const id = resolveIdIn(context.projects, load, rest, arg);
+  return { load, task: findTask(load.tree, id) };
+}
+
+/**
+ * Every task of `load` derived for the calling actor, and `id` among them.
+ * Derivation reads the whole tree, since a task's conditions depend on its
+ * ancestors, children and references.
+ */
+export async function deriveWithin(
+  context: CommandContext,
+  load: LoadedTree,
+  id: string,
+): Promise<{ task: DerivedTask; derived: Map<string, DerivedTask> }> {
+  const { derived } = await snapshotTree(
+    snapshotFromContext(context),
+    load,
+    context.identity.actor,
+  );
+  const task = derived.get(id);
+  if (task === undefined) {
+    throw TaskError.internal(`${id} was resolved but not derived.`, { id });
+  }
+  return { task, derived };
 }

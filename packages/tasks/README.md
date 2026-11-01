@@ -82,7 +82,8 @@ path, an unambiguous suffix of one, or `alias:path` in a listed project.
 | `tasks move <source> <destination>`                                             | Relocate a task or group and rewrite every reference, here and in listed trees.               |
 | `tasks state <task> [--edit]`                                                   | Replace `state.md` from stdin, or in `$VISUAL`/`$EDITOR`.                                     |
 | `tasks log <task> "<text>"` / `tasks log --since <when> [--local]`              | Append a narrative entry; list entries since a time across trees.                             |
-| `tasks archive <task> [--force]`                                                | Move a resolved subtree to `.archive/`; refused while live tasks reference it.                |
+| `tasks archive <task> [--force]`                                                | Move a resolved subtree to `.archive/`; refused while open tasks reference it.                |
+| `tasks archive --resolved-before <when>` / `--all-resolved`                      | Archive every resolved subtree older than a threshold (`30d`, a date), skipping and listing the ones open tasks reference. |
 | `tasks restore <path>` / `tasks purge <path>`                                   | Bring an archive entry back; delete one for good and release its path.                        |
 | `tasks delete <task>`                                                           | Remove a never-worked task without archiving it.                                              |
 | `tasks heartbeat` / `tasks session-end`                                         | Mark the session alive; mark it ended, orphaning its claims at once.                          |
@@ -131,6 +132,7 @@ Every shape is documented at
 version: 2
 scope: auth-rework # default scope for list, ready, tree and claim --next
 session_timeout_minutes: 30 # silence after which a claim is orphaned
+archive_resolved_after_days: 30 # resolved this long ago and still live: validate reports them
 projects: # sibling trees, by alias
   backend: ../backend
 ```

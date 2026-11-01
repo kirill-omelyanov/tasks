@@ -25,6 +25,10 @@ version: 2
 # Minutes without a heartbeat after which a claim counts as orphaned.
 # session_timeout_minutes: 30
 
+# Days after which a resolved task is expected to be archived: validate reports
+# older ones, and tasks archive --resolved-before without a value uses it.
+# archive_resolved_after_days: 30
+
 # Sibling trees by alias, as paths relative to this project's root.
 # projects:
 #   backend: ../backend
@@ -48,6 +52,12 @@ version: 2
         "Heartbeat age after which a claim counts as orphaned and may be taken over.",
       type: "integer ≥ 1",
       default: "30",
+    },
+    archive_resolved_after_days: {
+      description:
+        "Days after which a resolved subtree is expected to be archived: validate reports the ones still live, and archive --resolved-before without a value uses it.",
+      type: "integer ≥ 1",
+      default: "none",
     },
     projects: {
       description:
@@ -91,6 +101,18 @@ the timeout (a long test suite) produces no heartbeat while it runs. Keep the ti
 well above your longest tool call; the default of 30 is not meant to be lowered.
 
 The liveness of a claim is judged by the timeout of the tree that holds the task.
+
+### `archive_resolved_after_days`
+
+```yaml
+archive_resolved_after_days: 30
+```
+
+How long a resolved subtree may stay in the live tree before it counts as due for
+archiving. With it set, `tasks validate` warns `resolved-unarchived` with the count and the
+roots, and `tasks archive --resolved-before` without a value archives exactly those (see
+[archive](/docs/reference/commands#tasks-archive)). Nothing is archived on its own: the
+warning is the signal, the command the action. Unset, neither applies.
 
 ### `projects`
 

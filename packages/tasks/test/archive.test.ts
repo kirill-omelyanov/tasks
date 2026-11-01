@@ -4,6 +4,8 @@ import { stripVTControlCharacters } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { ResolvedArchiveJson } from "../src/core/archive.js";
+import { formatIso } from "../src/core/time.js";
 import type { TaskWithDerivedJson } from "../src/core/types.js";
 import { readLog } from "../src/core/workspace.js";
 import type { TreeSpec } from "./fixtures.js";
@@ -503,5 +505,118 @@ describe("delete", () => {
     expect(errorOf(refused).details).toMatchObject({ assignee: "alice" });
     expect((await s.run("delete", "a", "--force")).code).toBe(0);
     expect(await s.exists(".tasks/a")).toBe(false);
+  });
+});
+
+describe("archive --resolved-before and --all-resolved", () => {
+  // Fixture tasks are stamped 2026-01-01 unless said otherwise: old enough.
+  const RECENT = formatIso(new Date());
+
+  it("archives the resolved subtrees older than the threshold and lists the roots a refusal kept", async () => {
+    const s = await box({
+      tasks: {
+        old: { status: "DONE" },
+        "old/part": { status: "CANCELLED" },
+        fresh: { status: "DONE", updated: RECENT },
+        held: { status: "DONE" },
+        user: { depends_on: ["held"] },
+        epic: {},
+        // Resolved under an open parent: a root of its own.
+        "epic/done": { status: "DONE" },
+        "epic/todo": {},
+      },
+    });
+    const result = await s.run("archive", "--resolved-before", "30d", "--json");
+    expect(result.code).toBe(0);
+    expect(result.json<ResolvedArchiveJson>()).toEqual({
+      before: expect.stringMatching(/Z$/),
+      archived: [
+        {
+          id: "epic/done",
+          path: archived(s, "epic/done"),
+          tasks: ["epic/done"],
+          left_blocked: [],
+        },
+        {
+          id: "old",
+          path: archived(s, "old"),
+          tasks: ["old", "old/part"],
+          left_blocked: [],
+        },
+      ],
+      skipped: [{ id: "held", reason: "dependents", dependents: ["user"] }],
+    });
+    expect(await s.exists(".tasks/fresh/task.md")).toBe(true);
+    expect(await s.exists(".tasks/held/task.md")).toBe(true);
+    expect(await s.exists(".tasks/old")).toBe(false);
+    expect(await s.exists(".tasks/epic/done")).toBe(false);
+    expect(await s.exists(".tasks/epic/todo/task.md")).toBe(true);
+  });
+
+  it("takes every resolved subtree with --all-resolved, and the configured days without a value", async () => {
+    const s = await box({
+      tasks: { a: { status: "DONE", updated: RECENT }, b: { status: "DONE" } },
+    });
+    const bare = await s.run("archive", "--resolved-before", "--json");
+    expect(bare.code).toBe(2);
+    expect(errorOf(bare).details).toMatchObject({
+      key: "archive_resolved_after_days",
+    });
+
+    await s.write(
+      ".tasks/config.yml",
+      "version: 2\narchive_resolved_after_days: 30\n",
+    );
+    const configured = await s.run("archive", "--resolved-before", "--json");
+    expect(configured.code).toBe(0);
+    expect(
+      configured.json<ResolvedArchiveJson>().archived.map((entry) => entry.id),
+    ).toEqual(["b"]);
+
+    const all = await s.run("archive", "--all-resolved", "--json");
+    expect(all.code).toBe(0);
+    expect(all.json<ResolvedArchiveJson>()).toMatchObject({
+      before: null,
+      archived: [expect.objectContaining({ id: "a" })],
+      skipped: [],
+    });
+  });
+
+  it("refuses a task beside a batch option, no task without one, both options, and --force", async () => {
+    const s = await box({ tasks: { a: { status: "DONE" } } });
+    for (const argv of [
+      ["archive", "a", "--all-resolved"],
+      ["archive"],
+      ["archive", "--all-resolved", "--resolved-before", "1d"],
+      ["archive", "--all-resolved", "--force"],
+      ["archive", "--resolved-before", "yesterday"],
+    ]) {
+      const result = await s.run(...argv, "--json");
+      expect({ argv, code: result.code }).toEqual({ argv, code: 2 });
+    }
+    expect(await s.exists(".tasks/a/task.md")).toBe(true);
+  });
+
+  it("prints what it archived and what it skipped", async () => {
+    const s = await box({
+      tasks: {
+        old: { status: "DONE" },
+        "old/x": { status: "DONE" },
+        held: { status: "DONE" },
+        user: { depends_on: ["held"] },
+      },
+    });
+    const out = stripVTControlCharacters(
+      (await s.run("archive", "--all-resolved")).stdout,
+    );
+    expect(out).toContain("✓ archive 1 resolved subtree (2 tasks)");
+    expect(out).toContain("  old with old/x");
+    expect(out).toContain("skipped held: referenced by user");
+
+    const again = stripVTControlCharacters(
+      (await s.run("archive", "--all-resolved")).stdout,
+    );
+    expect(again).toContain("Nothing archived.");
+    expect(again).toContain("skipped held");
   });
 });

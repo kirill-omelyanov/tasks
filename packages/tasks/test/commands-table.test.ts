@@ -55,7 +55,8 @@ const TRANSITION_ROW =
   "schedule, defer, claim [--next [--scope <path>]], pause -m, release, done -m, cancel -m, reopen -m, handoff <actor> -m, assign <actor>, unassign, priority <level>";
 const DEP_ROW =
   "dep add|rm|list <task> [<ref>…] and after add|rm|list <task> [<ref>…]";
-const ARCHIVE_ROW = "archive <task> [--force], restore <path>, purge <path>";
+const ARCHIVE_ROW =
+  "archive <task> [--force], archive --resolved-before <when> | --all-resolved, restore <path>, purge <path>";
 const LOG_ROW =
   'log <task> "<text>", log --since <duration|timestamp> [--local]';
 
@@ -139,8 +140,8 @@ const TABLE: Entry[] = [
   {
     row: ARCHIVE_ROW,
     path: ["archive"],
-    args: ["<task>"],
-    options: ["--force"],
+    args: ["[task]"],
+    options: ["--force", "--resolved-before [when]", "--all-resolved"],
   },
   { row: ARCHIVE_ROW, path: ["restore"], args: ["<path>"], options: [] },
   { row: ARCHIVE_ROW, path: ["purge"], args: ["<path>"], options: [] },

@@ -10,6 +10,7 @@ icon: Settings
 version: 2
 scope: auth-rework               # default query scope, a group or task path
 session_timeout_minutes: 30      # heartbeat age after which a claim is orphaned
+archive_resolved_after_days: 30  # resolved this long ago and still live: reported
 projects:                        # aliases for sibling trees
   backend: ../backend
   cli: ../arkveil-cli
@@ -20,6 +21,7 @@ projects:                        # aliases for sibling trees
 | `version` | `2` | — | Convention version; REQUIRED. |
 | `scope` | path | none | Default scope for `list`, `ready` and `tree` when the caller gives none; never restricts addressing by id, gate resolution or validation. |
 | `session_timeout_minutes` | integer ≥ 1 | 30 | Liveness threshold for claims. |
+| `archive_resolved_after_days` | integer ≥ 1 | none | Resolved subtrees whose root's `updated` is older than this are reported by validation as not yet archived; `archive --resolved-before` without a value uses it. |
 | `projects` | map alias → relative path | `{}` | See [Projects](/docs/spec/projects). |
 
 Unknown top-level keys MUST be rejected as a usage error. Invalid YAML, or a document that is not

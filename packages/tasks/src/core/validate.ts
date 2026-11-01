@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { CommandContext } from "../context.js";
+import { resolvedRoots } from "./archive.js";
 import type { DerivedTask } from "./derive.js";
 import { errnoCode, isDirectory } from "./fs-utils.js";
 import { GATE_FIELDS, UNSATISFIABLE_REASONS } from "./gates.js";
@@ -25,10 +26,12 @@ import { livenessForTree, readSession } from "./sessions.js";
 import { snapshotFromContext, snapshotTree } from "./snapshot.js";
 import type { Task } from "./task.js";
 import { hasState, isOpenTask, isResolvedTask } from "./task.js";
+import { daysBefore } from "./time.js";
 import type { Malformed, Tree } from "./tree.js";
 import {
   ancestorsOf,
   archivedTaskDir,
+  descendantsOf,
   isReservedPath,
   taskDir,
 } from "./tree.js";
@@ -90,6 +93,7 @@ const SEVERITY: Record<FindingKind, FindingSeverity> = {
   "unknown-key": "warning",
   "project-unavailable": "warning",
   "duplicate-project": "warning",
+  "resolved-unarchived": "warning",
   "index-stale": "warning",
 };
 
@@ -146,6 +150,7 @@ export async function validateTree(
     ...workspaceFindings(tree),
     ...(await referenceFindings(context, load)),
     ...(await livenessFindings(tree)),
+    ...archiveFindings(tree),
     ...(await projectFindings(context)),
     ...(await indexFindings(context, load)),
   ];
@@ -777,6 +782,29 @@ function unavailableText(load: UnavailableTree): string {
         ? `${name} is a .tasks v1 tree, so references into it are unsatisfied (unsupported-version); \`tasks migrate ${load.alias ?? load.relPath}\` upgrades it from here`
         : `${name} declares version ${load.version}, which this implementation does not support, so references into it are unsatisfied (unsupported-version)`;
   }
+}
+
+/**
+ * Resolved subtrees older than `archive_resolved_after_days`, when the
+ * configuration sets it: the hint to run `tasks archive --resolved-before`,
+ * never an action of validation itself.
+ */
+function archiveFindings(tree: Tree): FindingJson[] {
+  const days = tree.config.archiveResolvedAfterDays;
+  if (days === null) return [];
+  const roots = resolvedRoots(tree, daysBefore(days));
+  if (roots.length === 0) return [];
+  const count = roots.reduce(
+    (sum, root) => sum + 1 + descendantsOf(tree, root.id).length,
+    0,
+  );
+  return [
+    finding(
+      "resolved-unarchived",
+      null,
+      `${count} resolved ${count === 1 ? "task is" : "tasks are"} older than ${days} days and not archived (${listed(roots.map((root) => root.id))}); \`tasks archive --resolved-before\` archives them`,
+    ),
+  ];
 }
 
 /** A missing `index.md` is no finding: the file is optional. */

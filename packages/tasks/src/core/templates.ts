@@ -15,6 +15,10 @@ version: 2
 # Minutes without a heartbeat after which a claim counts as orphaned.
 # session_timeout_minutes: 30
 
+# Days after which a resolved task is expected to be archived: validate reports
+# older ones, and tasks archive --resolved-before without a value uses it.
+# archive_resolved_after_days: 30
+
 # Sibling trees by alias, as paths relative to this project's root.
 # projects:
 #   backend: ../backend

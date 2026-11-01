@@ -58,6 +58,7 @@ describe("parsing a v2 config.yml", () => {
       version: 2,
       scope: null,
       sessionTimeoutMinutes: 30,
+      archiveResolvedAfterDays: null,
       projects: {},
     });
   });
@@ -76,6 +77,17 @@ projects:
       ["backend", "../backend"],
       ["cli", "../arkveil-cli"],
     ]);
+  });
+
+  it("reads archive_resolved_after_days, absent by default, and writes it back", () => {
+    expect(
+      v2("version: 2\narchive_resolved_after_days: 45\n")
+        .archiveResolvedAfterDays,
+    ).toBe(45);
+    expect(v2("version: 2\n").archiveResolvedAfterDays).toBeNull();
+    expect(
+      renderConfig({ ...defaultConfig(), archiveResolvedAfterDays: 45 }),
+    ).toBe("version: 2\narchive_resolved_after_days: 45\n");
   });
 
   it("reads an optional key set to null as absent", () => {
@@ -120,6 +132,9 @@ projects:
     ["session_timeout_minutes: -5", "session_timeout_minutes"],
     ["session_timeout_minutes: 1.5", "session_timeout_minutes"],
     ['session_timeout_minutes: "30"', "session_timeout_minutes"],
+    ["archive_resolved_after_days: 0", "archive_resolved_after_days"],
+    ["archive_resolved_after_days: 2.5", "archive_resolved_after_days"],
+    ['archive_resolved_after_days: "30"', "archive_resolved_after_days"],
     ["projects: [a, b]", "projects"],
     ["projects:\n  Backend: ../backend", "projects"],
     ["projects:\n  my_repo: ../x", "projects"],

@@ -48,11 +48,15 @@ export function parseIso(value: string): Date {
 }
 
 /**
- * The lower bound of a `--since` argument as a canonical timestamp: an ISO
+ * The lower bound of a `--since` argument (or of `flag`) as a canonical timestamp: an ISO
  * timestamp, a UTC date (`2026-09-21`, midnight), or a duration back from
  * `now` — `<n>m`, `<n>h`, `<n>d` or `<n>w`.
  */
-export function parseSince(arg: string, now: Date = new Date()): string {
+export function parseSince(
+  arg: string,
+  now: Date = new Date(),
+  flag = "--since",
+): string {
   if (isIsoTimestamp(arg)) return arg;
 
   if (DATE_PATTERN.test(arg)) {
@@ -68,9 +72,14 @@ export function parseSince(arg: string, now: Date = new Date()): string {
   }
 
   throw TaskError.usage(
-    `Invalid --since "${arg}": expected a timestamp such as 2026-09-21T09:14:00Z, a date such as 2026-09-21, or a duration such as 30m, 12h, 7d or 2w.`,
-    { since: arg },
+    `Invalid ${flag} "${arg}": expected a timestamp such as 2026-09-21T09:14:00Z, a date such as 2026-09-21, or a duration such as 30m, 12h, 7d or 2w.`,
+    flag === "--since" ? { since: arg } : { option: flag, value: arg },
   );
+}
+
+/** The canonical timestamp `days` days before `now`. */
+export function daysBefore(days: number, now: Date = new Date()): string {
+  return formatIso(new Date(now.getTime() - days * UNIT_MS["d"]!));
 }
 
 /** Fractional minutes elapsed since `date`; negative when it lies ahead. */

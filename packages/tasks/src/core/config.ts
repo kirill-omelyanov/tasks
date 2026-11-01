@@ -20,6 +20,8 @@ export interface Config {
   /** Default query scope, a group or task path; never limits addressing. */
   scope: string | null;
   sessionTimeoutMinutes: number;
+  /** Days after which a resolved task is expected to be archived; `null` unset. */
+  archiveResolvedAfterDays: number | null;
   /** Alias → path relative to the project root. Has no prototype. */
   projects: Record<string, string>;
 }
@@ -43,6 +45,7 @@ export const CONFIG_KEYS = [
   "version",
   "scope",
   "session_timeout_minutes",
+  "archive_resolved_after_days",
   "projects",
 ] as const;
 
@@ -58,6 +61,7 @@ export function defaultConfig(): Config {
     version: CONVENTION_VERSION,
     scope: null,
     sessionTimeoutMinutes: DEFAULT_SESSION_TIMEOUT_MINUTES,
+    archiveResolvedAfterDays: null,
     projects: Object.create(null) as Record<string, string>,
   };
 }
@@ -136,6 +140,22 @@ function parseV2(doc: Record<string, unknown>, file: string): Config {
       );
     }
     config.sessionTimeoutMinutes = timeout;
+  }
+
+  const archiveAfter = doc.archive_resolved_after_days;
+  if (archiveAfter !== undefined && archiveAfter !== null) {
+    if (
+      typeof archiveAfter !== "number" ||
+      !Number.isInteger(archiveAfter) ||
+      archiveAfter < 1
+    ) {
+      throw invalid(
+        file,
+        `archive_resolved_after_days must be an integer of at least 1, got ${describe(archiveAfter)}.`,
+        "archive_resolved_after_days",
+      );
+    }
+    config.archiveResolvedAfterDays = archiveAfter;
   }
 
   const projects = doc.projects;
@@ -318,6 +338,11 @@ export function renderConfig(config: Config): string {
   if (config.scope !== null) lines.push(`scope: ${yamlScalar(config.scope)}`);
   if (config.sessionTimeoutMinutes !== DEFAULT_SESSION_TIMEOUT_MINUTES) {
     lines.push(`session_timeout_minutes: ${config.sessionTimeoutMinutes}`);
+  }
+  if (config.archiveResolvedAfterDays !== null) {
+    lines.push(
+      `archive_resolved_after_days: ${config.archiveResolvedAfterDays}`,
+    );
   }
   const aliases = Object.entries(config.projects);
   if (aliases.length > 0) {

@@ -404,6 +404,7 @@ export const FINDING_KINDS = [
   "unknown-key",
   "project-unavailable",
   "duplicate-project",
+  "resolved-unarchived",
   "index-stale",
 ] as const;
 

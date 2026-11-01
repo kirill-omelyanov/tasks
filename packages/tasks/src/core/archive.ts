@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { CommandContext } from "../context.js";
-import { TaskError } from "../errors.js";
+import { TaskError, isTaskError } from "../errors.js";
 import type { SupersededClaim } from "./authorization.js";
 import { judgeAuthorization } from "./authorization.js";
 import {
@@ -570,6 +570,17 @@ function unreadableManifests(trees: LoadedTree[]): string[] {
   );
 }
 
+/** Say on stderr which manifests of the writable trees could not be read. */
+async function reportUnreadable(context: CommandContext): Promise<void> {
+  const unreadable = unreadableManifests(
+    await context.projects.writableTrees(),
+  );
+  if (unreadable.length === 0) return;
+  context.diagnose(
+    `${unreadable.length === 1 ? "a manifest" : `${unreadable.length} manifests`} could not be read, so references held there are unknown to this archive: ${unreadable.join(", ")}.`,
+  );
+}
+
 /* ------------------------------------------------------------------------ */
 /* archive                                                                  */
 /* ------------------------------------------------------------------------ */
@@ -577,6 +588,8 @@ function unreadableManifests(trees: LoadedTree[]): string[] {
 export interface ArchiveOptions {
   /** Archive even though open tasks reference the subtree. */
   force?: boolean;
+  /** Say on stderr which manifests could not be read; off when the caller did. */
+  reportUnreadable?: boolean;
 }
 
 export interface ArchiveResult {
@@ -647,13 +660,8 @@ export async function archiveTask(
       true,
     );
     // A manifest that does not parse may hold references nobody can see.
-    const unreadable = unreadableManifests(
-      await context.projects.writableTrees(),
-    );
-    if (unreadable.length > 0) {
-      context.diagnose(
-        `${unreadable.length === 1 ? "a manifest" : `${unreadable.length} manifests`} could not be read, so references held there are unknown to this archive: ${unreadable.join(", ")}.`,
-      );
+    if (options.reportUnreadable !== false) {
+      await reportUnreadable(context);
     }
     if (dependents.length > 0 && options.force !== true) {
       const details: DependentsDetails = { id: shown, dependents };
@@ -689,6 +697,85 @@ export async function archiveTask(
       left_blocked: forced ? dependents : [],
     };
   });
+}
+
+/* ------------------------------------------------------------------------ */
+/* archive --resolved-before / --all-resolved                               */
+/* ------------------------------------------------------------------------ */
+
+/** A resolved subtree the batch left in place, with the refusal that kept it. */
+export interface SkippedResolvedJson {
+  id: string;
+  /** The refusal's `kind`: `dependents`, `open-descendants`, … */
+  reason: string;
+  /** The refusal's other details, `dependents` for one. */
+  [detail: string]: unknown;
+}
+
+export interface ResolvedArchiveJson {
+  /** Roots resolved (by `updated`) before this were taken; `null` for all. */
+  before: string | null;
+  /** What was archived, root by root, in tree order. */
+  archived: ArchiveResult[];
+  /** Roots that qualified by age but a refusal kept, never forced. */
+  skipped: SkippedResolvedJson[];
+}
+
+/**
+ * The roots of the resolved subtrees of `tree`: resolved tasks whose parent
+ * is not resolved, since a resolved parent takes its subtree along. With
+ * `before`, only those whose `updated` lies before it.
+ */
+export function resolvedRoots(tree: Tree, before: string | null): Task[] {
+  return tree.tasks.filter((task) => {
+    if (!isResolvedTask(task)) return false;
+    const parent =
+      task.parent === null ? undefined : tree.byId.get(task.parent);
+    if (parent !== undefined && isResolvedTask(parent)) return false;
+    return before === null || task.frontmatter.updated < before;
+  });
+}
+
+/**
+ * `archive --resolved-before <when>` and `--all-resolved`: every resolved
+ * subtree of the local tree whose root was resolved before `before`, each
+ * archived as the single command would, under the lock and with its
+ * refusals; a refused root is reported as skipped, never forced. The roots
+ * come from the tree as it is now; each archive re-reads it.
+ */
+export async function archiveResolved(
+  context: CommandContext,
+  before: string | null,
+): Promise<ResolvedArchiveJson> {
+  await reportUnreadable(context);
+  const archived: ArchiveResult[] = [];
+  const skipped: SkippedResolvedJson[] = [];
+  for (const root of resolvedRoots(context.projects.local.tree, before)) {
+    try {
+      archived.push(
+        await archiveTask(context, context.projects.local, root.id, {
+          reportUnreadable: false,
+        }),
+      );
+    } catch (err) {
+      const details = isTaskError(err) ? err.details : undefined;
+      if (
+        !isTaskError(err) ||
+        err.code !== "CONFLICT" ||
+        details === undefined ||
+        typeof details.kind !== "string"
+      ) {
+        throw err;
+      }
+      const facts = Object.fromEntries(
+        Object.entries(details).filter(
+          ([key]) => key !== "kind" && key !== "id",
+        ),
+      );
+      skipped.push({ id: root.id, reason: details.kind, ...facts });
+    }
+  }
+  return { before, archived, skipped };
 }
 
 /* ------------------------------------------------------------------------ */

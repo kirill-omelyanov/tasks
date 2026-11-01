@@ -618,6 +618,8 @@ conflict marker is refused (exit `2`). Listing entries is
 
 ```sh
 tasks archive <task> [--force] [--json]
+tasks archive --resolved-before <when> [--json]
+tasks archive --all-resolved [--json]
 ```
 
 Move a resolved task and its subtree to `.tasks/.archive/<id>/`, where it is excluded
@@ -630,6 +632,17 @@ Refused when the task is open (`not-resolved`), a descendant is open
 the subtree (`dependents`). `--force` overrides only the last; the result then lists the
 tasks it left blocked. A manifest that cannot be parsed, here or in a listed project, may
 hold references the command cannot see; it says so on stderr and goes ahead.
+
+**In one call.** `--resolved-before <when>` archives every resolved subtree of this tree
+whose root was resolved — by its `updated` stamp — before `<when>`: a timestamp, a date,
+or a duration back from now (`30d`, `2w`). Without a value it uses
+`archive_resolved_after_days` from `config.yml`, and is refused when that is not set.
+`--all-resolved` takes every resolved subtree, whatever its age. A resolved task under a
+resolved parent goes with the parent; one under an open parent is a root of its own. Each
+root is archived as the single form would be, under the lock and with the same refusals: a
+root that open tasks reference is skipped and listed with them, never forced, so `--force`
+is refused here. The result names what was archived and what was skipped; `validate`
+reports the roots that are due once the threshold is configured.
 
 ### `tasks restore`
 

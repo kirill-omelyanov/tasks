@@ -159,7 +159,7 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | `tasks dep add\|rm\|list` / `tasks after add\|rm\|list`           | Edit and inspect the gates.                                        |
 | `tasks move <source> <destination>`                               | Relocate a task or group, rewriting every reference.               |
 | `tasks log <task> "<text>"` / `tasks log --since 1d`              | Narrative entry; recent history across trees.                      |
-| `tasks archive`, `restore`, `purge`, `delete`                     | Archive a resolved subtree; undo; release a path; remove unworked. |
+| `tasks archive`, `restore`, `purge`, `delete`                     | Archive a resolved subtree (`--resolved-before 30d`: all older ones); undo; release a path; remove unworked. |
 | `tasks session-check` / `heartbeat` / `session-end`               | Exit invariant; liveness (run by the harness).                     |
 | `tasks validate [--fix]` / `tasks reindex`                        | Check the tree; regenerate `index.md`.                             |
 | `tasks init` / `tasks skill install`                              | Scaffold a tree (ask first); refresh this skill.                   |

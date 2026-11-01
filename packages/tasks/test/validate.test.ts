@@ -9,6 +9,7 @@ import type {
   FindingKind,
   ValidationJson,
 } from "../src/core/types.js";
+import { formatIso } from "../src/core/time.js";
 import { addProjectAlias, renderSpec } from "./fixtures.js";
 import type { Sandbox } from "./helpers.js";
 import { treeSandbox } from "./helpers.js";
@@ -617,6 +618,33 @@ describe("warnings", () => {
     expect(result.findings[0]!.message).toContain('"reviewer"');
     expect(result.findings[1]!.message).toContain('"id"');
     expect(result.findings[1]!.message).toContain("v1");
+  });
+
+  it("warns about resolved subtrees older than archive_resolved_after_days", async () => {
+    sandbox = await treeSandbox({
+      tasks: {
+        old: { status: "DONE" },
+        "old/x": { status: "CANCELLED" },
+        fresh: { status: "DONE", updated: formatIso(new Date()) },
+        open: {},
+      },
+    });
+    // No threshold configured: no finding.
+    expect(summary((await validate()).result)).toEqual([]);
+
+    await sandbox.write(
+      ".tasks/config.yml",
+      "version: 2\narchive_resolved_after_days: 30\n",
+    );
+    const { code, result } = await validate();
+    expect(code).toBe(0);
+    expect(summary(result)).toEqual([warning("resolved-unarchived", null)]);
+    expect(result.findings[0]!.message).toMatch(
+      /^2 resolved tasks are older than 30 days and not archived \(old\)/,
+    );
+    expect(result.findings[0]!.message).toContain(
+      "`tasks archive --resolved-before`",
+    );
   });
 
   it("warns when two aliases lead to the same tree", async () => {

@@ -462,10 +462,14 @@ a live, readable task.
 { "id": "billing/invoices", "path": "/Users/you/acme-api/.tasks/.archive/billing/invoices", "tasks": ["billing/invoices"], "left_blocked": ["billing/reminders"] }
 { "id": "billing/invoices", "path": "/Users/you/acme-api/.tasks/.archive/billing/invoices", "removed": ["billing/invoices"], "referenced_by": ["billing/reminders"] }
 { "id": "scratch/try-it", "deleted": true }
+{ "before": "2026-10-02T10:00:00Z", "archived": [ { "id": "billing/invoices", "path": "/Users/you/acme-api/.tasks/.archive/billing/invoices", "tasks": ["billing/invoices"], "left_blocked": [] } ], "skipped": [ { "id": "auth/old", "reason": "dependents", "dependents": ["auth/new"] } ] }
 ```
 
 `archive` lists every task it archived and, with `--force`, the live tasks it left
-blocked. `restore` prints the restored task object with derived conditions. `purge`
+blocked. `archive --resolved-before` and `--all-resolved` print the last shape: `before`
+is the threshold (`null` for all), `archived` the single form's results root by root in
+tree order, and `skipped` the roots a refusal kept — its `kind` as `reason`, its other
+details beside it. `restore` prints the restored task object with derived conditions. `purge`
 lists the archived tasks it removed and the live tasks whose references now reach a task
 recreated at that path. `delete` confirms the removal.
 

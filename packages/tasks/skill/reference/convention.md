@@ -180,6 +180,7 @@ entries in time order.
 version: 2
 scope: auth-rework # default scope for list, ready, tree and claim --next
 session_timeout_minutes: 30 # heartbeat age after which a claim is orphaned
+archive_resolved_after_days: 30 # resolved this long ago and still live: reported
 projects: # sibling trees by alias, relative to the project root
   backend: ../backend
 ```
@@ -230,7 +231,7 @@ Errors (exit `4`): `malformed`, `unknown-status`, `unknown-priority`,
 
 Warnings (exit `0`): `paused-without-state`, `todo-with-state`,
 `unsatisfiable-ref`, `claim-liveness`, `unknown-key`, `project-unavailable`,
-`duplicate-project`, `index-stale`.
+`duplicate-project`, `resolved-unarchived`, `index-stale`.
 
 `--fix` only regenerates `index.md`; every other finding needs a person's
 intent. Exit `0` with `{"ok": true, "findings": []}` means the tree is clean.

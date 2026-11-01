@@ -341,10 +341,17 @@ describe("resolveArgument", () => {
       alias: "nope",
       aliases: ["backend", "cli", "ghost"],
     });
-    // A path is not an alias on the command line.
-    expect(
-      (await caughtAsync(projects.resolveArgument("../backend:api"))).exitCode,
-    ).toBe(2);
+    // A path is not an alias on the command line; the message names the alias.
+    const pathForm = await caughtAsync(
+      projects.resolveArgument("../backend:api"),
+    );
+    expect(pathForm.exitCode).toBe(2);
+    expect(pathForm.message).toContain("write backend:<path>");
+    const unlisted = await caughtAsync(
+      projects.resolveArgument("../elsewhere:api"),
+    );
+    expect(unlisted.exitCode).toBe(2);
+    expect(unlisted.message).toContain("named by its alias");
     expect(
       (await caughtAsync(projects.resolveArgument("Not A Task"))).exitCode,
     ).toBe(2);

@@ -279,12 +279,28 @@ export class Projects {
         aliases.length === 0
           ? "this tree lists no projects"
           : `the configured aliases are ${aliases.join(", ")}`;
-      throw TaskError.usage(`Unknown project alias "${alias}": ${known}.`, {
-        alias,
-        aliases,
-      });
+      throw TaskError.usage(
+        `Unknown project alias "${alias}": ${known}.${this.pathHint(alias, aliases)}`,
+        { alias, aliases },
+      );
     }
     return relPath;
+  }
+
+  /**
+   * The stored form of a reference (`../backend:x`) is not accepted on the
+   * command line, where a project is named by alias; say so when the
+   * "alias" looks like a path, naming the alias that path has when it has one.
+   */
+  private pathHint(alias: string, aliases: string[]): string {
+    if (!alias.includes("/") && !alias.startsWith(".")) return "";
+    const named = aliases.find(
+      (candidate) =>
+        projectPathOf(this.current.tree.config, candidate) === alias,
+    );
+    return named === undefined
+      ? " On the command line a project is named by its alias; the path form is how references are stored in files."
+      : ` On the command line a project is named by its alias: that path is project ${named}, so write ${named}:<path>.`;
   }
 
   /**

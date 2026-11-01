@@ -520,6 +520,7 @@ describe("renderCollectionFooter", () => {
       malformed: [
         { path: "/abs/.tasks/bad/task.md", message: "no frontmatter" },
       ],
+      unavailable: [],
     };
     expect(plain(renderCollectionFooter(collection))).toBe(
       "3 tasks · scope auth · projects backend, cli\n! malformed /abs/.tasks/bad/task.md: no frontmatter",
@@ -532,6 +533,7 @@ describe("renderCollectionFooter", () => {
           count: 1,
           tasks: [],
           malformed: [],
+          unavailable: [],
         }),
       ),
     ).toBe("1 task");

@@ -4,6 +4,7 @@ import type { CommandContext } from "../context.js";
 import { openContext, resolveScope } from "../context.js";
 import type { DerivedTask } from "../core/derive.js";
 import { inScope } from "../core/derive.js";
+import { unavailableReason } from "../core/gates.js";
 import { compareIds } from "../core/ids.js";
 import type { UnavailableTree } from "../core/projects.js";
 import type { TreeDerivation } from "../core/snapshot.js";
@@ -115,6 +116,10 @@ export function collectionOf(
         .filter((entry) => !load.local || inScope(entry.id, span.scope))
         .map(toMalformedJson),
     ),
+    unavailable: span.unavailable.map((load) => ({
+      alias: load.alias ?? load.relPath,
+      reason: unavailableReason(load),
+    })),
   };
 }
 

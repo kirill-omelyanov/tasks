@@ -107,6 +107,8 @@ export interface MoveJson {
   rewritten: RewrittenRefJson[];
   /** References to moved tasks the command could read but not write. */
   unrewritten: UnrewrittenRefJson[];
+  /** Writable trees it could not write; their references are in `unrewritten`. */
+  skipped: SkippedTree[];
 }
 
 /** A writable tree whose references could not be rewritten, and why. */
@@ -121,8 +123,6 @@ export interface MoveResult extends MoveJson {
   forced: boolean;
   /** Claims the move went past: orphaned ones, and those `--force` overrode. */
   superseded: SupersededClaim[];
-  /** Trees left with dangling references; those are in `unrewritten`. */
-  skipped: SkippedTree[];
 }
 
 /** The contract fields of a result, as `--json` prints them. */
@@ -135,6 +135,7 @@ export function moveJson(result: MoveResult): MoveJson {
     deferred: result.deferred,
     rewritten: result.rewritten,
     unrewritten: result.unrewritten,
+    skipped: result.skipped,
   };
 }
 

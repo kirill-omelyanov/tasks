@@ -305,6 +305,9 @@ A task being worked carries its claim and its liveness:
   "tasks": [ { "id": "auth-rework/token-schema", "…": "…" }, { "id": "backend:kernel/claims-api", "…": "…" } ],
   "malformed": [
     { "path": "/Users/you/acme-api/.tasks/billing/task.md", "message": "the frontmatter has no closing `---` line" }
+  ],
+  "unavailable": [
+    { "alias": "web", "reason": "not-checked-out" }
   ]
 }
 ```
@@ -316,6 +319,7 @@ A task being worked carries its claim and its liveness:
 | `count`     | Equals `tasks.length`.                                                                    |
 | `tasks`     | Task objects with derived conditions, in the command's order.                             |
 | `malformed` | Every task directory in the query whose `task.md` could not be parsed: `{path, message}`. Such a task is never in `tasks`, and it blocks whatever references it. |
+| `unavailable` | Listed projects the query could not read: `{alias, reason}`, with `not-checked-out`, `unresolved-project` or `unsupported-version`. The human output prints a line for each; `--local` spans none. |
 
 `tree` emits the same flat list: every task carries `parent`, and nesting is only how the
 human output presents it.
@@ -436,7 +440,8 @@ a live, readable task.
   ],
   "unrewritten": [
     { "project": "../upstream", "task": "publish", "field": "depends_on", "ref": "../backend:kernel/claims-api" }
-  ]
+  ],
+  "skipped": []
 }
 ```
 
@@ -448,6 +453,7 @@ a live, readable task.
 | `deferred`    | The new ids of the tasks a `BACKLOG` destination deferred.                                  |
 | `rewritten`   | Each reference changed: `project` is the tree holding it — `null` for the local tree, else its alias — and `from`, `to` the stored forms. The source's tree comes first. |
 | `unrewritten` | References to a moved task found in trees the command could read but not write: `project` is that tree's alias, or its project path when it is reached without one. |
+| `skipped`     | Trees the command could write but did not — their lock stayed busy, or a write failed — as `{project, reason}`: `null` for the local tree, else the alias. Their references are in `unrewritten`. |
 
 ### `archive`, `restore`, `purge`, `delete`
 

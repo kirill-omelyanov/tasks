@@ -76,6 +76,7 @@ describe("move: relocation", () => {
       deferred: [],
       rewritten: [],
       unrewritten: [],
+      skipped: [],
     });
 
     const tree = await s.loadTree();
@@ -156,6 +157,7 @@ describe("move: relocation", () => {
       deferred: [],
       rewritten: [],
       unrewritten: [],
+      skipped: [],
     });
     expect(await s.exists(".tasks/later/empty")).toBe(true);
     expect(await s.exists(".tasks/empty")).toBe(false);
@@ -379,6 +381,7 @@ describe("move: references", () => {
         },
       ],
       unrewritten: [],
+      skipped: [],
     });
     expect(await s.exists("../backend/.tasks/b/x/task.md")).toBe(true);
     expect(await s.exists("../backend/.tasks/a")).toBe(false);
@@ -914,5 +917,29 @@ describe("move: across filesystems", () => {
         task: "b/x",
       }),
     );
+  });
+});
+
+describe("a writable tree that cannot be written", () => {
+  it("is reported as skipped with its references unrewritten; the move stands", async () => {
+    const s = await box({ tasks: { l: { depends_on: ["../backend:x"] } } });
+    await s.project("backend", "../backend", { tasks: { x: {} } });
+    // Another process holds this tree's lock for longer than the wait.
+    await s.write(
+      ".tasks/.locks/tree.lock",
+      JSON.stringify({ pid: 999999, hostname: "elsewhere", timestamp: "t" }),
+    );
+    const result = await s.run("move", "backend:x", "y", "--json");
+    expect(result.code).toBe(0);
+    const json = result.json<MoveJson>();
+    expect(json.tasks).toEqual([{ from: "backend:x", to: "backend:y" }]);
+    expect(json.skipped).toEqual([
+      { project: null, reason: expect.stringContaining("locked") },
+    ]);
+    expect(json.unrewritten).toEqual([
+      { project: null, task: "l", field: "depends_on", ref: "../backend:x" },
+    ]);
+    expect(result.stderr).toContain("index.md was not refreshed");
+    expect(await s.exists("../backend/.tasks/y/task.md")).toBe(true);
   });
 });

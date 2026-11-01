@@ -359,6 +359,13 @@ export interface MalformedJson {
   message: string;
 }
 
+/** A listed project an overview could not read, and why. */
+export interface UnavailableProjectJson {
+  alias: string;
+  /** `not-checked-out`, `unresolved-project` or `unsupported-version`. */
+  reason: GateReason;
+}
+
 export interface CollectionJson<T = TaskWithDerivedJson> {
   /** The resolved local scope, or `null`. */
   scope: string | null;
@@ -367,6 +374,8 @@ export interface CollectionJson<T = TaskWithDerivedJson> {
   count: number;
   tasks: T[];
   malformed: MalformedJson[];
+  /** Listed projects left out because they could not be read. */
+  unavailable: UnavailableProjectJson[];
 }
 
 /* ------------------------------------------------------------------------ */

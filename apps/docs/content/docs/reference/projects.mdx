@@ -65,7 +65,8 @@ the aliases spanned.
 | `--scope` | Applies to the local tree only; listed trees are never scoped.            |
 
 A listed project that is not checked out, or is a v1 tree, is left out of the overview
-with a line saying so, and `validate` reports it as `project-unavailable`.
+with a line saying so — under `--json`, the collection's `unavailable` names it with the
+reason — and `validate` reports it as `project-unavailable`.
 
 ## Writes into listed trees
 

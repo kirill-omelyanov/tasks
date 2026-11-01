@@ -1217,6 +1217,12 @@ describe("list", () => {
     expect(collection(await sandbox.run("list", "--json")).projects).toEqual(
       [],
     );
+    expect(
+      collection(await sandbox.run("list", "--json")).unavailable,
+    ).toEqual([{ alias: "gone", reason: "not-checked-out" }]);
+    expect(
+      collection(await sandbox.run("list", "--local", "--json")).unavailable,
+    ).toEqual([]);
     const out = plain((await sandbox.run("list")).stdout);
     expect(out).toContain("gone not shown: not checked out");
     expect(plain((await sandbox.run("list", "--local")).stdout)).not.toContain(

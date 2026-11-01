@@ -94,12 +94,15 @@ the local tree and in the trees reachable through `projects:`, whose `depends_on
 ## Collection object
 
 ```json
-{ "scope": "auth-rework", "projects": ["backend", "cli"], "count": 2, "tasks": [ … ], "malformed": [] }
+{ "scope": "auth-rework", "projects": ["backend", "cli"], "count": 2, "tasks": [ … ], "malformed": [], "unavailable": [] }
 ```
 
 `scope` is the resolved local scope or `null`; `projects` lists the aliases spanned; `count`
 equals `tasks.length`; `malformed` lists `{ "path", "message" }` for every task directory whose
-manifest could not be parsed (see [Structure](/docs/spec/task-file#structure)). `tree` emits this same object: a flat
+manifest could not be parsed (see [Structure](/docs/spec/task-file#structure)); `unavailable` lists
+`{ "alias", "reason" }` for every listed project the query could not read — `not-checked-out`,
+`unresolved-project` or `unsupported-version` — so an empty project is told from an unread one.
+`tree` emits this same object: a flat
 list in which every task carries `parent`; nesting is how the human-readable rendering presents
 it, not a property of the JSON.
 
@@ -132,7 +135,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 | `list [--<situation>]`, `tree` | Overviews by [situation](/docs/spec/lifecycle#situation); `list` filters by situation (`--parked`, `--blocked`, `--waiting`, …); `tree` nests by containment in its human output and renders `finishes_after` entries under their task, tagged with their project; its JSON is the flat [collection object](/docs/spec/cli#collection-object). |
 | `schedule`, `defer`, `claim [--next [--scope <path>]]`, `pause -m`, `release`, `done -m`, `cancel -m`, `reopen -m`, `handoff <actor> -m`, `assign <actor>`, `unassign`, `priority <level>` | The [transitions](/docs/spec/lifecycle#transitions); `--force` as defined under [Force](/docs/spec/lifecycle#force). |
 | `dep add\|rm\|list <task> [<ref>…]` and `after add\|rm\|list <task> [<ref>…]` | Edit and inspect `depends_on` and `finishes_after` with the [mutation constraints](/docs/spec/dependencies#cycles); `<ref>` resolves like `<task>` ([addressing](/docs/spec/identity#command-line-addressing)) and is stored in full. |
-| `move <task\|group> <destination>` | Relocate with reference rewriting in this tree and in listed trees; list the references it could not rewrite. |
+| `move <task\|group> <destination>` | Relocate with reference rewriting in this tree and in listed trees; list the trees it could not write and the references it could not rewrite. |
 | `archive <task> [--force]`, `restore <path>`, `purge <path>` | Archive a resolved subtree; restore it to a free path, never under a resolved parent; purge an archive entry (see [`.archive/`](/docs/spec/layout#archive)). |
 | `delete <task>` | OPTIONAL: remove a never-worked task without archiving it, under the conditions in [`.archive/`](/docs/spec/layout#archive). |
 | `log <task> "<text>"`, `log --since <duration\|timestamp> [--local]` | Append a narrative entry; list entries across the tree(s) by time as [log entries](/docs/spec/cli#log-entries). |

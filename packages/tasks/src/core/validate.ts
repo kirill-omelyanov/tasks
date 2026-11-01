@@ -89,6 +89,7 @@ const SEVERITY: Record<FindingKind, FindingSeverity> = {
   "claim-liveness": "warning",
   "unknown-key": "warning",
   "project-unavailable": "warning",
+  "duplicate-project": "warning",
   "index-stale": "warning",
 };
 
@@ -733,9 +734,31 @@ async function projectFindings(
   context: CommandContext,
 ): Promise<FindingJson[]> {
   const out: FindingJson[] = [];
-  for (const load of await context.projects.listed()) {
-    if (load.kind === "ok") continue;
-    out.push(finding("project-unavailable", null, unavailableText(load)));
+  // Two aliases can lead to one directory; the tree then loads once and is
+  // listed twice, so every overview and aggregate counts it twice.
+  const aliasesByTree = new Map<string, string[]>();
+  const names = context.projects.aliases();
+  const loads = await context.projects.listed();
+  loads.forEach((load, index) => {
+    if (load.kind !== "ok") {
+      out.push(finding("project-unavailable", null, unavailableText(load)));
+      return;
+    }
+    // `listed()` is aligned with `aliases()`; the load itself carries only
+    // the first alias of a tree listed twice.
+    const aliases = aliasesByTree.get(load.key) ?? [];
+    aliases.push(names[index] ?? load.alias ?? load.key);
+    aliasesByTree.set(load.key, aliases);
+  });
+  for (const [key, aliases] of aliasesByTree) {
+    if (aliases.length < 2) continue;
+    out.push(
+      finding(
+        "duplicate-project",
+        null,
+        `projects ${aliases.join(" and ")} lead to the same tree (${key}), which is listed once under each alias; drop one`,
+      ),
+    );
   }
   return out;
 }

@@ -619,6 +619,20 @@ describe("warnings", () => {
     expect(result.findings[1]!.message).toContain("v1");
   });
 
+  it("warns when two aliases lead to the same tree", async () => {
+    sandbox = await treeSandbox({
+      tasks: { a: {} },
+      projects: { backend: "../backend" },
+    });
+    await sandbox.project("backend", "../backend", { tasks: { x: {} } });
+    await addProjectAlias(sandbox.tasksDir, "api", "../backend");
+
+    const { code, result } = await validate();
+    expect(code).toBe(0);
+    expect(summary(result)).toEqual([warning("duplicate-project", null)]);
+    expect(result.findings[0]!.message).toContain("backend and api");
+  });
+
   it("reports every listed project that is unavailable, and the references into it", async () => {
     sandbox = await treeSandbox({
       tasks: {

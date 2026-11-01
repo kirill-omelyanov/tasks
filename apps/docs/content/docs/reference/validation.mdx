@@ -57,6 +57,7 @@ status survives in a `task.md` is a person's decision.
 | `claim-liveness`       | An `IN_PROGRESS` claim is orphaned and may be taken over, or its session has no heartbeat file here (another machine, or a cleaned `.locks/`). A claim without a session is normal and not reported. |
 | `unknown-key`          | A frontmatter key the convention does not define. It is kept on every write; v1's `id` and `phase` are named as such. |
 | `project-unavailable`  | A project listed in `config.yml` is not checked out, leads to no tree, or is a v1 or unsupported-version tree. |
+| `duplicate-project`    | Two aliases in `config.yml` lead to the same tree, which is then listed once under each. Drop one alias. |
 | `index-stale`          | `index.md` no longer matches the tree. Regenerate it with `tasks reindex` or `--fix`.                     |
 
 Gate, containment and liveness rules cover live tasks; the rules about a single file —

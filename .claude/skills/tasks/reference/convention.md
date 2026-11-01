@@ -229,7 +229,7 @@ Errors (exit `4`): `malformed`, `unknown-status`, `unknown-priority`,
 
 Warnings (exit `0`): `paused-without-state`, `todo-with-state`,
 `unsatisfiable-ref`, `claim-liveness`, `unknown-key`, `project-unavailable`,
-`index-stale`.
+`duplicate-project`, `index-stale`.
 
 `--fix` only regenerates `index.md`; every other finding needs a person's
 intent. Exit `0` with `{"ok": true, "findings": []}` means the tree is clean.

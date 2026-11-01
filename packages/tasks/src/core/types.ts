@@ -403,6 +403,7 @@ export const FINDING_KINDS = [
   "claim-liveness",
   "unknown-key",
   "project-unavailable",
+  "duplicate-project",
   "index-stale",
 ] as const;
 

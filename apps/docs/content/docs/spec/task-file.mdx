@@ -131,6 +131,7 @@ An implementation offering validation MUST detect at least:
 | An `IN_PROGRESS` claim that is orphaned, or whose non-null session has no heartbeat file | warning |
 | A frontmatter key this specification does not define | warning |
 | A configured project is not checked out, or is a v1 or unsupported-version tree | warning |
+| Two configured aliases lead to the same tree | warning |
 | `index.md` is out of date | warning |
 
 Repair MUST be opt-in and MUST be confined to regenerating `index.md`; every other finding

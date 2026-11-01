@@ -23,9 +23,19 @@ enforces it. Four hooks are enough:
 
 ## The hooks block
 
-Paste this into `.claude/settings.json` at the root of the repository — merged with any
-`hooks` you already have — and commit it. It needs `tasks` on `PATH` and
-[`jq`](https://jqlang.org) to read the hook input.
+`tasks hooks install` writes this block into `.claude/settings.json` at the root of the
+repository, merged with any `hooks` you already have: everything else in the file stays
+as it is. `--actor <name>` puts another actor in all four commands, and `--force` replaces
+the tasks hooks the file already has, which are otherwise kept as they are.
+
+```sh
+tasks hooks install                  # the block below, for the actor agent
+tasks hooks install --actor claude   # the same block for another actor
+tasks hooks install --force          # replace tasks hooks already in the file
+```
+
+Or paste it yourself, merged the same way. Either way, commit the file. It needs `tasks`
+on `PATH` and [`jq`](https://jqlang.org) to read the hook input.
 
 ```json title=".claude/settings.json"
 {
@@ -75,8 +85,8 @@ Paste this into `.claude/settings.json` at the root of the repository — merged
 }
 ```
 
-The agent's actor is `agent`; replace it, in all four commands, with the name its log
-entries should carry.
+The agent's actor is `agent`. `--actor` puts another name in all four commands; when
+pasting, replace it yourself with the name the agent's log entries should carry.
 
 ## What each hook does
 
@@ -152,6 +162,9 @@ A session that dies mid-turn is covered by the combination: the `Stop` hook guar
 does when it does not, and the next session takes over from the resume point.
 
 ## Adjusting it
+
+`tasks hooks install` knows an edited hook by the `tasks` subcommand it runs, and keeps it
+unless `--force`.
 
 - **No global install.** Replace `tasks` with the path of a local install, for instance
   `./node_modules/.bin/tasks`. `npx @speekl/tasks` works but starts slowly, which matters

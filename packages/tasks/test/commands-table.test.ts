@@ -176,7 +176,7 @@ const TABLE: Entry[] = [
 ];
 
 /** The commands of this CLI that the spec's table does not list. */
-const BEYOND_THE_TABLE = ["skill"];
+const BEYOND_THE_TABLE = ["skill", "hooks"];
 
 function find(program: Command, commandPath: string[]): Command {
   let command = program;
@@ -688,6 +688,47 @@ describe("every command", () => {
     }).toEqual({
       invalidActor: 2,
       invalidSession: 2,
+      valid: 0,
+      underC: true,
+      inTheWorkingDirectory: false,
+      heartbeat: true,
+    });
+  });
+
+  it("hooks install, beyond the table, takes the global options like every other command", async () => {
+    const s = await treeSandbox({});
+    sandbox = s;
+    const outside = { cwd: s.root };
+    const install = (...globals: string[]) =>
+      s.runWith(
+        outside,
+        "hooks",
+        "install",
+        "-C",
+        "repo",
+        ...globals,
+        "--json",
+      );
+    const settings = path.join(".claude", "settings.json");
+
+    const invalidActor = (await install("--as", "two words")).code;
+    const invalidSession = (await install("--session", "bad token")).code;
+    const writtenByInvalid =
+      (await s.exists(settings)) || (await s.exists(path.join("..", settings)));
+    const valid = await install("--as", "agent", "--session", "s1");
+    expect({
+      invalidActor,
+      invalidSession,
+      writtenByInvalid,
+      valid: valid.code,
+      // At the root of the tree -C names.
+      underC: await s.exists(settings),
+      inTheWorkingDirectory: await s.exists(path.join("..", settings)),
+      heartbeat: await s.exists(".tasks/.locks/sessions/s1"),
+    }).toEqual({
+      invalidActor: 2,
+      invalidSession: 2,
+      writtenByInvalid: false,
       valid: 0,
       underC: true,
       inTheWorkingDirectory: false,

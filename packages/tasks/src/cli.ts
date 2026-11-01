@@ -8,6 +8,7 @@ import {
 } from "./commands/archive.js";
 import { afterCommand, depCommand } from "./commands/dep.js";
 import { heartbeatCommand } from "./commands/heartbeat.js";
+import { hooksCommand } from "./commands/hooks.js";
 import { initCommand } from "./commands/init.js";
 import { listCommand } from "./commands/list.js";
 import { logCommand } from "./commands/log.js";
@@ -102,6 +103,7 @@ export function buildCli(): Command {
   program.addCommand(migrateCommand());
 
   program.addCommand(skillCommand());
+  program.addCommand(hooksCommand());
 
   return program;
 }

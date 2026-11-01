@@ -58,6 +58,7 @@ path, an unambiguous suffix of one, or `alias:path` in a listed project.
 | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `tasks init [--force] [--no-skill]`                                             | Scaffold `.tasks/`, print the resolved actor, install the agent skill.                        |
 | `tasks skill install [--force]`                                                 | Install or refresh the agent skill in `.claude/skills/tasks/`.                                |
+| `tasks hooks install [--actor <name>] [--force]`                                | Write the Claude Code harness hooks into `.claude/settings.json`; they need `jq`.             |
 | `tasks show <task>`                                                             | The task: fields, derived conditions, workspace files, who references it, body.               |
 | `tasks resume <task>`                                                           | Everything the next session reads: ancestors, children, `state.md`, last log entry.           |
 | `tasks ready [--scope <path>] [--all] [--local]`                                | What you may take now: effective priority, then paused before todo, then oldest.              |
@@ -164,9 +165,12 @@ Skip it with `tasks init --no-skill`. Add it to a project that predates it, or
 refresh it after upgrading the CLI, with `tasks skill install --force`. Commit
 `.claude/skills/tasks/` so every agent working in the repository gets it.
 
-For Claude Code, a hooks block for `.claude/settings.json` makes the protocol
-automatic — it exports the session, keeps claims live and refuses to end a turn
-without a resume point: see
+For Claude Code, `tasks hooks install` writes a hooks block into
+`.claude/settings.json` that makes the protocol automatic — it exports the
+session, keeps claims live and refuses to end a turn without a resume point. The
+rest of the file is kept, and so is a tasks hook already there unless `--force`;
+`--actor <name>` sets the actor the hooks act as (default `agent`). The hooks
+need `jq` on `PATH`. Commit the file. See
 [agenttasks.dev/docs/guides/harness](https://agenttasks.dev/docs/guides/harness).
 
 ## Upgrading from v1

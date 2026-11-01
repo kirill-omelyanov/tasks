@@ -162,7 +162,9 @@ describe("the program", () => {
     expect(result.code).toBe(ExitCode.Success);
 
     const names = buildCli().commands.map((command) => command.name());
-    expect(names).toEqual(expect.arrayContaining([...CLI_COMMANDS, "skill"]));
+    expect(names).toEqual(
+      expect.arrayContaining([...CLI_COMMANDS, "skill", "hooks"]),
+    );
     for (const name of names) {
       expect(result.stdout).toMatch(new RegExp(`^ {2}${name}\\b`, "m"));
     }
@@ -1686,7 +1688,7 @@ describe("skill install", () => {
 describe("command groups", () => {
   it("refuse a bare group as a usage error instead of printing help", async () => {
     sandbox = await treeSandbox({});
-    for (const group of ["dep", "after", "skill"]) {
+    for (const group of ["dep", "after", "skill", "hooks"]) {
       const result = await sandbox.run(group);
       expect({ group, code: result.code }).toEqual({
         group,

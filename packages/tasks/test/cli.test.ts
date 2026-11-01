@@ -1682,3 +1682,17 @@ describe("skill install", () => {
     );
   });
 });
+
+describe("command groups", () => {
+  it("refuse a bare group as a usage error instead of printing help", async () => {
+    sandbox = await treeSandbox({});
+    for (const group of ["dep", "after", "skill"]) {
+      const result = await sandbox.run(group);
+      expect({ group, code: result.code }).toEqual({
+        group,
+        code: ExitCode.Usage,
+      });
+      expect(result.stderr).toContain(`${group} needs a subcommand`);
+    }
+  });
+});

@@ -316,7 +316,14 @@ function gateCommand(spec: GateSpec): Command {
   const group = new Command(spec.name)
     .summary(spec.summary)
     .description(spec.description)
-    .exitOverride();
+    .exitOverride()
+    // Without a subcommand there is nothing to do: an error, not help.
+    .action(() => {
+      throw TaskError.usage(
+        `${spec.name} needs a subcommand: ${spec.name} add, ${spec.name} rm or ${spec.name} list.`,
+        { command: spec.name, subcommands: ["add", "rm", "list"] },
+      );
+    });
 
   group
     .command("add")

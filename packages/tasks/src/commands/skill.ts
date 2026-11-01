@@ -15,12 +15,19 @@ import {
   SKILL_NAME,
   installSkill,
 } from "../core/skill.js";
+import { TaskError } from "../errors.js";
 import { emitJson, ui, writeOut } from "../output.js";
 
 export function skillCommand(): Command {
-  const skill = new Command("skill").description(
-    "manage the bundled agent skill",
-  );
+  const skill = new Command("skill")
+    .description("manage the bundled agent skill")
+    // Without a subcommand there is nothing to do: an error, not help.
+    .action(() => {
+      throw TaskError.usage("skill needs a subcommand: skill install.", {
+        command: "skill",
+        subcommands: ["install"],
+      });
+    });
 
   skill
     .command("install")

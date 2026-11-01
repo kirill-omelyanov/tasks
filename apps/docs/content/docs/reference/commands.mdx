@@ -86,7 +86,9 @@ with exit `2` when the existing tree is a v1 tree, `--force` or not: upgrade it 
 
 ### `tasks skill install`
 
-Install the bundled agent skill into `.claude/skills/tasks/` in the current directory.
+Install the bundled agent skill into `.claude/skills/tasks/` at the root of the discovered
+tree, the directory that holds `.tasks/`; without a tree, into the current directory (or
+`-C`), where `init` would create one.
 
 ```sh
 tasks skill install [--force] [--json]

@@ -4,12 +4,11 @@ import { Command } from "commander";
 
 import {
   globalOptions,
+  heartbeatAt,
   resolveCommandIdentity,
   startDirectory,
 } from "../context.js";
-import { detectTreeVersion } from "../core/config.js";
 import { findProject } from "../core/discovery.js";
-import { touchSession } from "../core/sessions.js";
 import {
   SKILLS_RELATIVE_DIR,
   SKILL_NAME,
@@ -45,29 +44,20 @@ export function skillCommand(): Command {
         command: Command,
       ) => {
         const global = globalOptions(command);
-
-        const root = startDirectory(global);
-
+        const start = startDirectory(global);
+        // The skill belongs to the repository: at the root of the tree when
+        // one is discovered, wherever below it this runs; where the command
+        // runs when there is no tree yet (`init` creates it there).
+        const project = await findProject(start);
+        const root = project?.root ?? start;
         // Like every command: a bad --as or --session is a usage error before
-
-        // anything is written, and a known session leaves its heartbeat in the
-
-        // v2 tree at the target, when there is one.
-
+        // anything is written, and a known session leaves its heartbeat in
+        // the v2 tree at the target, when there is one, and in the trees it
+        // lists.
         const identity = await resolveCommandIdentity(global, root);
+        if (project) await heartbeatAt(project, identity.session);
 
         const result = await installSkill(root, { force: options.force });
-
-        if (identity.session) {
-          const project = await findProject(root);
-
-          if (
-            project &&
-            (await detectTreeVersion(project.tasksDir)).kind === "v2"
-          ) {
-            await touchSession(project.tasksDir, identity.session);
-          }
-        }
 
         if (options.json) {
           emitJson({

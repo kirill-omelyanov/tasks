@@ -1683,6 +1683,50 @@ describe("skill install", () => {
       "name: tasks",
     );
   });
+
+  it("installs at the root of the tree from a subdirectory, and where it runs without one", async () => {
+    sandbox = await treeSandbox({});
+    await sandbox.write(path.join("src", "deep", ".keep"), "");
+    const below = await sandbox.runWith(
+      { cwd: path.join("src", "deep") },
+      "skill",
+      "install",
+      "--json",
+    );
+    expect(below.code).toBe(ExitCode.Success);
+    expect(below.json<{ dir: string }>().dir).toBe(
+      path.join(sandbox.dir, skillDir),
+    );
+
+    // The parent of the project has no tree: the skill lands where this runs.
+    const outside = await sandbox.runWith(
+      { cwd: ".." },
+      "skill",
+      "install",
+      "--json",
+    );
+    expect(outside.code).toBe(ExitCode.Success);
+    expect(outside.json<{ dir: string }>().dir).toBe(
+      path.join(path.dirname(sandbox.dir), skillDir),
+    );
+  });
+
+  it("writes the session's heartbeat into the tree and the trees it lists", async () => {
+    sandbox = await treeSandbox({ projects: { backend: "../backend" } });
+    await sandbox.project("backend", "../backend", {});
+    const result = await sandbox.run(
+      "skill",
+      "install",
+      "--json",
+      "--session",
+      "s7",
+    );
+    expect(result.code).toBe(ExitCode.Success);
+    expect(await sandbox.exists(".tasks/.locks/sessions/s7")).toBe(true);
+    expect(await sandbox.exists("../backend/.tasks/.locks/sessions/s7")).toBe(
+      true,
+    );
+  });
 });
 
 describe("command groups", () => {

@@ -4,10 +4,10 @@ import { Command } from "commander";
 
 import {
   globalOptions,
+  heartbeatAt,
   resolveCommandIdentity,
   startDirectory,
 } from "../context.js";
-import { detectTreeVersion } from "../core/config.js";
 import { requireProject } from "../core/discovery.js";
 import type { HookEvent } from "../core/hooks.js";
 import {
@@ -15,7 +15,7 @@ import {
   SETTINGS_RELATIVE_PATH,
   installHooks,
 } from "../core/hooks.js";
-import { assertActor, touchSession } from "../core/sessions.js";
+import { assertActor } from "../core/sessions.js";
 import { TaskError } from "../errors.js";
 import { emitJson, ui, writeOut } from "../output.js";
 
@@ -83,14 +83,9 @@ export function hooksCommand(): Command {
 
       // Like every command: a bad --as or --session is a usage error before
       // anything is written, and a known session leaves its heartbeat in a
-      // v2 tree.
+      // v2 tree and in the trees it lists.
       const identity = await resolveCommandIdentity(global, project.root);
-      if (
-        identity.session &&
-        (await detectTreeVersion(project.tasksDir)).kind === "v2"
-      ) {
-        await touchSession(project.tasksDir, identity.session);
-      }
+      await heartbeatAt(project, identity.session);
 
       const result = await installHooks(project.root, {
         actor,

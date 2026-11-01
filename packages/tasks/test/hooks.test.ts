@@ -497,3 +497,22 @@ describe("hooks", () => {
     expect(await sandbox.exists(".claude")).toBe(false);
   });
 });
+
+describe("hooks install and the session registry", () => {
+  it("writes the session's heartbeat into the tree and the trees it lists", async () => {
+    sandbox = await treeSandbox({ projects: { backend: "../backend" } });
+    await sandbox.project("backend", "../backend", {});
+    const result = await sandbox.run(
+      "hooks",
+      "install",
+      "--json",
+      "--session",
+      "s7",
+    );
+    expect(result.code).toBe(ExitCode.Success);
+    expect(await sandbox.exists(".tasks/.locks/sessions/s7")).toBe(true);
+    expect(await sandbox.exists("../backend/.tasks/.locks/sessions/s7")).toBe(
+      true,
+    );
+  });
+});

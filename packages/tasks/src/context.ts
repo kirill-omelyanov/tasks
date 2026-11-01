@@ -170,6 +170,21 @@ export async function heartbeat(
   return touched;
 }
 
+/**
+ * The heartbeat of a command that does not open the tree (`skill install`,
+ * `hooks install`): the one every other command writes, into the tree at
+ * `project` and every tree it lists, when it is a v2 tree. A v1 or
+ * unsupported tree has no registry to touch; no session, no heartbeat.
+ */
+export async function heartbeatAt(
+  project: Project,
+  session: string | null,
+): Promise<void> {
+  if (session === null) return;
+  if ((await detectTreeVersion(project.tasksDir)).kind !== "v2") return;
+  await heartbeat(new Projects(await loadTree(project)), session);
+}
+
 /* ------------------------------------------------------------------------ */
 /* Helpers the commands share                                               */
 /* ------------------------------------------------------------------------ */

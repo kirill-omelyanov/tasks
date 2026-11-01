@@ -47,6 +47,8 @@ export interface CommandContext {
   gates: GateResolver;
   identity: Identity;
   json: boolean;
+  /** Print a warning on stderr: a condition the command survives. */
+  diagnose(message: string): void;
   /** Re-read the local tree from disk and drop cached gate resolutions. */
   reload(): Promise<void>;
   /** The local tree first, then every listed tree that is available. */
@@ -131,6 +133,7 @@ export async function openContext(command: Command): Promise<CommandContext> {
     gates,
     identity,
     json: options.json === true,
+    diagnose: (message) => writeErr(ui.warn(message)),
     async reload() {
       await projects.reload(projects.local);
       gates.invalidate();

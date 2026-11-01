@@ -73,7 +73,10 @@ A tree may write into a project it lists — transitions, `new`, dependency edit
 `state`, `log`, archive commands — addressing the task by alias. Every such write takes
 **that** tree's lock; there are no cross-tree transactions. A `move` or a `migrate` run
 from here also rewrites references in every listed tree, one tree at a time under each
-tree's lock.
+tree's lock. After a write into a listed tree, this tree's `index.md` is regenerated under
+its own lock, since what changed there may show here. When that lock stays busy the write
+stands, and a warning on stderr says the index was not refreshed; `tasks reindex` or the
+next local write regenerates it.
 
 `show` and `resume` list as `referenced_by` the tasks here and in listed trees whose
 gates name the task, and `cancel` reports `dependents` across them, so a decision about a

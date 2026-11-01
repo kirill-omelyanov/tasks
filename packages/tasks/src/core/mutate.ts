@@ -1,5 +1,6 @@
 import type { CommandContext } from "../context.js";
-import { withTreeLock } from "./lock.js";
+import type { LockPayload } from "./lock.js";
+import { holderText, isLockBusy, withTreeLock } from "./lock.js";
 import type { LoadedTree } from "./projects.js";
 import { refreshIndexFor, snapshotFromContext } from "./snapshot.js";
 import { nowIso } from "./time.js";
@@ -50,7 +51,22 @@ export async function withMutation<T>(
   // (`blocked by backend:x` comes and goes with that task), so the local
   // index follows it too, under its own lock, once the foreign one is free.
   if (options.refreshIndex !== false && !load.local) {
-    const local = context.projects.local;
+    await refreshLocalIndex(context, load);
+  }
+  return result;
+}
+
+/**
+ * The write is done by now, so a local lock that stays busy fails nothing:
+ * it only leaves `index.md` behind, which `validate` reports and the next
+ * local write or `reindex` regenerates. Anything else is still an error.
+ */
+async function refreshLocalIndex(
+  context: CommandContext,
+  written: LoadedTree,
+): Promise<void> {
+  const local = context.projects.local;
+  try {
     await withTreeLock(local.project.tasksDir, async () => {
       await context.projects.reload(local);
       context.gates.invalidate();
@@ -59,6 +75,13 @@ export async function withMutation<T>(
         context.projects.local,
       );
     });
+  } catch (err) {
+    if (!isLockBusy(err)) throw err;
+    const holder = holderText(
+      (err.details?.holder as LockPayload | null | undefined) ?? null,
+    );
+    context.diagnose(
+      `${context.projects.qualifier(written) ?? written.project.root} was written, but this tree's index.md was not refreshed: the tree is locked${holder}. Run \`tasks reindex\` once it is free.`,
+    );
   }
-  return result;
 }

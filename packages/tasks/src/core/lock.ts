@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { TaskError } from "../errors.js";
+import { isTaskError, TaskError } from "../errors.js";
 import { errnoCode } from "./fs-utils.js";
 import { LOCKS_DIRNAME, LOCK_STALE_MS, TREE_LOCK_FILENAME } from "./types.js";
 
@@ -112,6 +112,22 @@ async function readHolder(file: string): Promise<LockPayload | null> {
   return null;
 }
 
+/** ` by process 123 on host since 2026-…`, or nothing for an unknown holder. */
+export function holderText(holder: LockPayload | null): string {
+  return holder
+    ? ` by process ${holder.pid} on ${holder.hostname} since ${holder.timestamp}`
+    : "";
+}
+
+/** Whether `err` is the conflict a busy tree lock raises. */
+export function isLockBusy(err: unknown): err is TaskError {
+  return (
+    isTaskError(err) &&
+    err.code === "CONFLICT" &&
+    typeof err.details?.lock === "string"
+  );
+}
+
 /** Only our own lock is removed: after a reclaim, the file is someone else's. */
 async function release(file: string, payload: string): Promise<void> {
   try {
@@ -194,11 +210,8 @@ export async function withTreeLock<T>(
     if (age > LOCK_STALE_MS && (await reclaimIfStale(file, text))) continue;
     if (Date.now() >= deadline) {
       const holder = await readHolder(file);
-      const who = holder
-        ? ` by process ${holder.pid} on ${holder.hostname} since ${holder.timestamp}`
-        : "";
       throw TaskError.conflict(
-        `The task tree is locked${who}. Another command is writing it; try again.`,
+        `The task tree is locked${holderText(holder)}. Another command is writing it; try again.`,
         { lock: file, holder },
       );
     }

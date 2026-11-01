@@ -176,7 +176,8 @@ Another command holds `.tasks/.locks/tree.lock`. Writes are short, and every com
 up to two seconds before reporting this, so it usually means a burst of agents — retry.
 A holder touches its lock while it works, so a long write is never mistaken for a dead
 one; a lock older than ten seconds belongs to a dead process and is reclaimed
-automatically.
+automatically. A write into a listed tree whose own lock was free succeeds even while
+this tree's lock is busy: it then warns that `index.md` was not refreshed.
 If it persists, check for a hung `tasks` process; only when none runs is deleting the
 file safe — `.locks/` holds no state.
 

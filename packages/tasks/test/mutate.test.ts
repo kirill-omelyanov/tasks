@@ -108,6 +108,45 @@ describe("withMutation on a listed tree", () => {
     expect(await sandbox.read(".tasks/index.md")).not.toContain("stale");
     expect(await sandbox.exists(".tasks/.locks/tree.lock")).toBe(false);
   });
+
+  it("keeps a foreign write when the local lock stays busy", async () => {
+    sandbox = await treeSandbox({
+      tasks: { a: { depends_on: ["../backend:x"] } },
+      projects: { backend: "../backend" },
+    });
+    await sandbox.project("backend", "../backend", { tasks: { x: {} } });
+    await sandbox.write(".tasks/index.md", "stale\n");
+    // Another process holds this tree's lock for longer than the wait.
+    await sandbox.write(
+      ".tasks/.locks/tree.lock",
+      JSON.stringify({ pid: 999999, hostname: "elsewhere", timestamp: "t" }),
+    );
+    const context = await openContext(command({ dir: sandbox.dir }));
+    const warnings: string[] = [];
+    context.diagnose = (message) => warnings.push(message);
+    const backend = (await context.trees())[1]!;
+
+    await withMutation(context, backend, async (fresh) => {
+      const task = fresh.tree.byId.get("x")!;
+      await writeTask({
+        ...task,
+        frontmatter: {
+          ...task.frontmatter,
+          priority: "high",
+          updated: fresh.now,
+        },
+      });
+    });
+
+    expect(await sandbox.read("../backend/.tasks/x/task.md")).toContain(
+      "priority: high",
+    );
+    expect(await sandbox.read(".tasks/index.md")).toBe("stale\n");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("backend was written");
+    expect(warnings[0]).toContain("tasks reindex");
+    expect(await sandbox.exists(".tasks/.locks/tree.lock")).toBe(true);
+  });
 });
 
 it("renders a listed tree's index from that tree's own point of view", async () => {

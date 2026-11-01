@@ -634,6 +634,13 @@ async function referrersOf(
   return [...out];
 }
 
+/** The `task.md` files that did not parse, across `trees`, as absolute paths. */
+function unreadableManifests(trees: LoadedTree[]): string[] {
+  return trees.flatMap((load) =>
+    load.tree.malformed.map((entry) => entry.path),
+  );
+}
+
 /* ------------------------------------------------------------------------ */
 /* archive                                                                  */
 /* ------------------------------------------------------------------------ */
@@ -710,6 +717,15 @@ export async function archiveTask(
       (id) => isWithin(id, task.id),
       true,
     );
+    // A manifest that does not parse may hold references nobody can see.
+    const unreadable = unreadableManifests(
+      await context.projects.writableTrees(),
+    );
+    if (unreadable.length > 0) {
+      context.diagnose(
+        `${unreadable.length === 1 ? "a manifest" : `${unreadable.length} manifests`} could not be read, so references held there are unknown to this archive: ${unreadable.join(", ")}.`,
+      );
+    }
     if (dependents.length > 0 && options.force !== true) {
       const details: DependentsDetails = { id: shown, dependents };
       throw TaskError.conflict(

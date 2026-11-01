@@ -597,7 +597,8 @@ task first, so the history travels with it.
 Refused when the task is open (`not-resolved`), a descendant is open
 (`open-descendants`), or open tasks — here or in listed projects — reference anything in
 the subtree (`dependents`). `--force` overrides only the last; the result then lists the
-tasks it left blocked.
+tasks it left blocked. A manifest that cannot be parsed, here or in a listed project, may
+hold references the command cannot see; it says so on stderr and goes ahead.
 
 ### `tasks restore`
 

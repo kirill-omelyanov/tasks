@@ -104,6 +104,15 @@ describe("archive", () => {
     expect(await s.exists(".tasks/d/task.md")).toBe(true);
   });
 
+  it("says on stderr when a manifest could not be read: its references are unknown", async () => {
+    const s = await box({ tasks: { d: { status: "DONE" } } });
+    await s.write(".tasks/broken/task.md", "garbage\n");
+    const result = await s.run("archive", "d", "--json");
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain("could not be read");
+    expect(result.stderr).toContain(path.join("broken", "task.md"));
+  });
+
   it("archives anyway with --force, reporting who is left blocked", async () => {
     const s = await box({
       tasks: {

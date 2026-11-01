@@ -9,6 +9,7 @@ import { isIsoTimestamp } from "./time.js";
 import type {
   Identity,
   LastEntryJson,
+  Liveness,
   LogEntryJson,
   Status,
   WorkspaceFilename,
@@ -524,4 +525,24 @@ export function takeoverLine(
 ): string {
   const tag = session === null ? "" : ` ${SESSION_PREFIX}${session}`;
   return `supersedes ${claimant}${tag}, last seen ${lastSeen ?? "unknown"}`;
+}
+
+/**
+ * What a write that is not a transition records about a claim it went past;
+ * the claim stays in place: `over the claim of alice s:7f3a (orphaned, last
+ * seen <time>)`, `(live, last seen <time>)` when `--force` went past live
+ * work, `(liveness unknown)` when no heartbeat was ever seen.
+ */
+export function passedOverLine(
+  claimant: string,
+  session: string | null,
+  liveness: Liveness,
+  lastSeen: string | null,
+): string {
+  const tag = session === null ? "" : ` ${SESSION_PREFIX}${session}`;
+  const state =
+    liveness === "unknown"
+      ? "liveness unknown"
+      : `${liveness}, last seen ${lastSeen ?? "unknown"}`;
+  return `over the claim of ${claimant}${tag} (${state})`;
 }

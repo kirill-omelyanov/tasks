@@ -424,7 +424,10 @@ describe("authorization of dependency edits", () => {
     const forced = await s.session("s1")("dep", "add", "w", "b", "--force");
     expect(forced.code).toBe(0);
     const [entry] = await logOf(s, "w");
-    expect(entry).toMatchObject({ session: "s1", text: "dep add: b (forced)" });
+    expect(entry).toMatchObject({ session: "s1" });
+    expect(entry?.text).toMatch(
+      /^dep add: b \(forced\)\nover the claim of tester s:s2 \(live, last seen \S+Z\)$/,
+    );
 
     const own = await s.session("s2")("dep", "rm", "w", "b");
     expect(own.code).toBe(0);
@@ -458,7 +461,7 @@ describe("authorization of dependency edits", () => {
     expect(result.code).toBe(0);
     const [entry] = await logOf(s, "w");
     expect(entry?.text).toBe(
-      `dep add: b\nsupersedes bob s:s9, last seen ${formatIso(mtime)}`,
+      `dep add: b\nover the claim of bob s:s9 (orphaned, last seen ${formatIso(mtime)})`,
     );
   });
 

@@ -23,13 +23,9 @@ import type { LoadedTree } from "./projects.js";
 import { claimLiveness } from "./sessions.js";
 import type { Task } from "./task.js";
 import { makeTask } from "./task.js";
-import type { SupersededClaim } from "./transitions.js";
-import {
-  NO_CLAIM,
-  cascadeTarget,
-  claimsText,
-  isClaimant,
-} from "./transitions.js";
+import type { SupersededClaim } from "./authorization.js";
+import { isClaimant, supersededClaimOf } from "./authorization.js";
+import { NO_CLAIM, cascadeTarget, claimsText } from "./transitions.js";
 import type { Tree } from "./tree.js";
 import {
   archivedTaskDir,
@@ -53,7 +49,7 @@ import {
   cascadeLine,
   logEntryFor,
   moveLine,
-  takeoverLine,
+  passedOverLine,
 } from "./workspace.js";
 
 /**
@@ -331,6 +327,7 @@ async function relocate(
     const authorization = await authorize(tree, source.task, context.identity, {
       force,
       label: subject.from,
+      command: "move",
     });
     forced = forced || authorization.forced;
   }
@@ -386,7 +383,12 @@ async function relocate(
     const claimLine =
       claim === undefined
         ? null
-        : takeoverLine(claim.claimant, claim.session, claim.last_seen);
+        : passedOverLine(
+            claim.claimant,
+            claim.session,
+            claim.liveness,
+            claim.last_seen,
+          );
     await appendLogEntry(
       dir,
       logEntryFor(context.identity, now, [
@@ -867,17 +869,12 @@ async function passClaims(
       continue;
     }
     const claim = await claimLiveness(tree, task);
-    // Inconsistent claim fields name nobody to supersede; validation
-    // reports them.
-    if (fm.claimed_by !== null) {
-      superseded.set(task.id, {
-        id: qualify(renames.get(task.id) ?? task.id),
-        claimant: fm.claimed_by,
-        session: fm.claimed_session,
-        liveness: claim.liveness,
-        last_seen: claim.last_seen,
-      });
-    }
+    const passed = supersededClaimOf(
+      qualify(renames.get(task.id) ?? task.id),
+      fm,
+      claim,
+    );
+    if (passed !== null) superseded.set(task.id, passed);
     if (claim.liveness !== "orphaned") {
       live.push({
         id: qualify(task.id),

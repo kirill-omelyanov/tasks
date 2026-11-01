@@ -5,6 +5,8 @@ import path from "node:path";
 
 import type { CommandContext } from "../context.js";
 import { TaskError } from "../errors.js";
+import type { SupersededClaim } from "./authorization.js";
+import { judgeAuthorization } from "./authorization.js";
 import {
   errnoCode,
   isDirectory,
@@ -42,10 +44,8 @@ import {
   taskDir,
 } from "./tree.js";
 import type {
-  AuthorizationDetails,
   DependentsDetails,
   Identity,
-  Liveness,
   Status,
   TaskWithDerivedJson,
 } from "./types.js";
@@ -200,53 +200,21 @@ export interface AuthorizeOptions {
   force?: boolean;
   /** The id as output names it: qualified for a listed project. */
   label?: string;
-}
-
-/** An orphaned claim a write passed over, for its log entry. */
-export interface SupersededClaim {
-  claimant: string;
-  session: string | null;
-  /** The claimant session's last heartbeat, or `null` when none is known. */
-  last_seen: string | null;
+  /** The command, for messages: `edit` by default, `delete`, `move`. */
+  command?: string;
 }
 
 export interface Authorization {
   /** Only `--force` allowed the write; its log entry says so. */
   forced: boolean;
-  /** Set when the write went past an orphaned claim. */
+  /** The claim the write went past: orphaned, or overridden by `--force`. */
   superseded: SupersededClaim | null;
 }
 
-function refusal(
-  task: Task,
-  id: string,
-  liveness: Liveness | null,
-  message: string,
-): TaskError {
-  const fm = task.frontmatter;
-  const details: AuthorizationDetails = {
-    id,
-    claimed_by: fm.claimed_by,
-    claimed_session: fm.claimed_session,
-    assignee: fm.assignee,
-    liveness,
-  };
-  return TaskError.conflict(`${message} Pass --force to override.`, {
-    kind: "authorization",
-    ...details,
-  });
-}
-
 /**
- * The authorization rules of transitions, for the writes that are not
- * transitions. A claim that is live or unknown admits only its claimant —
- * the same actor and, when the claim has a session, the same session — which
- * is the fence that stops a session superseded by a takeover from writing
- * over the new claimant's work. An orphaned claim protects nothing: the rest
- * of the rules decide, and the write records the claim it passed over. An
- * assigned task admits its assignee and the assignees of its ancestors;
- * anything else admits anyone. Call it inside the lock, on the task as
- * re-read there.
+ * The authorization rules, for the writes that are not transitions; the
+ * rules themselves live in `authorization.ts`. Call it inside the lock, on
+ * the task as re-read there.
  */
 export async function authorize(
   tree: Tree,
@@ -255,64 +223,24 @@ export async function authorize(
   options: AuthorizeOptions = {},
 ): Promise<Authorization> {
   const fm = task.frontmatter;
-  const id = options.label ?? task.id;
-  const force = options.force === true;
-  let superseded: SupersededClaim | null = null;
-  let liveness: Liveness | null = null;
-
   // Either claim signal counts, so a manifest whose claim fields disagree
   // with its status still protects whoever may be working on it.
-  if (fm.status === "IN_PROGRESS" || fm.claimed_by !== null) {
-    const claim = await claimLiveness(tree, task);
-    liveness = claim.liveness;
-    const isClaimant =
-      fm.claimed_by !== null &&
-      fm.claimed_by === identity.actor &&
-      (fm.claimed_session === null || fm.claimed_session === identity.session);
-    if (isClaimant) return { forced: false, superseded: null };
-
-    if (claim.liveness !== "orphaned") {
-      if (force) return { forced: true, superseded: null };
-      const who =
-        fm.claimed_session === null
-          ? `${fm.claimed_by ?? "nobody"} with no session (liveness ${claim.liveness})`
-          : `${fm.claimed_by ?? "nobody"} in session ${fm.claimed_session} (${claim.liveness})`;
-      const only =
-        fm.claimed_session === null
-          ? "only its claimant may change it"
-          : "only that session may change it";
-      throw refusal(task, id, liveness, `${id} is claimed by ${who}; ${only}.`);
-    }
-    superseded = {
-      claimant: fm.claimed_by ?? "unknown",
-      session: fm.claimed_session,
-      last_seen: claim.last_seen,
-    };
-  }
-
-  if (fm.assignee !== null) {
-    const authorities = [
-      fm.assignee,
-      ...ancestorsOf(tree, task.id).flatMap((ancestor) =>
-        ancestor.frontmatter.assignee === null
-          ? []
-          : [ancestor.frontmatter.assignee],
-      ),
-    ];
-    if (!authorities.includes(identity.actor)) {
-      if (force) return { forced: true, superseded };
-      const named = [...new Set(authorities)].join(" or ");
-      const orphaned = superseded === null ? "" : " and its claim is orphaned";
-      throw refusal(
-        task,
-        id,
-        liveness,
-        `${id} is assigned to ${fm.assignee}${orphaned}; only ${named} may change it.`,
-      );
-    }
-  }
-
-  return { forced: false, superseded };
+  const claimed =
+    fm.status === "IN_PROGRESS" || fm.claimed_by !== null
+      ? await claimLiveness(tree, task)
+      : null;
+  const verdict = judgeAuthorization({
+    task,
+    ancestors: ancestorsOf(tree, task.id),
+    identity,
+    claimed,
+    shown: options.label ?? task.id,
+    command: options.command ?? "edit",
+  });
+  if (verdict.admitted)
+    return { forced: false, superseded: verdict.superseded };
+  if (options.force !== true) throw verdict.refusal;
+  return { forced: true, superseded: verdict.superseded };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1045,6 +973,7 @@ export async function deleteTask(
     await authorize(tree, task, context.identity, {
       force: options.force,
       label: shown,
+      command: "delete",
     });
 
     const instead = isResolvedTask(task)

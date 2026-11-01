@@ -2,7 +2,8 @@ import { Command } from "commander";
 
 import type { CommandContext } from "../context.js";
 import { openContext } from "../context.js";
-import type { SupersededClaim, TransitionResult } from "../core/transitions.js";
+import type { SupersededClaim } from "../core/authorization.js";
+import type { TransitionResult } from "../core/transitions.js";
 import {
   applyTransition,
   claimNext,

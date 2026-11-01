@@ -14,7 +14,7 @@ import {
   appendLogEntry,
   forcedSuffix,
   logEntryFor,
-  takeoverLine,
+  passedOverLine,
 } from "../core/workspace.js";
 import { TaskError, isTaskError } from "../errors.js";
 import { emitJson, renderDepList, ui, writeOut } from "../output.js";
@@ -160,7 +160,12 @@ function supersededLine(authorization: Authorization): string | null {
   const claim = authorization.superseded;
   return claim === null
     ? null
-    : takeoverLine(claim.claimant, claim.session, claim.last_seen);
+    : passedOverLine(
+        claim.claimant,
+        claim.session,
+        claim.liveness,
+        claim.last_seen,
+      );
 }
 
 interface EditOutcome {

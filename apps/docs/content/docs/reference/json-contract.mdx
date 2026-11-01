@@ -98,7 +98,7 @@ branch without reading the message:
 | `kind`                  | Refused by                                     | With                                    |
 | ----------------------- | ---------------------------------------------- | --------------------------------------- |
 | `illegal-transition`    | a transition from a status its row excludes    | `from`, `to`, `allowed`                 |
-| `authorization`         | a transition by someone the rules exclude      | `claimed_by`, `claimed_session`, `assignee`, `liveness` |
+| `authorization`         | a transition, `state`, a gate edit, `delete` or `move` by someone the rules exclude | `claimed_by`, `claimed_session`, `assignee`, `liveness` |
 | `already-claimed`       | `claim` of a task this session already holds   | as `authorization`                      |
 | `start-gate`            | `claim`, `done`                                | `blocked_by`                            |
 | `finish-gate`           | `done`                                         | `open_children`, `finishes_after`       |

@@ -772,12 +772,12 @@ describe("move: work in progress", () => {
     expect(plain(result.stdout)).toContain("✓ move e → f (forced)");
     expect((await frontmatterOf(s, "f/a")).claimed_by).toBe("alice");
     expect((await lastEntry(s, "f/a")).text).toMatch(
-      /^move: e\/a → f\/a \(forced\)\nsupersedes alice s:s1, last seen \S+Z$/,
+      /^move: e\/a → f\/a \(forced\)\nover the claim of alice s:s1 \(live, last seen \S+Z\)$/,
     );
     expect(await logTexts(s, "f")).toEqual(["move: e → f (forced)"]);
   });
 
-  it("passes an orphaned claim and records it as a takeover would", async () => {
+  it("passes an orphaned claim and records the claim it went past", async () => {
     const s = await box({ tasks: { e: {}, "e/a": claimedByAlice } });
     await heartbeat(s, "s1", STALE);
     const seen = await lastSeen(s, "s1");
@@ -788,7 +788,7 @@ describe("move: work in progress", () => {
       `superseded alice s:s1 on f/a (orphaned, last seen ${seen})`,
     );
     expect(await logTexts(s, "f/a")).toEqual([
-      `move: e/a → f/a\nsupersedes alice s:s1, last seen ${seen}`,
+      `move: e/a → f/a\nover the claim of alice s:s1 (orphaned, last seen ${seen})`,
     ]);
     expect(await logTexts(s, "f")).toEqual(["move: e → f"]);
   });

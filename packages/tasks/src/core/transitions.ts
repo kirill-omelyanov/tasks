@@ -1,5 +1,12 @@
 import type { CommandContext } from "../context.js";
 import { TaskError } from "../errors.js";
+import type { SupersededClaim } from "./authorization.js";
+import {
+  authorizationDetailsOf,
+  isClaimant,
+  judgeAuthorization,
+  supersededClaimOf,
+} from "./authorization.js";
 import type { DerivedTask } from "./derive.js";
 import { holdsSubtree, readySet } from "./derive.js";
 import { toBlockedBy, unavailableReason } from "./gates.js";
@@ -22,7 +29,6 @@ import {
 } from "./tree.js";
 import type {
   AncestorDetails,
-  AuthorizationDetails,
   CascadeClaimDetails,
   ClaimLiveness,
   FinishGate,
@@ -30,7 +36,6 @@ import type {
   Frontmatter,
   Identity,
   IllegalTransitionDetails,
-  Liveness,
   StartGate,
   StartGateDetails,
   StateDetails,
@@ -102,16 +107,6 @@ export interface ClaimNextOptions extends TransitionOptions {
   all?: boolean;
   /** Only the local tree, even when `projects:` lists others. */
   local?: boolean;
-}
-
-/** A claim a command passed over without being its claimant. */
-export interface SupersededClaim {
-  /** The task that carried it, qualified when foreign. */
-  id: string;
-  claimant: string;
-  session: string | null;
-  liveness: Liveness;
-  last_seen: string | null;
 }
 
 export interface TransitionResult {
@@ -740,17 +735,6 @@ function targetOf(run: Run, task: Task): Status {
 /* Authorization                                                            */
 /* ------------------------------------------------------------------------ */
 
-/**
- * The claimant rule: the same actor, and its session when the claim has one.
- * Exported for `move`, which applies it to every task it relocates.
- */
-export function isClaimant(fm: Frontmatter, identity: Identity): boolean {
-  return (
-    fm.claimed_by === identity.actor &&
-    (fm.claimed_session === null || fm.claimed_session === identity.session)
-  );
-}
-
 /** The claim's own actor from its own session: the task is already theirs. */
 function isSameSession(fm: Frontmatter, identity: Identity): boolean {
   return (
@@ -769,56 +753,19 @@ function authorize(
   task: Task,
   claimed: ClaimLiveness | null,
 ): SupersededClaim | null {
-  if (claimed === null) {
-    checkAssignee(run, task, null);
-    return null;
+  const verdict = judgeAuthorization({
+    task,
+    ancestors: ancestorsOf(run.tree, task.id),
+    identity: run.identity,
+    claimed,
+    shown: run.shown(task.id),
+    command: run.command,
+  });
+  if (!verdict.admitted) {
+    const { refusal } = verdict;
+    run.overridable(() => refusal);
   }
-  // A claim by the same session was refused already; any other claim is
-  // someone else's work to `claim`, whoever the actor is.
-  if (run.command !== "claim" && isClaimant(task.frontmatter, run.identity)) {
-    return null;
-  }
-  if (claimed.liveness !== "orphaned") {
-    run.overridable(() => claimantRefusal(run, task, claimed));
-    return supersededOf(run, task, claimed);
-  }
-  // Liveness protects live work; authority governs the rest.
-  checkAssignee(run, task, claimed);
-  return supersededOf(run, task, claimed);
-}
-
-/** Authority flows down: the assignee, or the assignee of an ancestor. */
-function checkAssignee(
-  run: Run,
-  task: Task,
-  claimed: ClaimLiveness | null,
-): void {
-  const assignee = task.frontmatter.assignee;
-  const actor = run.identity.actor;
-  if (assignee === null || assignee === actor) return;
-  const above = ancestorsOf(run.tree, task.id).some(
-    (ancestor) => ancestor.frontmatter.assignee === actor,
-  );
-  if (above) return;
-  run.overridable(() => assigneeRefusal(run, task, claimed));
-}
-
-function supersededOf(
-  run: Run,
-  task: Task,
-  claimed: ClaimLiveness,
-): SupersededClaim | null {
-  const fm = task.frontmatter;
-  // Inconsistent claim fields name nobody to supersede; validation reports
-  // them, and the transition clears them like any claim.
-  if (fm.claimed_by === null) return null;
-  return {
-    id: run.shown(task.id),
-    claimant: fm.claimed_by,
-    session: fm.claimed_session,
-    liveness: claimed.liveness,
-    last_seen: claimed.last_seen,
-  };
+  return verdict.superseded;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1017,7 +964,11 @@ async function planCascade(run: Run, task: Task): Promise<Reach[]> {
       !isClaimant(descendant.frontmatter, run.identity)
     ) {
       const claimed = await claimLiveness(run.tree, descendant);
-      superseded = supersededOf(run, descendant, claimed);
+      superseded = supersededClaimOf(
+        run.shown(descendant.id),
+        descendant.frontmatter,
+        claimed,
+      );
       if (claimed.liveness !== "orphaned") {
         live.push({
           id: run.shown(descendant.id),
@@ -1241,77 +1192,6 @@ function illegalTransition(run: Run, task: Task, to: Status): TaskError {
   });
 }
 
-function authorizationDetails(
-  run: Run,
-  task: Task,
-  claimed: ClaimLiveness | null,
-): AuthorizationDetails {
-  const fm = task.frontmatter;
-  return {
-    id: run.shown(task.id),
-    claimed_by: fm.claimed_by,
-    claimed_session: fm.claimed_session,
-    assignee: fm.assignee,
-    liveness: claimed?.liveness ?? null,
-  };
-}
-
-/** `alice in session s1 (live, last seen …)`, as a refusal names a claim. */
-function claimText(fm: Frontmatter, claimed: ClaimLiveness): string {
-  const who = fm.claimed_by ?? "nobody";
-  const session =
-    fm.claimed_session === null
-      ? "without a session"
-      : `in session ${fm.claimed_session}`;
-  let state: string;
-  switch (claimed.liveness) {
-    case "live":
-      state = `live, last seen ${claimed.last_seen ?? "just now"}`;
-      break;
-    case "orphaned":
-      state = `orphaned, last seen ${claimed.last_seen ?? "unknown"}`;
-      break;
-    case "unknown":
-      state =
-        fm.claimed_session === null
-          ? "liveness unknown"
-          : "liveness unknown: no heartbeat from that session here";
-      break;
-  }
-  return `${who} ${session} (${state})`;
-}
-
-function claimantRefusal(
-  run: Run,
-  task: Task,
-  claimed: ClaimLiveness,
-): TaskError {
-  const shown = run.shown(task.id);
-  const rule =
-    run.command === "claim"
-      ? claimed.liveness === "live"
-        ? "a claim on live work is refused"
-        : "a claim whose liveness cannot be judged is refused"
-      : `only its claimant may ${run.command} it`;
-  return TaskError.conflict(
-    `${shown} is claimed by ${claimText(task.frontmatter, claimed)}; ${rule}. Pass --force to override.`,
-    { ...authorizationDetails(run, task, claimed), kind: "authorization" },
-  );
-}
-
-function assigneeRefusal(
-  run: Run,
-  task: Task,
-  claimed: ClaimLiveness | null,
-): TaskError {
-  const shown = run.shown(task.id);
-  const assignee = task.frontmatter.assignee;
-  return TaskError.conflict(
-    `${shown} is assigned to ${assignee}: while it is not claimed, only ${assignee} or the assignee of an ancestor may ${run.command} it. Pass --force to override.`,
-    { ...authorizationDetails(run, task, claimed), kind: "authorization" },
-  );
-}
-
 function alreadyClaimed(
   run: Run,
   task: Task,
@@ -1325,7 +1205,10 @@ function alreadyClaimed(
       : `${fm.claimed_by} in session ${fm.claimed_session}`;
   return TaskError.conflict(
     `${shown} is already claimed by ${holder}, the claim this command would take.`,
-    { ...authorizationDetails(run, task, claimed), kind: "already-claimed" },
+    {
+      ...authorizationDetailsOf(run.shown(task.id), task.frontmatter, claimed),
+      kind: "already-claimed",
+    },
   );
 }
 

@@ -170,7 +170,8 @@ first line names the command (`claim: TODO → IN_PROGRESS`,
 `priority: high`, `new: TODO`, `dep add: …`, `move: old → new`); a task a
 cascade reached gets `<command> with <parent>: <from> → <to>`; a forced entry is
 marked `(forced)`; a takeover adds `supersedes <actor> s:<session>, last seen
-<time>`. Entries are never edited; merge conflicts are resolved by keeping both
+<time>`; a gate edit or a move past a claim adds `over the claim of <actor>
+s:<session> (<liveness>, last seen <time>)`. Entries are never edited; merge conflicts are resolved by keeping both
 entries in time order.
 
 ## `config.yml`

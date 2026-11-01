@@ -212,7 +212,10 @@ happened:
 
 The message given with `-m` follows the first line. A forced transition is marked
 `(forced)` on its first line, and a transition that passed over an orphaned claim adds
-`supersedes agent s:7f3a, last seen 2026-09-21T16:40:12Z`.
+`supersedes agent s:7f3a, last seen 2026-09-21T16:40:12Z`. A gate edit or a move that went
+past a claim leaves the claim in place and adds
+`over the claim of agent s:7f3a (orphaned, last seen 2026-09-21T16:40:12Z)` — `(live, …)`
+when `--force` went past live work.
 
 Entries are never edited. Two branches that both appended merge mechanically — keep
 both entries, in time order — and a `log.md` left with conflict markers is a validation

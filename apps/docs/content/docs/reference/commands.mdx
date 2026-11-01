@@ -499,8 +499,8 @@ reaches every reference the tooling can see.
 `state.md` and assignees are kept, claims are cleared.
 
 **Writes** the directory rename, and on every moved task a log entry
-`move: <old-id> → <new-id>` (` (forced)` when forced), followed by the defer line or a
-`supersedes …` line where one applies. `updated` is stamped only on manifests whose
+`move: <old-id> → <new-id>` (` (forced)` when forced), followed by the defer line or an
+`over the claim of …` line where one applies: the claim travels with the task. `updated` is stamped only on manifests whose
 frontmatter changed — a deferred task, a rewritten reference; a pure relocation leaves
 it alone. Groups have no manifest and get no entry.
 

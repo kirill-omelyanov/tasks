@@ -131,7 +131,9 @@ Every mutation of a tree MUST be performed under one **tree-wide exclusive lock*
 `.tasks/.locks/tree.lock`, acquired with an operation that atomically fails if the file exists
 (`O_EXCL` or equivalent). The implementation MUST re-read every task whose state the mutation
 depends on **inside** the lock before deciding. A lock older than a documented staleness
-threshold MUST be reclaimable; the reference threshold is 10 seconds.
+threshold MUST be reclaimable; the reference threshold is 10 seconds. A holder SHOULD keep a lock
+it holds younger than that threshold while it works, so a long write is not reclaimed under it; the
+reference implementation touches its lock every 2.5 seconds.
 
 Each tree has its own lock. A command that writes several trees MUST write them one at a time,
 each under its own lock; there are no cross-tree transactions, and every intermediate state is one

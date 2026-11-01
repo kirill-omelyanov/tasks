@@ -103,6 +103,14 @@ The epic's `design.md` and `plan.md` live with it in the tracker. `finishes_afte
 it open until its parts are resolved, without making them its children: `cancel` on the
 epic does not reach into the product repositories.
 
+The epic has no children of its own, so the ready rule does not hold it back while its parts
+are open, and `claim --next` would offer it as free work. Assign it to its owner, or create
+it with `--backlog` until the parts are done:
+
+```sh
+tasks assign public-api alice
+```
+
 </Step>
 
 <Step>
@@ -137,7 +145,7 @@ tasks log --since 1d    # yesterday across all of them
 
 ```txt
 TASK                       SITUATION                             LABELS  TITLE
-public-api                 ready                                         Launch the public API
+public-api                 assigned alice                                Launch the public API
   ↳ after backend:kernel/claims-api (not-done)
   ↳ after web:session-ui (not-done)
 backend:kernel/claims-api  ready                                         Expose the claims API

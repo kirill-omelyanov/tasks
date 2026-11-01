@@ -194,7 +194,7 @@ never stored.
 | `children`           | `{open, resolved}`: live children by state.                                           |
 | `active`             | A task beneath is `IN_PROGRESS`.                                                      |
 | `waiting_for`        | The assignee of a `PAUSED` task, else `null`.                                         |
-| `closable`           | An open parent whose finish gate is satisfied.                                        |
+| `closable`           | An open task with children or `finishes_after` whose finish gate is satisfied.        |
 | `liveness`           | For `IN_PROGRESS`: `live`, `orphaned` or `unknown`; else `null`.                      |
 | `last_seen`          | The claimant session's last heartbeat, or `null`.                                     |
 | `last_entry`         | The most recent log entry — `{time, actor, via, session, text}` — or `null`.          |

@@ -41,7 +41,7 @@ and MUST NOT be persisted to any file:
 | **parked** | `BACKLOG` and started: begun, then set aside. |
 | **held** | An open task with an ancestor that is claimed or assigned: that ancestor's work or decision comes first (see [Hold](/docs/spec/containment#hold)). |
 | **progress** | For a parent: live children resolved and open, and whether any descendant is `IN_PROGRESS` (**active**). |
-| **closable** | An open parent whose finish gate is satisfied: it can be closed either way without touching anything else. |
+| **closable** | An open task with children or `finishes_after` references whose finish gate is satisfied: it can be closed either way without touching anything else. |
 | **claim liveness** | For `IN_PROGRESS`: live, orphaned, or unknown, see [Sessions and liveness](/docs/spec/sessions). |
 
 A ready set MUST be ordered by effective [priority](/docs/spec/lifecycle#priority) first, then `PAUSED` before `TODO`,
@@ -55,7 +55,10 @@ then `created` ascending; aggregated output interleaves projects by the same key
   among equal priorities, and the oldest task comes first because nothing else in the tree says
   what matters more. A parent
   with open children is not ready because its work is its children's until they close; it comes up
-  by itself once they have — to verify, to integrate, or simply to be closed. A `BACKLOG` parent
+  by itself once they have — to verify, to integrate, or simply to be closed. A task whose finish
+  gate waits only on `finishes_after` references stays ready: a join is worked beside its parts and
+  closed after them, so an epic that is nothing but a join is assigned to its owner or deferred
+  rather than left for `claim --next`. A `BACKLOG` parent
   has only `BACKLOG` children ([Containment](/docs/spec/containment)), so nothing under it is ready either;
   without these rules every epic created by `new` would be offered to every agent as free work. A
   claimed or assigned ancestor holds its subtree for the mirror-image reason: its decomposition is
@@ -81,7 +84,7 @@ situation by this table, so that two of them agree on what a tree looks like.
 | `waiting for X` | `PAUSED` with an assignee | `PAUSED` |
 | `assigned X` | an assignee, not `PAUSED` | `TODO`, `BACKLOG`, `IN_PROGRESS` |
 | `blocked by X` | an unsatisfied `depends_on` reference | any open |
-| `closable` | a parent whose finish gate is satisfied: closable either way, no cascade | any open |
+| `closable` | a task with children or `finishes_after` references whose finish gate is satisfied: closable either way, no cascade | any open |
 | `open N/M` | a parent with open children | any open |
 | `ready` | free and unblocked, as defined above | `TODO`, `PAUSED` |
 

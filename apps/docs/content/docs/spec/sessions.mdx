@@ -18,7 +18,8 @@ An actor and a session token are opaque to implementations but MUST match:
 ^[A-Za-z0-9][A-Za-z0-9._@+-]*$
 ```
 
-An explicit override or an environment variable that does not match is a usage error; a
+An explicit override or an environment variable that does not match is a usage error, and an
+empty environment variable counts as unset; a
 version-control identity that does not match is skipped with a diagnostic and the next source is
 tried — a one-word `user.name` passes, a name with spaces is skipped and `user.email` is used.
 Nothing is normalized silently. The pattern is what keeps log headings parseable and makes

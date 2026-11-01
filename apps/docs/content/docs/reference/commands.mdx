@@ -177,7 +177,7 @@ combine with OR:
 | `--working`   | claimed                                         |
 | `--parked`    | `BACKLOG` with started work                     |
 | `--backlog`   | `BACKLOG` without started work                  |
-| `--closable`  | parents whose children are all resolved         |
+| `--closable`  | finish gate satisfied: children and joins resolved |
 | `--open`      | parents with open children                      |
 | `--done`      | done (resolved tasks appear only through these) |
 | `--cancelled` | cancelled                                       |
@@ -185,7 +185,7 @@ combine with OR:
 
 A filter selects by the situation word alone, so `list --ready` is not `tasks ready`:
 the ready set for you also holds tasks assigned to you — `assigned alice`,
-`waiting for alice` — and parents whose children are all resolved (`closable`).
+`waiting for alice` — and tasks whose finish gate is satisfied (`closable`).
 `--scope`, `--all` and `--local` work as for `ready`.
 
 ### `tasks tree`

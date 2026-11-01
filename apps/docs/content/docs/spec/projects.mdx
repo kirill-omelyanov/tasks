@@ -46,7 +46,8 @@ projects:
   An epic that spans repositories, coordination work, and anything that touches two repositories
   and cannot be split live in a dedicated **tracker repository** whose `.tasks/` lists the product
   repositories as projects; the maintainer works from its folder. The epic holds on its
-  cross-repository parts through `finishes_after`, and its `design.md` lives with it; tasks in the
+  cross-repository parts through `finishes_after`, and its `design.md` lives with it; it is assigned
+  to its owner, so the ready set does not offer it while its parts are open; tasks in the
   product repositories link to it by relative path in their body, because a tree that lists no
   projects cannot discover the tracker on its own (`referenced_by` reaches only listed trees). No
   product repository has to pretend to be the lead, and each repository's reviewer sees exactly

@@ -187,9 +187,12 @@ Feed a hook its input by hand from the repository root:
 
 ```sh
 echo '{"session_id":"test-1","hook_event_name":"Stop"}' \
-  | sh -c "$(jq -r '.hooks.Stop[0].hooks[0].command' .claude/settings.json)"
+  | sh -c "$(jq -r '[.hooks.Stop[].hooks[].command | select(test("tasks session-check"))][0]' .claude/settings.json)"
 echo "exit $?"
 ```
+
+The `select` picks the tasks hook wherever it sits in `Stop`: `tasks hooks install` appends it
+after the entries already there.
 
 Exit `0` means no task claimed by session `test-1` lacks a resume point; claim one with
 `--session test-1` and the same command exits `2` with the violation on stderr.

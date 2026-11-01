@@ -487,6 +487,10 @@ function blockedText(d: DerivedTask): string {
 export function situationText(d: DerivedTask): string {
   const { derived } = d;
   switch (derived.situation) {
+    case "working": {
+      const by = d.snapshot.task.frontmatter.claimed_by;
+      return by === null ? "working" : `working by ${by}`;
+    }
     case "held":
       return `held by ${derived.held_by}`;
     case "waiting":

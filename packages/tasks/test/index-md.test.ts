@@ -120,11 +120,11 @@ describe("renderIndex", () => {
         "- billing/",
         "  - [billing/invoices](billing/invoices/) — invoices · ready",
         "- [blocked](blocked/) — blocked · blocked by solo",
-        "- [solo](solo/) — solo · working",
+        "- [solo](solo/) — solo · working by tester",
         "",
       ].join("\n"),
     );
-    expect(text.endsWith("working\n")).toBe(true);
+    expect(text.endsWith("working by tester\n")).toBe(true);
     expect(text).not.toContain("old/thing");
     expect(text).not.toContain("screenshots");
     expect(text).not.toContain("empty-group");

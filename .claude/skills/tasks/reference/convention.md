@@ -101,7 +101,7 @@ updated: "2026-09-21T16:40:12Z"
 | `CANCELLED`   | decided not to do                        | resolved |
 
 Overviews show one **situation** per task, the first that holds: `done`,
-`cancelled`, `working`, `parked` (`BACKLOG` with a `state.md` at or beneath it),
+`cancelled`, `working by X`, `parked` (`BACKLOG` with a `state.md` at or beneath it),
 `backlog`, `held by X` (an ancestor is claimed or assigned), `waiting for X`
 (`PAUSED` with an assignee), `assigned X`, `blocked by X`, `closable` (children
 and joins all resolved), `open N/M` (a parent with open children),

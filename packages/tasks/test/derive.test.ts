@@ -231,7 +231,7 @@ describe("the situation table", () => {
     const expected: Record<string, [Situation, string]> = {
       finished: ["done", "done"],
       dropped: ["cancelled", "cancelled"],
-      worked: ["working", "working"],
+      worked: ["working", "working by tester"],
       shelved: ["parked", "parked"],
       later: ["backlog", "backlog"],
       "epic/part": ["held", "held by epic"],
@@ -1006,7 +1006,7 @@ describe("labels", () => {
       "held by epic · started · blocked by x (cancelled) · active · waiting for bob",
     );
     expect(shown(get(derived, "epic/worked"))).toBe(
-      "working · blocked by y · high · live · assigned bob · held by epic · closable",
+      "working by tester · blocked by y · high · live · assigned bob · held by epic · closable",
     );
   });
 
@@ -1124,9 +1124,9 @@ describe("the agent protocol's Shown column", () => {
       waits: "blocked by x",
       unscheduled: "backlog",
       deploy: "assigned alice",
-      worked: "working · live",
+      worked: "working by tester · live",
       paused: "ready · started",
-      crashed: "working · orphaned since 2026-09-21T16:40:12Z",
+      crashed: "working by tester · orphaned since 2026-09-21T16:40:12Z",
       "paused-waits": "blocked by x · started",
       review: "waiting for alice",
       "after-y": "blocked by y · started",

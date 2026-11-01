@@ -1073,7 +1073,7 @@ describe("mine", () => {
   it("renders each task's last log entry", async () => {
     sandbox = await treeSandbox(MINE_TREE);
     const out = plain((await sandbox.session("s1")("mine")).stdout);
-    expect(out).toMatch(/this-session\s+working\s+live/);
+    expect(out).toMatch(/this-session\s+working by tester\s+live/);
     expect(out).toContain("2026-01-02T00:00:00Z alice");
     expect(out).toContain("Please deploy after the review.");
     expect(out).toContain("2026-01-03T00:00:00Z tester s:s1");
@@ -1217,9 +1217,9 @@ describe("list", () => {
     expect(collection(await sandbox.run("list", "--json")).projects).toEqual(
       [],
     );
-    expect(
-      collection(await sandbox.run("list", "--json")).unavailable,
-    ).toEqual([{ alias: "gone", reason: "not-checked-out" }]);
+    expect(collection(await sandbox.run("list", "--json")).unavailable).toEqual(
+      [{ alias: "gone", reason: "not-checked-out" }],
+    );
     expect(
       collection(await sandbox.run("list", "--local", "--json")).unavailable,
     ).toEqual([]);

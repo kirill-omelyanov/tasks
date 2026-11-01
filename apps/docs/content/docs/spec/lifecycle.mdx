@@ -77,7 +77,7 @@ situation by this table, so that two of them agree on what a tree looks like.
 | Situation | Condition | Statuses in which it can hold |
 | --- | --- | --- |
 | `done`, `cancelled` | resolved | one each |
-| `working` | a claimant is recorded; shown with its liveness | `IN_PROGRESS` |
+| `working by X` | a claimant X is recorded; shown with its liveness | `IN_PROGRESS` |
 | `parked` | `BACKLOG` with started work at the task or beneath it | `BACKLOG` |
 | `backlog` | `BACKLOG` without started work | `BACKLOG` |
 | `held by X` | an ancestor X is claimed or assigned ([Hold](/docs/spec/containment#hold)) | `TODO`, `PAUSED` |

@@ -135,7 +135,9 @@ will head every entry you write.
 
 A **session** is one run of an agent. Its token comes from `--session <token>`, else
 `TASKS_SESSION`; an empty variable counts as unset. Tokens follow the actor pattern,
-which also makes them safe as file names under `.tasks/.locks/sessions/`.
+which also makes them safe as file names under `.tasks/.locks/sessions/`. On a
+case-insensitive filesystem two tokens that differ only in case share one heartbeat file,
+and Windows refuses its reserved names (`CON`, `NUL`) as tokens.
 
 With a session known, the CLI records it in `claimed_session` on `claim`, in every log
 heading it writes (`s:<token>`), and touches the session's heartbeat in this tree and in

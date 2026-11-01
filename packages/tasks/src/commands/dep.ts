@@ -12,6 +12,7 @@ import { resolveTaskArg, resolveTaskId, writeTask } from "../core/tree.js";
 import type { GateField, ResolvedRef } from "../core/types.js";
 import {
   appendLogEntry,
+  forcedSuffix,
   logEntryFor,
   takeoverLine,
 } from "../core/workspace.js";
@@ -152,8 +153,7 @@ function editLine(
   refs: readonly string[],
   authorization: Authorization,
 ): string {
-  const forced = authorization.forced ? " (forced)" : "";
-  return `${spec.name} ${action}: ${refs.join(", ")}${forced}`;
+  return `${spec.name} ${action}: ${refs.join(", ")}${forcedSuffix(authorization.forced)}`;
 }
 
 function supersededLine(authorization: Authorization): string | null {

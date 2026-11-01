@@ -474,17 +474,31 @@ export function findArchivedTask(tree: Tree, id: string): Task {
   });
 }
 
+export interface ResolveTaskIdOptions {
+  /** The argument as the user typed it, for messages; `arg` by default. */
+  argument?: string;
+  /** How messages name ids: qualified by the alias of a listed project. */
+  qualify?: (id: string) => string;
+}
+
 /**
  * Resolve a command-line path over the live tree by the suffix rule. When it
  * matches nothing live but names an archived task, the not-found error says
  * so (`details.archived`).
  */
-export function resolveTaskId(tree: Tree, arg: string): string {
+export function resolveTaskId(
+  tree: Tree,
+  arg: string,
+  options: ResolveTaskIdOptions = {},
+): string {
+  const argument = options.argument ?? arg;
+  const qualify = options.qualify ?? ((id: string) => id);
   try {
-    return resolveSuffix(arg, [
-      ...tree.byId.keys(),
-      ...tree.malformedById.keys(),
-    ]);
+    return resolveSuffix(
+      arg,
+      [...tree.byId.keys(), ...tree.malformedById.keys()],
+      { argument, qualify },
+    );
   } catch (err) {
     if (!isTaskError(err) || err.code !== "NOT_FOUND") throw err;
     let archived: string | null = null;
@@ -497,9 +511,10 @@ export function resolveTaskId(tree: Tree, arg: string): string {
       // Nothing (or several things) archived either: the original stands.
     }
     if (archived === null) throw err;
+    const shown = qualify(archived);
     throw TaskError.notFound(
-      `${archived} is archived. Restore it with \`tasks restore ${archived}\` first.`,
-      { argument: arg, id: archived, archived: true },
+      `${shown} is archived. Restore it with \`tasks restore ${shown}\` first.`,
+      { argument, id: shown, archived: true },
     );
   }
 }

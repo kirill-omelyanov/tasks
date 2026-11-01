@@ -1,7 +1,7 @@
 import type { CommandContext } from "../context.js";
 import { TaskError } from "../errors.js";
 import type { DerivedTask } from "./derive.js";
-import { readySet } from "./derive.js";
+import { holdsSubtree, readySet } from "./derive.js";
 import { toBlockedBy, unavailableReason } from "./gates.js";
 import { assertTaskPath, compareIds } from "./ids.js";
 import type { Fresh } from "./mutate.js";
@@ -953,19 +953,6 @@ function refuseUnderResolved(run: Run, task: Task): void {
       kind: "resolved-ancestor",
       status,
     },
-  );
-}
-
-/**
- * A claimed or assigned task holds its subtree. Either claim field counts,
- * as in the derivation of `held_by`, so inconsistent fields still hold.
- */
-function holdsSubtree(task: Task): boolean {
-  const fm = task.frontmatter;
-  return (
-    fm.status === "IN_PROGRESS" ||
-    fm.claimed_by !== null ||
-    fm.assignee !== null
   );
 }
 

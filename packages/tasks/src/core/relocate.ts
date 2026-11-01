@@ -52,6 +52,7 @@ import {
   appendLogEntry,
   cascadeLine,
   logEntryFor,
+  moveLine,
   takeoverLine,
 } from "./workspace.js";
 
@@ -1203,15 +1204,6 @@ async function discardCopy(to: string): Promise<void> {
 /* ------------------------------------------------------------------------ */
 /* Helpers                                                                  */
 /* ------------------------------------------------------------------------ */
-
-/**
- * `move: a/x → b/x`, with the ` (forced)` every first line of `log.md`
- * carries when `--force` was needed. Ids are the tree's own: an alias means
- * nothing inside it.
- */
-function moveLine(from: string, to: string, forced: boolean): string {
-  return `move: ${from} → ${to}${forced ? " (forced)" : ""}`;
-}
 
 function deepestFirst(a: Task, b: Task): number {
   return depthOf(b.id) - depthOf(a.id) || compareIds(a.id, b.id);

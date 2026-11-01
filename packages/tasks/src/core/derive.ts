@@ -126,7 +126,7 @@ interface Lineage {
 }
 
 /** A claimed or assigned task holds its subtree (see Hold in the spec). */
-function holdsSubtree(task: Task): boolean {
+export function holdsSubtree(task: Task): boolean {
   const fm = task.frontmatter;
   // Either claim signal counts, so inconsistent claim fields still hold.
   return (

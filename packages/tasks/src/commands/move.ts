@@ -5,6 +5,7 @@ import { qualifyId } from "../core/ids.js";
 import type { MoveResult } from "../core/relocate.js";
 import { moveJson, moveSubtree } from "../core/relocate.js";
 import type { RewrittenRefJson } from "../core/types.js";
+import { forcedSuffix } from "../core/workspace.js";
 import { emitJson, ui, writeOut } from "../output.js";
 
 interface MoveCommandOptions {
@@ -75,8 +76,11 @@ function byProject(
  * for every reference it could not write.
  */
 function renderMove(result: MoveResult): string {
-  const forced = result.forced ? " (forced)" : "";
-  const lines = [ui.success(`move ${result.from} → ${result.to}${forced}`)];
+  const lines = [
+    ui.success(
+      `move ${result.from} → ${result.to}${forcedSuffix(result.forced)}`,
+    ),
+  ];
   if (result.tasks.length === 0)
     lines.push(`  ${ui.dim("no task beneath it")}`);
   for (const task of result.tasks) {

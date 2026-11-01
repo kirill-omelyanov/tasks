@@ -445,8 +445,21 @@ export interface LineOptions {
 const ARROW = "→";
 const FORCED_MARK = " (forced)";
 
+/** ` (forced)` when `--force` was needed, else nothing. */
+export function forcedSuffix(forced: boolean): string {
+  return forced ? FORCED_MARK : "";
+}
+
 function forcedMark(options: LineOptions | undefined): string {
-  return options?.forced ? FORCED_MARK : "";
+  return forcedSuffix(options?.forced === true);
+}
+
+/**
+ * `move: a/x → b/x`, with ` (forced)` when `--force` was needed. Ids are the
+ * tree's own: an alias means nothing inside it.
+ */
+export function moveLine(from: string, to: string, forced: boolean): string {
+  return `move: ${from} ${ARROW} ${to}${forcedSuffix(forced)}`;
 }
 
 /** `claim: TODO → IN_PROGRESS`, with ` (forced)` when forced. */

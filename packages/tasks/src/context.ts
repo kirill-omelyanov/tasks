@@ -7,7 +7,7 @@ import type { DerivedTask } from "./core/derive.js";
 import type { Project } from "./core/discovery.js";
 import { requireProject } from "./core/discovery.js";
 import { GateResolver } from "./core/gates.js";
-import { assertTaskPath, resolveSuffix } from "./core/ids.js";
+import { assertTaskPath } from "./core/ids.js";
 import type { LoadedTree, ProjectLoad } from "./core/projects.js";
 import { Projects } from "./core/projects.js";
 import {
@@ -19,14 +19,20 @@ import {
 import { snapshotFromContext, snapshotTree } from "./core/snapshot.js";
 import type { Task } from "./core/task.js";
 import type { Tree } from "./core/tree.js";
-import { findTask, hasLiveTask, isGroup, loadTree } from "./core/tree.js";
+import {
+  findTask,
+  hasLiveTask,
+  isGroup,
+  loadTree,
+  resolveTaskId,
+} from "./core/tree.js";
 import type { Identity } from "./core/types.js";
 import {
   CONVENTION_VERSION,
   CONFIG_FILENAME,
   SESSION_ENV,
 } from "./core/types.js";
-import { TaskError, isTaskError } from "./errors.js";
+import { TaskError } from "./errors.js";
 import { ui, writeErr } from "./output.js";
 
 /** The options every command accepts, declared once on the program. */
@@ -230,10 +236,8 @@ export function resolveScope(
 
   const configured = context.tree.config.scope;
   if (configured !== null && !namesTreePath(context.tree, configured)) {
-    writeErr(
-      ui.warn(
-        `scope "${configured}" in ${path.join(context.project.tasksDir, CONFIG_FILENAME)} names no task or group of this tree; no local task is in scope.`,
-      ),
+    context.diagnose(
+      `scope "${configured}" in ${path.join(context.project.tasksDir, CONFIG_FILENAME)} names no task or group of this tree; no local task is in scope.`,
     );
   }
   return configured;
@@ -285,29 +289,10 @@ function resolveIdIn(
   rest: string,
   argument: string,
 ): string {
-  const { tree } = load;
-  const qualify = (id: string) => projects.qualify(load, id);
-  const live = [...tree.byId.keys(), ...tree.malformedById.keys()];
-  try {
-    return resolveSuffix(rest, live, { argument, qualify });
-  } catch (err) {
-    if (!isTaskError(err) || err.code !== "NOT_FOUND") throw err;
-    let archived: string | null = null;
-    try {
-      archived = resolveSuffix(rest, [
-        ...tree.archivedById.keys(),
-        ...tree.archivedMalformedById.keys(),
-      ]);
-    } catch {
-      // Nothing (or several things) archived either: the original stands.
-    }
-    if (archived === null) throw err;
-    const shown = qualify(archived);
-    throw TaskError.notFound(
-      `${shown} is archived. Restore it with \`tasks restore ${shown}\` first.`,
-      { argument, id: shown, archived: true },
-    );
-  }
+  return resolveTaskId(load.tree, rest, {
+    argument,
+    qualify: (id) => projects.qualify(load, id),
+  });
 }
 
 /** A `<task>` argument, resolved: the tree that holds it and the task. */

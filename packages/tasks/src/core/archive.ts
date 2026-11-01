@@ -57,6 +57,7 @@ import {
 } from "./types.js";
 import {
   appendLogEntry,
+  forcedSuffix,
   logEntryFor,
   parseLog,
   parseLogHeading,
@@ -740,7 +741,7 @@ export async function archiveTask(
     await appendLogEntry(
       task.dir,
       logEntryFor(context.identity, fresh.now, [
-        forced ? "archive (forced)" : "archive",
+        `archive${forcedSuffix(forced)}`,
         forced ? `left blocked: ${dependents.join(", ")}` : null,
       ]),
     );

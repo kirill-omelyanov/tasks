@@ -177,7 +177,7 @@ the task does not hold it. Each edit logs `dep add: …` or `after rm: …` on t
 
 ## Archiving what others depend on
 
-Archiving a task that live tasks reference would leave them blocked for good, so
+Archiving a task that open tasks reference would leave them blocked for good, so
 `tasks archive` refuses it and names the dependents. `--force` archives anyway and
 reports which tasks it left blocked. Because an archived path stays reserved, a task
 recreated at the same path is refused rather than silently reconnected to those

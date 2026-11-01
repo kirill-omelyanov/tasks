@@ -431,7 +431,7 @@ describe("referenced by, dependents", () => {
     expect(await gates.referencedBy(projects.local, "a")).toEqual([]);
   });
 
-  it("lists the dependents of several targets once, by depends_on only", async () => {
+  it("lists the open dependents of several targets once, by depends_on only", async () => {
     await sandbox.tree({
       tasks: {
         t1: {},
@@ -439,6 +439,8 @@ describe("referenced by, dependents", () => {
         a: { depends_on: ["t1"] },
         b: { depends_on: ["t1", "../backend:t2"] },
         c: { finishes_after: ["t1"] },
+        // Resolved: nothing left to decide, so not a dependent.
+        g: { depends_on: ["t1"], status: "DONE" },
         d: { depends_on: ["unrelated"] },
         unrelated: {},
       },

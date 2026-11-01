@@ -299,10 +299,10 @@ describe("cancel cascade", () => {
       "--json",
     );
     expect(result.code).toBe(0);
-    // A task the command cancelled itself is no news to its decider.
+    // A task the command cancelled itself is no news to its decider, and a
+    // resolved dependent has nothing left to decide.
     expect(result.json<TransitionJson>().dependents).toEqual([
       "x",
-      "y",
       "backend:z",
     ]);
     expect(

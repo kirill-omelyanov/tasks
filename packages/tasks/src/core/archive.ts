@@ -12,7 +12,7 @@ import {
   removeEmptyDirs,
   renameDir,
 } from "./fs-utils.js";
-import { unavailableReason } from "./gates.js";
+import { holdsOpenTask, unavailableReason } from "./gates.js";
 import {
   ancestorPaths,
   assertTaskPath,
@@ -613,19 +613,22 @@ async function executeMove(plan: MovePlan): Promise<void> {
  * Live tasks, in the local tree and every listed tree, whose `depends_on` or
  * `finishes_after` names a task of `load` for which `targets` holds,
  * qualified and once each, local tree first. Tasks for which `inside` holds
- * are left out: they go wherever the targets go.
+ * are left out: they go wherever the targets go. With `openOnly`, resolved
+ * referrers are left out too: an archive blocks only open work.
  */
 async function referrersOf(
   context: CommandContext,
   load: LoadedTree,
   targets: (id: string) => boolean,
   inside: (id: string) => boolean = () => false,
+  openOnly = false,
 ): Promise<string[]> {
   const out = new Set<string>();
   for (const site of await context.gates.referenceSites()) {
     if (site.target === null || site.target.tree.key !== load.key) continue;
     if (!targets(site.target.id)) continue;
     if (site.holder.key === load.key && inside(site.task)) continue;
+    if (openOnly && !holdsOpenTask(site.holder, site.task)) continue;
     out.add(context.projects.qualify(site.holder, site.task));
   }
   return [...out];
@@ -636,7 +639,7 @@ async function referrersOf(
 /* ------------------------------------------------------------------------ */
 
 export interface ArchiveOptions {
-  /** Archive even though live tasks reference the subtree. */
+  /** Archive even though open tasks reference the subtree. */
   force?: boolean;
 }
 
@@ -705,6 +708,7 @@ export async function archiveTask(
       fresh.load,
       (id) => isWithin(id, task.id),
       (id) => isWithin(id, task.id),
+      true,
     );
     if (dependents.length > 0 && options.force !== true) {
       const details: DependentsDetails = { id: shown, dependents };

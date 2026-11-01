@@ -67,6 +67,12 @@ export function unavailableReason(load: UnavailableTree): GateReason {
   }
 }
 
+/** Whether the task `id` of `holder` is open: only open work is stranded. */
+export function holdsOpenTask(holder: LoadedTree, id: string): boolean {
+  const task = holder.tree.byId.get(id);
+  return task !== undefined && isOpen(task.frontmatter.status);
+}
+
 /** One reference stored in a live task, resolved. */
 export interface ReferenceSite {
   /** The tree that stores the reference. */
@@ -237,7 +243,7 @@ export class GateResolver {
   }
 
   /**
-   * The live tasks whose `depends_on` names any of `targets` — what `cancel`
+   * The open tasks whose `depends_on` names any of `targets` — what `cancel`
    * reports as `dependents` — once each, in the order of `referencedBy`.
    * The targets themselves are left out: the command that cancels them has
    * decided their fate already, so one depending on another is no news.
@@ -251,6 +257,9 @@ export class GateResolver {
     const out = new Set<string>();
     for (const site of await this.referenceSites()) {
       if (site.field !== "depends_on" || site.target === null) continue;
+      // A resolved holder has nothing left to decide; validation speaks for
+      // it if it is reopened.
+      if (!holdsOpenTask(site.holder, site.task)) continue;
       if (!wanted.has(nodeKey(site.target.tree.key, site.target.id))) continue;
       if (wanted.has(nodeKey(site.holder.key, site.task))) continue;
       out.add(this.projects.qualify(site.holder, site.task));

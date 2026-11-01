@@ -366,7 +366,7 @@ tasks cancel <task> -m <text> [--force] [--json]
 
 Decide not to do a task. **Cascades**: every open descendant is cancelled and its claim
 cleared; `finishes_after` is ignored. A live or unknown claim beneath refuses the command
-(`cascade-claim`). The result lists as `dependents` every live task whose `depends_on`
+(`cascade-claim`). The result lists as `dependents` every open task whose `depends_on`
 names a task it cancelled — here and in listed projects — because those are now
 [stranded](/docs/reference/gates#cancelled-dependencies-are-stranded).
 
@@ -595,7 +595,7 @@ exists because a descendant was archived earlier, the two merge. Logs `archive` 
 task first, so the history travels with it.
 
 Refused when the task is open (`not-resolved`), a descendant is open
-(`open-descendants`), or live tasks — here or in listed projects — reference anything in
+(`open-descendants`), or open tasks — here or in listed projects — reference anything in
 the subtree (`dependents`). `--force` overrides only the last; the result then lists the
 tasks it left blocked.
 

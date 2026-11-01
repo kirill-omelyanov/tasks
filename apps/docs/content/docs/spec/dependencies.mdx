@@ -82,16 +82,17 @@ A cycle in that graph means the tasks in it can never all resolve.
 
 ## Cancellation and deletion interaction
 
-Cancelling a task that other live tasks depend on strands them (see the note under
+Cancelling a task that other open tasks depend on strands them (see the note under
 [Start gate](/docs/spec/dependencies#start-gate)). `cancel` MUST NOT refuse for that reason — cancellation is a decision
-about the cancelled task — but its result MUST list, as `dependents`, every live task whose
+about the cancelled task — but its result MUST list, as `dependents`, every open task whose
 `depends_on` names a task the command cancelled, in the local tree and in the trees reachable
 through `projects:`, so that the decision about them is taken while the decider is present. A
 cascade lists the dependents of every task it reached.
 
-Archiving a task that other live tasks reference leaves those tasks permanently blocked. An
+Archiving a task that open tasks reference leaves those tasks permanently blocked. An
 implementation MUST refuse such an archive by default, MUST name the dependents, and MAY offer an
-explicit override, reporting which tasks were left blocked. Because archived paths remain
+explicit override, reporting which tasks were left blocked. A resolved task's reference to an
+archived task concerns nobody until that task is reopened; validation reports it then. Because archived paths remain
 reserved, recreating a task at the same path MUST fail rather than silently reconnect those
 references; a purge of the entry (see [`.archive/`](/docs/spec/layout#archive)) is the explicit decision to allow
 it.

@@ -89,7 +89,7 @@ An implementation:
   which `.archive/` holds a `task.md` MUST fail until that entry is purged. A directory under
   `.archive/` without `task.md` reserves nothing.
 - MUST refuse to archive a task that is not resolved, or that has live open descendants, or that
-  live tasks reference through `depends_on` or `finishes_after` — in the local tree and in the
+  open tasks reference through `depends_on` or `finishes_after` — in the local tree and in the
   trees reachable through `projects:` — naming the dependents, unless explicitly overridden.
 - MUST offer a way to **purge** an archive entry: remove it permanently and release its path. A
   purge MUST name the live tasks that still reference the entry; it is the explicit decision that

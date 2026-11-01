@@ -199,7 +199,7 @@ the log entry of the transition it forced. It overrides exactly:
 - the refusal of a `claim` on a live or unknown claim ([Claims across sessions](/docs/spec/sessions#claims-across-sessions)),
   and the refusal of a cascade over one ([Containment](/docs/spec/containment));
 - the hold of a subtree under a claimed or assigned ancestor ([Hold](/docs/spec/containment#hold));
-- the refusal to archive a task that live tasks reference ([Cancellation and deletion interaction](/docs/spec/dependencies#cancellation-and-deletion-interaction)).
+- the refusal to archive a task that open tasks reference ([Cancellation and deletion interaction](/docs/spec/dependencies#cancellation-and-deletion-interaction)).
 
 Nothing overrides the finish gate, the `state.md` preconditions of `pause`, `handoff` and
 `release`, the rules that protect a resolved parent, the `BACKLOG`-subtree invariant of

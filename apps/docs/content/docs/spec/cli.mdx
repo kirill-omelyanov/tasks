@@ -85,7 +85,7 @@ list of `{ref, reason, status}`), `ready` (for the calling actor), `effective_pr
 (`{open, resolved}`), `active` (an `IN_PROGRESS` descendant exists), `waiting_for`, for
 `IN_PROGRESS` tasks `liveness` and `last_seen`, and `last_entry`: the task's most recent log entry
 in the shape of [log entries](/docs/spec/cli#log-entries) without `task`, or `null`. `mine` MUST render
-`last_entry`: it is where a handoff's note is read. `cancel` adds `dependents`: the live tasks,
+`last_entry`: it is where a handoff's note is read. `cancel` adds `dependents`: the open tasks,
 qualified by alias where foreign, whose `depends_on` names a task it cancelled (see
 [Cancellation and deletion interaction](/docs/spec/dependencies#cancellation-and-deletion-interaction)). `show` and `resume` SHOULD add `referenced_by`: the live tasks, in
 the local tree and in the trees reachable through `projects:`, whose `depends_on` or

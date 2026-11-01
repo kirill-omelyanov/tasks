@@ -87,6 +87,7 @@ describe("archive", () => {
         // Inside the subtree: archived along, so not a dependent.
         "d/inner": { status: "DONE", finishes_after: ["d/part"] },
         x: { depends_on: ["d/part"] },
+        // Resolved: nothing is left to block, so not a dependent either.
         done: { status: "DONE", finishes_after: ["d"] },
       },
     });
@@ -98,7 +99,7 @@ describe("archive", () => {
     expect(errorOf(result).details).toEqual({
       id: "d",
       kind: "dependents",
-      dependents: ["done", "x", "backend:y"],
+      dependents: ["x", "backend:y"],
     });
     expect(await s.exists(".tasks/d/task.md")).toBe(true);
   });

@@ -353,7 +353,7 @@ reads after the write, plus:
 | Field        | Present on                                           | Notes                                                    |
 | ------------ | ---------------------------------------------------- | -------------------------------------------------------- |
 | `cascaded`   | `defer`, `schedule`, `cancel`, always                 | The tasks the cascade reached, in tree order; may be `[]`. |
-| `dependents` | `cancel`, always                                     | Live tasks whose `depends_on` names a task it cancelled — now stranded. |
+| `dependents` | `cancel`, always                                     | Open tasks whose `depends_on` names a task it cancelled — now stranded. |
 | `holds`      | `claim`, `assign`, `handoff`, when the count is above 0 | How many open descendants the task now holds.        |
 
 ```json

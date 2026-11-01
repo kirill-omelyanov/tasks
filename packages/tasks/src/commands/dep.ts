@@ -322,6 +322,9 @@ function gateCommand(spec: GateSpec): Command {
     .summary(spec.summary)
     .description(spec.description)
     .exitOverride()
+    // An option on the bare group (`--json`) must not stop it short of its
+    // own usage error, whose details the envelope then carries.
+    .allowUnknownOption()
     // Without a subcommand there is nothing to do: an error, not help.
     .action(() => {
       throw TaskError.usage(

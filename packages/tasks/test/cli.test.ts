@@ -1739,6 +1739,16 @@ describe("command groups", () => {
         code: ExitCode.Usage,
       });
       expect(result.stderr).toContain(`${group} needs a subcommand`);
+      // Under --json the envelope carries the details, option and all.
+      const json = await sandbox.run(group, "--json");
+      expect(json.code).toBe(ExitCode.Usage);
+      expect(json.stdout).toBe("");
+      expect(
+        json.json<{ error: { code: string; details: unknown } }>().error,
+      ).toMatchObject({
+        code: "USAGE",
+        details: { command: group, subcommands: expect.any(Array) },
+      });
     }
   });
 });

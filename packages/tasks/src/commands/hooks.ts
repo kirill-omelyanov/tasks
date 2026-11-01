@@ -51,6 +51,9 @@ export function hooksCommand(): Command {
     .description(
       "manage the Claude Code hooks that make the agent protocol automatic",
     )
+    // An option on the bare group (`--json`) must not stop it short of its
+    // own usage error, whose details the envelope then carries.
+    .allowUnknownOption()
     // Without a subcommand there is nothing to do: an error, not help.
     .action(() => {
       throw TaskError.usage("hooks needs a subcommand: hooks install.", {

@@ -20,6 +20,9 @@ import { emitJson, ui, writeOut } from "../output.js";
 export function skillCommand(): Command {
   const skill = new Command("skill")
     .description("manage the bundled agent skill")
+    // An option on the bare group (`--json`) must not stop it short of its
+    // own usage error, whose details the envelope then carries.
+    .allowUnknownOption()
     // Without a subcommand there is nothing to do: an error, not help.
     .action(() => {
       throw TaskError.usage("skill needs a subcommand: skill install.", {

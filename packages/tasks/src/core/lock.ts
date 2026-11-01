@@ -14,6 +14,13 @@ import { LOCKS_DIRNAME, LOCK_STALE_MS, TREE_LOCK_FILENAME } from "./types.js";
  */
 export const LOCK_WAIT_MS = 2_000;
 
+/**
+ * How often a held lock is touched. A holder that works longer than
+ * `LOCK_STALE_MS` — a move across filesystems copies the subtree — would
+ * otherwise be judged dead and have its lock reclaimed under it.
+ */
+export const LOCK_REFRESH_MS = LOCK_STALE_MS / 4;
+
 export interface LockPayload {
   pid: number;
   hostname: string;
@@ -23,6 +30,8 @@ export interface LockPayload {
 export interface TreeLockOptions {
   /** How long to wait for a held lock; `0` refuses at once. */
   waitMs?: number;
+  /** How often the held lock is touched; for tests. */
+  refreshMs?: number;
 }
 
 export function treeLockPath(tasksDir: string): string {
@@ -119,12 +128,46 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Keep a held lock younger than the reclaim threshold by touching it
+ * periodically. Only our own lock is touched: after a reclaim the file is
+ * someone else's. The timer never keeps the process alive.
+ */
+function keepFresh(
+  file: string,
+  payload: string,
+  everyMs: number,
+): { stop: () => void } {
+  let touching = false;
+  const timer = setInterval(() => {
+    if (touching) return;
+    touching = true;
+    void touchOwn(file, payload).finally(() => {
+      touching = false;
+    });
+  }, everyMs);
+  timer.unref();
+  return { stop: () => clearInterval(timer) };
+}
+
+async function touchOwn(file: string, payload: string): Promise<void> {
+  try {
+    if ((await fs.readFile(file, "utf8")) !== payload) return;
+    const now = new Date();
+    await fs.utimes(file, now, now);
+  } catch {
+    // Gone or unreadable: nothing of ours to keep fresh.
+  }
+}
+
+/**
  * Run `fn` while holding the tree-wide lock `.tasks/.locks/tree.lock`.
  *
  * Callers must re-read every task the mutation depends on *inside* `fn`: the
  * point of the lock is that anything read before acquiring it may be stale.
  * A lock older than `LOCK_STALE_MS` belongs to a dead process and is
- * reclaimed; a live one that outlasts `waitMs` is a conflict.
+ * reclaimed; a live one that outlasts `waitMs` is a conflict. The holder
+ * touches its lock every `LOCK_REFRESH_MS`, so a long write is never
+ * mistaken for a dead one.
  */
 export async function withTreeLock<T>(
   tasksDir: string,
@@ -164,9 +207,11 @@ export async function withTreeLock<T>(
     delay = Math.min(delay * 2, 50);
   }
 
+  const refresh = keepFresh(file, text, options.refreshMs ?? LOCK_REFRESH_MS);
   try {
     return await fn();
   } finally {
+    refresh.stop();
     await release(file, text);
   }
 }

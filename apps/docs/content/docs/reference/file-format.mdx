@@ -259,7 +259,7 @@ Transient, private to one working copy, and never committed:
 
 | Path                         | What it is                                                                                     |
 | ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| `.locks/tree.lock`           | The tree lock, created exclusively for each write and removed after it. One older than 10 seconds belongs to a dead process and is reclaimed. |
+| `.locks/tree.lock`           | The tree lock, created exclusively for each write and removed after it. The holder touches it every 2.5 seconds; one older than 10 seconds belongs to a dead process and is reclaimed. |
 | `.locks/sessions/<token>`    | A session's heartbeat: its modification time is the session's last activity. Empty while the session runs; the single line `ended` after `session-end`. |
 
 A heartbeat file that no claim names is removed by later commands once it is older than

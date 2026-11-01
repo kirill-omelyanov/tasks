@@ -150,6 +150,42 @@ describe("tree locking", () => {
     ).rejects.toMatchObject({ exitCode: 4 });
   });
 
+  it("keeps a long-held lock fresh so it is not reclaimed", async () => {
+    const lockFile = treeLockPath(tasksDir);
+    await withTreeLock(
+      tasksDir,
+      async () => {
+        // As if the holder had been working for longer than the threshold.
+        await backdate(lockFile, LOCK_STALE_MS + 1_000);
+        await tick(60);
+        const age = Date.now() - (await fs.stat(lockFile)).mtimeMs;
+        expect(age).toBeLessThan(LOCK_STALE_MS);
+        await expect(
+          withTreeLock(tasksDir, async () => "stolen", { waitMs: 0 }),
+        ).rejects.toMatchObject({ exitCode: 4 });
+      },
+      { refreshMs: 20 },
+    );
+  });
+
+  it("stops touching the lock once it is released", async () => {
+    const lockFile = treeLockPath(tasksDir);
+    let payload = "";
+    await withTreeLock(
+      tasksDir,
+      async () => {
+        payload = await fs.readFile(lockFile, "utf8");
+      },
+      { refreshMs: 10 },
+    );
+    // The same payload again, as if this process took the lock once more.
+    await fs.writeFile(lockFile, payload, "utf8");
+    await backdate(lockFile, 5_000);
+    await tick(40);
+    const age = Date.now() - (await fs.stat(lockFile)).mtimeMs;
+    expect(age).toBeGreaterThanOrEqual(4_000);
+  });
+
   it("clears a reclaim guard abandoned by a crashed reclaimer", async () => {
     const lockFile = treeLockPath(tasksDir);
     await fs.mkdir(path.dirname(lockFile), { recursive: true });

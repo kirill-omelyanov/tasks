@@ -174,7 +174,9 @@ tasks show search/tests
 
 Another command holds `.tasks/.locks/tree.lock`. Writes are short, and every command waits
 up to two seconds before reporting this, so it usually means a burst of agents — retry.
-A lock older than ten seconds belongs to a dead process and is reclaimed automatically.
+A holder touches its lock while it works, so a long write is never mistaken for a dead
+one; a lock older than ten seconds belongs to a dead process and is reclaimed
+automatically.
 If it persists, check for a hung `tasks` process; only when none runs is deleting the
 file safe — `.locks/` holds no state.
 

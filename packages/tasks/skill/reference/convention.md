@@ -253,7 +253,7 @@ Under `--json`, errors go to stderr:
 `claimed_session`/`liveness`, `blocked_by`, `open_children`, `ancestor`,
 `claims`, `candidates`, `dependents` — and conflicts name the refusal in
 `details.kind`: `illegal-transition`, `authorization`, `already-claimed`,
-`start-gate`, `finish-gate`, `held`, `backlog-ancestor`, `resolved-parent`,
+`start-gate`, `finish-gate`, `held`, `backlog-ancestor`, `resolved-ancestor`,
 `cascade-claim`, `missing-state`, `present-state`, `not-assigned`, `cycle`,
 `ancestor`, `exists`, `reserved`, `dependents`, and others. Prefer `details`
 over parsing `message`, which is written for people and may change.

@@ -561,7 +561,7 @@ describe("ancestors that block a claim or a reopen", () => {
       expect(errorOf(result).details).toEqual({
         id: "closed/a",
         ancestor: "closed",
-        kind: "resolved-parent",
+        kind: "resolved-ancestor",
         status: "DONE",
       });
     }
@@ -576,7 +576,7 @@ describe("ancestors that block a claim or a reopen", () => {
     });
     const refused = await sandbox.run("reopen", "epic/a", "-m", "x", "--json");
     expect(errorOf(refused).details).toMatchObject({
-      kind: "resolved-parent",
+      kind: "resolved-ancestor",
       ancestor: "epic",
       status: "CANCELLED",
     });

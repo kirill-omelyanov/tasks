@@ -462,7 +462,7 @@ describe("force", () => {
       "--force",
       "--json",
     );
-    expect(refusal(reopen).kind).toBe("resolved-parent");
+    expect(refusal(reopen).kind).toBe("resolved-ancestor");
     const claim = await sandbox.run("claim", "later/b", "--force", "--json");
     expect(refusal(claim).kind).toBe("backlog-ancestor");
     const schedule = await sandbox.run(

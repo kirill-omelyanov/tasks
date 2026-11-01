@@ -326,7 +326,7 @@ descendants, the result reports how many it now holds (`holds`).
 
 **Fails** with exit `4` for an unsatisfied start gate (`start-gate`, with `blocked_by`),
 a claimed or assigned ancestor (`held`), a `BACKLOG` ancestor (`backlog-ancestor`), a
-resolved parent (`resolved-parent`), and an illegal status (`illegal-transition`).
+resolved ancestor (`resolved-ancestor`), and an illegal status (`illegal-transition`).
 
 ### `tasks pause`
 
@@ -378,7 +378,7 @@ tasks reopen <task> -m <text> [--force] [--json]
 
 Bring a `DONE` or `CANCELLED` task back: to `BACKLOG` under a `BACKLOG` ancestor, else
 `PAUSED` when it has a `state.md`, else `TODO`. Refused while its parent is resolved
-(`resolved-parent`): reopen the parent first. Reopening a parent reopens none of its
+(`resolved-ancestor`): reopen the parent first. Reopening a parent reopens none of its
 children.
 
 ### `tasks handoff`

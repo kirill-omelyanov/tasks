@@ -950,7 +950,7 @@ function refuseUnderResolved(run: Run, task: Task): void {
     `${shown} cannot ${what} while ${ancestor} is ${status}. Reopen ${ancestor} first.`,
     {
       ...ancestorDetails(run, task, resolved.id),
-      kind: "resolved-parent",
+      kind: "resolved-ancestor",
       status,
     },
   );

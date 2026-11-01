@@ -103,7 +103,7 @@ branch without reading the message:
 | `finish-gate`           | `done`                                         | `open_children`, `finishes_after`       |
 | `held`                  | `claim` under a claimed or assigned ancestor   | `ancestor`                              |
 | `backlog-ancestor`      | `claim`, `schedule` under a `BACKLOG` ancestor | `ancestor`                              |
-| `resolved-parent`       | `claim`, `reopen` under a resolved parent      | `ancestor`, `status`                    |
+| `resolved-ancestor`     | `claim`, `reopen`, `new`, `restore`, `move` under a resolved ancestor | `ancestor`, `status` |
 | `cascade-claim`         | `defer`, `cancel`, `move` over work in progress | `claims`                               |
 | `missing-state`         | `pause`, `handoff`                             |                                         |
 | `present-state`         | `release`, `delete`                            |                                         |
@@ -113,7 +113,6 @@ branch without reading the message:
 | `malformed-descendants` | a cascade, `move` or `restore` over unreadable tasks | `descendants` or `tasks`          |
 | `exists`                | `new`, `restore` onto a live task; `move` onto anything | `path` for `move`                |
 | `reserved`              | `new`, `move` onto a path an archived task reserves | `archived`                         |
-| `resolved-ancestor`     | `new`, `restore`, `move` under a resolved ancestor | `ancestor`, `status`                |
 | `same-path`, `inside-subtree` | `move` to where the source is, or inside it | `to`                                |
 | `interrupted-move`      | `move` of a source that holds a `.moving` marker | `path`                                 |
 | `path-blocked`          | a file or a symbolic link where a directory must go | `path`                             |

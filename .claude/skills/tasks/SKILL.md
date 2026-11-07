@@ -10,7 +10,7 @@ when_to_use: >-
   Use whenever the repo has a .tasks/ directory, or the user asks what to work
   on next, to claim, pause, hand off or finish a task, what is blocked, to add
   or re-scope a task, or to plan work that must outlive this session.
-allowed-tools: Bash(tasks:*)
+allowed-tools: Bash(tasks:*) Bash(TASKS_ACTOR=agent tasks:*) Bash(npx @speekl/tasks:*)
 ---
 
 Tasks live in `.tasks/` (convention v2): every task is a directory whose
@@ -46,7 +46,8 @@ Subagents use the same name and token.
   (`echo $TASKS_SESSION`), and you pass nothing.
 - **Without them**, generate a token once (`uuidgen`, or a timestamp; it must
   match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`), then prefix every command with
-  `TASKS_ACTOR=agent` and pass `--session <token>` to it:
+  `TASKS_ACTOR=agent` (unless it is already set: `echo $TASKS_ACTOR`) and
+  pass `--session <token>` to it:
   `TASKS_ACTOR=agent tasks claim --next --session <token>`. Shell variables may
   not survive between tool calls, so prefer the prefix and the flag to an
   `export`. Never `--as agent`: `--as` records the person as the operator.

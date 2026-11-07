@@ -496,6 +496,37 @@ describe("init", () => {
     );
   });
 
+  it("refuses a bare --actors when it runs as agent, and quotes a name YAML would retype", async () => {
+    sandbox = await makeSandbox();
+    const bare = await sandbox.runWith(
+      { env: { TASKS_ACTOR: "agent" } },
+      "init",
+      "--no-skill",
+      "--actors",
+      "--json",
+    );
+    expect(bare.code).toBe(ExitCode.Usage);
+    expect(await sandbox.exists(".tasks")).toBe(false);
+
+    const named = await sandbox.run(
+      "init",
+      "--no-skill",
+      "--actors",
+      "007,agent",
+      "--json",
+    );
+    expect(named.json<InitJson>().actors).toEqual(["007", "agent"]);
+    expect(await sandbox.read(".tasks/config.yml")).toContain(
+      '\nactors:\n  "007":\n  agent: the coding agent\n',
+    );
+    const listed = await sandbox.run("actors", "--json");
+    expect(
+      listed
+        .json<{ actors: { actor: string; listed: boolean }[] }>()
+        .actors.map((row) => row.actor),
+    ).toEqual(["007", "agent", "tester"]);
+  });
+
   it("prints the roster it wrote, or how to switch one on", async () => {
     sandbox = await makeSandbox();
     const on = await sandbox.run("init", "--no-skill", "--actors", "ada,agent");

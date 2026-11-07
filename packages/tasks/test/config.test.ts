@@ -81,6 +81,22 @@ actors:
     expect(Object.hasOwn(config.actors, "constructor")).toBe(false);
   });
 
+  it("refuses a name YAML would read as something else, and takes it quoted", () => {
+    for (const raw of ["007", "True", "1.50", "1e3"]) {
+      expect(
+        usage(() => v2(`version: 2\nactors:\n  ${raw}: someone\n`)).message,
+      ).toContain(`actor "${raw}" is read by YAML as`);
+    }
+    const config = v2('version: 2\nactors:\n  "007": someone\n  "true":\n');
+    expect(Object.entries(config.actors)).toEqual([
+      ["007", "someone"],
+      ["true", null],
+    ]);
+    expect(renderConfig(config)).toBe(
+      'version: 2\nactors:\n  "007": someone\n  "true":\n',
+    );
+  });
+
   it("refuses actors that are not a mapping of actor to a line", () => {
     expect(
       usage(() => v2("version: 2\nactors:\n  - alice\n  - bob\n")).message,

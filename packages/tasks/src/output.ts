@@ -330,7 +330,7 @@ export function renderActors(result: ActorsJson): string {
         : row.actor;
     const description = row.listed
       ? (row.description ?? "")
-      : pc.yellow("not listed in config.yml");
+      : pc.yellow("not listed in this tree's config.yml");
     const open = [
       ...(row.claimed > 0 ? [`${row.claimed} claimed`] : []),
       ...(row.assigned > 0 ? [`${row.assigned} assigned`] : []),

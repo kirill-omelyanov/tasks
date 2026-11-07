@@ -145,19 +145,26 @@ bare name (`bob:`) needs no description. With at least one actor listed:
   listed, with exit `2`, naming the listed actors and the file; a name that differs in
   case alone is suggested. The roster that applies is the one of the tree that holds the
   task, so a task created in a listed project is judged by that project's `config.yml`.
-- `--as` and `tasks hooks install --actor` refuse an unlisted name the same way.
+- `--as`, on every command that opens the tree, and `tasks hooks install --actor` refuse
+  an unlisted name the same way. `--force` lifts none of these refusals.
 - The actor a command resolves for itself — from `TASKS_ACTOR`, git or the OS user — is
-  never refused for being unlisted, but every command says so on stderr until you set
-  `TASKS_ACTOR` to a listed name or add yours. The operator behind an `--as` is diagnosed
-  the same way.
+  never refused for being unlisted, but every command that opens the tree says so on
+  stderr (not under `--json`, where `tasks actors --json` carries the fact as
+  `listed: false`) until you set `TASKS_ACTOR` to a listed name or add yours. The operator
+  behind an `--as` is diagnosed the same way.
+- A name YAML would read as a number or a boolean (`007`, `True`) is refused unless
+  quoted (`"007":`), so a roster never holds a name nobody typed; `init --actors` quotes
+  such names itself. A purely numeric name sorts first in every listing, whatever its
+  position in the file.
 - `tasks validate` warns `unknown-actor` for every open task whose `assignee` or
   `claimed_by` is not listed.
 
 [`tasks actors`](/docs/reference/commands#tasks-actors) shows the roster with each actor's
 open tasks, and the names in use that it lacks. Without the key, any name may be assigned.
 `tasks init --actors [<names>]` writes the key from the start, with the actor it resolved
-and `agent`, or the names given; without the flag the scaffold carries those two names
-commented out, ready to switch on.
+and `agent`, or the names given (run as `agent`, the bare form is refused: name the
+person); without the flag the scaffold carries those two names commented out, ready to
+switch on.
 
 ### `projects`
 

@@ -52,19 +52,21 @@ function hint(config: Config, actor: string): string {
 /**
  * Refuse a typed actor the roster does not list: a usage error naming the
  * listed actors and the file to extend. `label` is the argument or option
- * the actor came from, for the error's details.
+ * the actor came from, for the error's details; `remedy` replaces the
+ * default advice when the command has a better one.
  */
 export function assertListedActor(
   config: Config,
   project: Project,
   actor: string,
   label: string,
+  remedy = `use one of them or add "${actor}" there`,
 ): string {
   if (!hasRoster(config) || isListed(config, actor)) return actor;
   const file = configFileOf(project);
   const actors = listedActors(config);
   throw TaskError.usage(
-    `Unknown actor "${actor}": ${file} lists ${actors.join(", ")} under actors:; use one of them or add "${actor}" there.${hint(config, actor)}`,
+    `Unknown actor "${actor}": ${file} lists ${actors.join(", ")} under actors:; ${remedy}.${hint(config, actor)}`,
     { field: label, value: actor, actors, file },
   );
 }

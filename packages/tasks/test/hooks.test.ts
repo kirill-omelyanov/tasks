@@ -463,7 +463,7 @@ describe("hooks install", () => {
     expect(await sandbox.exists(".claude")).toBe(false);
   });
 
-  it("installs beside a v1 tree, which it neither reads nor touches", async () => {
+  it("installs beside a v1 tree, reading only its version and touching nothing", async () => {
     sandbox = await makeSandbox();
     await fs.cp(V1_TREE, sandbox.tasksDir, { recursive: true });
 

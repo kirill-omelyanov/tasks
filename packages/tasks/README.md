@@ -45,7 +45,7 @@ tasks validate                                      # check the tree
 A task's id is its path under `.tasks/`. A task inside another task is a part of
 its deliverable: the parent is done only when its children are resolved. Overviews
 show one computed **situation** per task — `ready`, `blocked by X`,
-`waiting for alice`, `open 1/2`, `working by claude` — instead of the stored status.
+`waiting for alice`, `open 1/2`, `working by agent` — instead of the stored status.
 
 ## Commands
 

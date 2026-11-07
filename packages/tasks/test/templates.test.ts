@@ -57,6 +57,15 @@ describe("configTemplate", () => {
     ]);
   });
 
+  it("quotes a name YAML would otherwise retype", () => {
+    const live = configTemplate({ actors: defaultRoster("007"), live: true });
+    expect(live).toContain('\nactors:\n  "007":\n  agent: the coding agent\n');
+    const detected = parseConfigText(live, "config.yml");
+    expect(detected.kind).toBe("v2");
+    if (detected.kind !== "v2") return;
+    expect(Object.keys(detected.config.actors)).toEqual(["007", "agent"]);
+  });
+
   it("proposes agent once when the agent itself runs init", () => {
     expect(Object.entries(defaultRoster("agent"))).toEqual([
       ["agent", "the coding agent"],

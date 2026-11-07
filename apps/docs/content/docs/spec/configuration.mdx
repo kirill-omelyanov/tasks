@@ -33,9 +33,11 @@ a mapping, MUST fail as a usage error naming the file. There are no `statuses`, 
 `transitions` keys: the lifecycle is fixed by this specification.
 
 A non-empty `actors` is a roster. An actor named for someone else — by `assign`, `handoff`,
-`new --assign` or `--as` — MUST be listed, or the command fails as a usage error naming the
-listed actors; the roster of the tree that holds the task judges `assign`, `handoff` and
-`new --assign`, the local tree's judges `--as`. The identity a command resolves for itself MUST
-NOT be refused for being unlisted, and SHOULD be diagnosed. Validation reports an open task whose
-`assignee` or `claimed_by` is unlisted. Keys match the actor pattern; a bare name carries `null`.
-Empty or absent, the roster constrains nothing.
+`new --assign`, or `--as` on a command that opens the tree — MUST be listed, or the command
+fails as a usage error naming the listed actors, which no force lifts; the roster of the tree
+that holds the task judges `assign`, `handoff` and `new --assign`, the local tree's judges
+`--as`. The identity a command resolves for itself MUST NOT be refused for being unlisted, and
+SHOULD be diagnosed. Validation reports an open task whose `assignee` or `claimed_by` is
+unlisted. Keys match the actor pattern and MUST be read as the names written (a name YAML would
+take for a number or a boolean, `007` or `True`, is refused unquoted); a bare name carries
+`null`. Empty or absent, the roster constrains nothing.

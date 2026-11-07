@@ -86,6 +86,49 @@ describe("a typed actor against the roster", () => {
     });
   });
 
+  it("judges assign and handoff by the roster of the tree that holds the task, and --force lifts nothing", async () => {
+    sandbox = await treeSandbox({ actors: ROSTER });
+    const backend = await sandbox.project("backend", "../backend", {
+      actors: { bob: null, tester: null },
+      tasks: { x: {}, y: { status: "IN_PROGRESS", state: true } },
+    });
+    expect((await sandbox.run("assign", "backend:x", "bob")).code).toBe(0);
+    const refused = await sandbox.run("assign", "backend:x", "alice", "--json");
+    expect(refused.code).toBe(ExitCode.Usage);
+    expect(errorOf(refused).details).toMatchObject({
+      actors: ["bob", "tester"],
+      file: path.join(backend, ".tasks", CONFIG_FILENAME),
+    });
+    const forced = await sandbox.run(
+      "handoff",
+      "backend:y",
+      "alice",
+      "-m",
+      "x",
+      "--force",
+      "--json",
+    );
+    expect(forced.code).toBe(ExitCode.Usage);
+    expect((await frontmatterOf(sandbox, "y", backend)).status).toBe(
+      "IN_PROGRESS",
+    );
+  });
+
+  it("refuses an unlisted name before judging the transition itself", async () => {
+    sandbox = await treeSandbox({
+      actors: ROSTER,
+      tasks: { done: { status: "DONE" } },
+    });
+    // A bad argument is a usage error, like a name that fails the pattern,
+    // whatever the task's state would have said.
+    expect((await sandbox.run("assign", "done", "zed", "--json")).code).toBe(
+      ExitCode.Usage,
+    );
+    expect((await sandbox.run("assign", "done", "alice", "--json")).code).toBe(
+      ExitCode.Conflict,
+    );
+  });
+
   it("constrains nothing without a roster", async () => {
     sandbox = await treeSandbox({ tasks: { a: {} } });
     expect((await sandbox.run("assign", "a", "whoever")).code).toBe(0);
@@ -178,17 +221,20 @@ describe("a typed actor against the roster", () => {
     expect(quiet.stderr).toBe("");
   });
 
-  it("diagnoses an identity the roster lacks on stderr and goes on", async () => {
+  it("diagnoses an identity the roster lacks on stderr and goes on, silently under --json", async () => {
     sandbox = await treeSandbox({
       actors: { alice: ROSTER.alice, agent: null },
       tasks: { a: {} },
     });
-    const result = await sandbox.run("ready", "--json");
+    const result = await sandbox.run("ready");
     expect(result.code).toBe(0);
     expect(plain(result.stderr)).toBe(
       `! actor tester is not listed under actors: in ${configFile(sandbox)} (alice, agent); set ${ACTOR_ENV} to a listed name or add tester there.\n`,
     );
-    expect(result.json<{ count: number }>().count).toBe(1);
+    // Under --json stderr is reserved for the error envelope.
+    const json = await sandbox.run("ready", "--json");
+    expect(json.stderr).toBe("");
+    expect(json.json<{ count: number }>().count).toBe(1);
 
     const near = await sandbox.runWith(
       { env: { [ACTOR_ENV]: "Agent" } },
@@ -211,13 +257,23 @@ describe("a typed actor against the roster", () => {
     sandbox = await treeSandbox({ actors: { alice: null } });
     const refused = await sandbox.run("hooks", "install", "--json");
     expect(refused.code).toBe(ExitCode.Usage);
-    expect(errorOf(refused).details).toEqual({
+    const error = errorOf(refused);
+    expect(error.details).toEqual({
       field: "--actor",
       value: "agent",
       actors: ["alice"],
       file: configFile(sandbox),
     });
+    expect(error.message).toContain("pass --actor <name> with one of them");
     expect(await sandbox.exists(".claude")).toBe(false);
+
+    // The roster is read from config.yml, so a broken one is refused too.
+    await sandbox.write(".tasks/config.yml", "version: 2\nnonsense: 1\n");
+    const broken = await sandbox.run("hooks", "install", "--json");
+    expect(broken.code).toBe(ExitCode.Usage);
+    expect(errorOf(broken).message).toContain('unknown key "nonsense"');
+    expect(await sandbox.exists(".claude")).toBe(false);
+    await sandbox.write(".tasks/config.yml", "version: 2\nactors:\n  alice:\n");
 
     const result = await sandbox.run(
       "hooks",
@@ -360,7 +416,9 @@ describe("tasks actors", () => {
     );
     expect(out).toMatch(/^tester \(you\) +1 claimed$/m);
     expect(out).toMatch(/^agent +the coding agent +—$/m);
-    expect(out).toMatch(/^zed +not listed in config.yml +1 assigned$/m);
+    expect(out).toMatch(
+      /^zed +not listed in this tree's config.yml +1 assigned$/m,
+    );
     expect(out).toContain("3 listed actors · projects backend");
   });
 

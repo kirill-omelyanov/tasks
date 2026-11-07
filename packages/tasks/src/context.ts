@@ -122,7 +122,7 @@ export async function openContext(command: Command): Promise<CommandContext> {
 
   const identity = await resolveCommandIdentity(options, project.root);
   const projects = new Projects(await loadTree(project));
-  checkRoster(projects.local.tree, identity, options.as);
+  checkRoster(projects.local.tree, identity, options.as, options.json === true);
   const gates = new GateResolver(projects);
 
   if (identity.session) {
@@ -159,16 +159,20 @@ export async function openContext(command: Command): Promise<CommandContext> {
  * identity resolved from the environment is this command's own and is only
  * diagnosed, since the remedy lies in `TASKS_ACTOR` or in `config.yml`, not
  * on the command line. With an `--as`, the operator behind it is the one
- * resolved from the environment, and it is diagnosed the same way.
+ * resolved from the environment, and it is diagnosed the same way. Under
+ * `--json` stderr stays reserved for the error envelope: `actors --json`
+ * carries the same fact as `listed: false` on the caller's row.
  */
 function checkRoster(
   tree: Tree,
   identity: Identity,
   as: string | null | undefined,
+  json: boolean,
 ): void {
   const { config, project } = tree;
   const overridden = as !== undefined && as !== null;
   if (overridden) assertListedActor(config, project, identity.actor, "--as");
+  if (json) return;
   const operator = overridden ? identity.via : identity.actor;
   if (operator === null) return;
   const warning = unlistedActorWarning(

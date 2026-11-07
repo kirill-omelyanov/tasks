@@ -124,7 +124,17 @@ function rosterFrom(
   actor: string,
 ): Roster | null {
   if (value === undefined) return null;
-  if (value === true) return defaultRoster(actor);
+  if (value === true) {
+    // The agent setting up a tree for a person: the proposed roster would
+    // name the agent alone, and the person would never be assignable.
+    if (actor === AGENT_ACTOR) {
+      throw TaskError.usage(
+        `--actors without names lists the resolved actor and ${AGENT_ACTOR}, which here are one and the same; name the people too: --actors <person>,${AGENT_ACTOR}.`,
+        { option: "--actors", actor },
+      );
+    }
+    return defaultRoster(actor);
+  }
   const roster = Object.create(null) as Roster;
   for (const part of value.split(",")) {
     const name = part.trim();

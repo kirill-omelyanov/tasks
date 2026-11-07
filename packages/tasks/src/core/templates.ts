@@ -1,3 +1,4 @@
+import { yamlScalar } from "./frontmatter.js";
 import { AGENT_ACTOR, AGENT_DESCRIPTION } from "./types.js";
 
 /**
@@ -34,15 +35,16 @@ function exampleRoster(): Record<string, string | null> {
 /**
  * Every key commented out, so the defaults apply until someone opts in; the
  * `actors:` block alone can be written live, which switches the roster on
- * from the first command. Actors match the actor pattern and the
- * descriptions are the CLI's own words, so both are safe as plain YAML.
+ * from the first command. A name is quoted when YAML would read it as
+ * something else (`007`, `true`); the descriptions are the CLI's own words,
+ * safe as they are.
  */
 export function configTemplate(options: ConfigTemplateOptions = {}): string {
   const prefix = options.live === true ? "" : "# ";
   const roster = Object.entries(options.actors ?? exampleRoster())
     .map(
       ([actor, description]) =>
-        `${prefix}  ${actor}:${description === null ? "" : ` ${description}`}`,
+        `${prefix}  ${yamlScalar(actor)}:${description === null ? "" : ` ${description}`}`,
     )
     .join("\n");
   return `# .tasks convention v2. See \`tasks --help\` or .tasks/README.md.

@@ -34,6 +34,9 @@ tasks hooks install --actor claude   # the same block for another actor
 tasks hooks install --force          # replace tasks hooks already in the file
 ```
 
+When `config.yml` lists [actors](/docs/reference/configuration#actors), the hooks' name
+must be among them: pass `--actor` with a listed one, or add `agent` to the roster.
+
 Or paste it yourself, merged the same way. Either way, commit the file. It needs `tasks`
 on `PATH` and [`jq`](https://jqlang.org) to read the hook input.
 

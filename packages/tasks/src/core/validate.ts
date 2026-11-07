@@ -733,11 +733,6 @@ async function livenessFindings(tree: Tree): Promise<FindingJson[]> {
   return out;
 }
 
-/* ------------------------------------------------------------------------ */
-/* Projects and index.md                                                    */
-/* ------------------------------------------------------------------------ */
-
-/** Every listed project that did not load, in configuration order. */
 /**
  * An open task whose assignee or claimant the roster does not list: the
  * name is misspelt or the roster is behind, and either way the task is in
@@ -773,6 +768,11 @@ function actorFindings(tree: Tree): FindingJson[] {
   return out;
 }
 
+/* ------------------------------------------------------------------------ */
+/* Projects and index.md                                                    */
+/* ------------------------------------------------------------------------ */
+
+/** Every listed project that did not load, in configuration order. */
 async function projectFindings(
   context: CommandContext,
 ): Promise<FindingJson[]> {

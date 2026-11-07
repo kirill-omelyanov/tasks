@@ -107,7 +107,27 @@ function invalid(file: string, message: string, key?: string): TaskError {
   });
 }
 
-function parseV2(doc: Record<string, unknown>, file: string): Config {
+/**
+ * The `actors:` keys as written, before YAML typing: `007` or `True` reads
+ * as a number or a boolean under the JSON schema and comes back as `7` or
+ * `true`, a name nobody typed. Compared against the typed keys so such a
+ * name is refused rather than silently changed.
+ */
+function rawActorKeys(source: string): string[] {
+  try {
+    const raw = yaml.load(source, { schema: yaml.FAILSAFE_SCHEMA });
+    if (!isMapping(raw) || !isMapping(raw.actors)) return [];
+    return Object.keys(raw.actors);
+  } catch {
+    return [];
+  }
+}
+
+function parseV2(
+  doc: Record<string, unknown>,
+  file: string,
+  rawActors: readonly string[],
+): Config {
   for (const key of Object.keys(doc)) {
     if (!(CONFIG_KEYS as readonly string[]).includes(key)) {
       throw invalid(
@@ -200,6 +220,15 @@ function parseV2(doc: Record<string, unknown>, file: string): Config {
       }
       config.actors[actor] = line === "" ? null : line;
     }
+    for (const raw of rawActors) {
+      if (!Object.hasOwn(config.actors, raw)) {
+        throw invalid(
+          file,
+          `actor "${raw}" is read by YAML as a number, a boolean or null, not as a name; quote it ("${raw}").`,
+          "actors",
+        );
+      }
+    }
   }
 
   const projects = doc.projects;
@@ -269,7 +298,7 @@ export function parseConfigText(source: string, file: string): TreeVersion {
   }
   if (version === 1) return { kind: "v1" };
   if (version !== CONVENTION_VERSION) return { kind: "unsupported", version };
-  return { kind: "v2", config: parseV2(doc, file) };
+  return { kind: "v2", config: parseV2(doc, file, rawActorKeys(source)) };
 }
 
 async function realOrResolved(target: string): Promise<string> {

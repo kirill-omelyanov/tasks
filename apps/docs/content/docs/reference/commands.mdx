@@ -72,11 +72,11 @@ tasks init [--force] [--no-skill] [--actors [<names>]] [--json]
 | -------------------- | ---------------------------------------------------------------------- |
 | `--force`            | Add the scaffold files an existing tree lacks. Never overwrites a file. |
 | `--no-skill`         | Skip installing the agent skill into `.claude/skills/tasks/`.           |
-| `--actors [<names>]` | Write [`actors:`](/docs/reference/configuration#actors) live, so the roster is on from the first command: the actor it resolved and `agent`, or the comma-separated names given. |
+| `--actors [<names>]` | Write [`actors:`](/docs/reference/configuration#actors) live, so the roster is on from the first command: the actor it resolved and `agent`, or the comma-separated names given. Run as `agent`, the bare form is refused: name the person too. |
 
 **Writes** `.tasks/config.yml` (`version: 2`, every other key commented out; the
 `actors:` example already names the actor it resolved and `agent`, so switching the roster
-on later is uncommenting two lines),
+on later is uncommenting that block),
 `.tasks/README.md`, `.tasks/.gitignore` (ignoring `.locks/`), the `.tasks/.locks/`
 directory, and the [skill](/docs/guides/agent-protocol#the-skill) unless `--no-skill`.
 `init` does not discover: it scaffolds exactly where it runs. It never prompts — agents
@@ -86,8 +86,8 @@ agent asks the person first.
 **Fails** with exit `4` when `.tasks/` already exists and `--force` was not given, and
 with exit `2` when the existing tree is a v1 tree, `--force` or not: upgrade it with
 [`migrate`](#tasks-migrate). Exit `2` too when `--actors` names an actor that fails the
-pattern, or is given while a `config.yml` already exists: the names go into that file by
-hand.
+pattern, names nobody, is given bare by `agent` itself, or is given while a `config.yml`
+already exists: the names go into that file by hand.
 
 ### `tasks skill install`
 
@@ -130,7 +130,10 @@ touched and the command says so. Use `--force` after upgrading the CLI. The hook
 session in the repository runs them.
 
 **Fails** with exit `2`, changing nothing, when the file is not a JSON object or its
-`hooks` is not an object of event lists, and with exit `3` when no tree is found.
+`hooks` is not an object of event lists, when the tree's `config.yml` cannot be read, or
+when it lists [actors](/docs/reference/configuration#actors) without the hooks' name
+(pass `--actor` with a listed one, or add `agent` to the roster), and with exit `3` when
+no tree is found.
 
 ## Reading
 
@@ -203,8 +206,9 @@ Who is around: the actors `config.yml` lists under
 [`actors`](/docs/reference/configuration#actors), in their order, each with its
 description and how many open tasks it has claimed and is assigned; then, by name, every
 other actor an open task names — a name to add to the roster, or to correct — and you,
-marked `(you)`. The counts span the listed projects unless `--local`; the roster is this
-tree's. Without a roster the footer says so: any name may be assigned.
+marked `(you)`. The counts span the listed projects unless `--local`; `listed` is judged by
+this tree's roster alone, so an actor a listed project names in its own `config.yml` shows
+here as not listed. Without a roster the footer says so: any name may be assigned.
 
 ### `tasks list`
 
@@ -442,7 +446,8 @@ now waits for: the task reads `waiting for <actor>`. One log entry,
 assignment keeps holding the children until the assignee releases them.
 
 **Fails** with exit `2`, writing nothing, when the tree lists
-[actors](/docs/reference/configuration#actors) and `<actor>` is not among them.
+[actors](/docs/reference/configuration#actors) and `<actor>` is not among them; `--force`
+does not lift this, and it is judged before the task's state is.
 
 ### `tasks assign` and `tasks unassign`
 
@@ -457,7 +462,8 @@ open descendants exist. `unassign` on a task with no assignee is refused
 (`not-assigned`). Assigning the current assignee again only writes the log entry.
 
 **Fails** with exit `2`, writing nothing, when the tree lists
-[actors](/docs/reference/configuration#actors) and `<actor>` is not among them.
+[actors](/docs/reference/configuration#actors) and `<actor>` is not among them; `--force`
+does not lift this, and it is judged before the task's state is.
 
 ### `tasks priority`
 

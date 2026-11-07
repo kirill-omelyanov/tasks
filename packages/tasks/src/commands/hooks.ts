@@ -90,7 +90,13 @@ export function hooksCommand(): Command {
       // list it, like any actor named for someone else.
       const detected = await detectTreeVersion(project.tasksDir);
       if (detected.kind === "v2") {
-        assertListedActor(detected.config, project, actor, "--actor");
+        assertListedActor(
+          detected.config,
+          project,
+          actor,
+          "--actor",
+          `pass --actor <name> with one of them, or add "${actor}" there`,
+        );
       }
 
       // Like every command: a bad --as or --session is a usage error before

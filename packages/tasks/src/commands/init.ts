@@ -10,7 +10,7 @@ import {
   startDirectory,
 } from "../context.js";
 import { isDirectory, pathExists, writeFileAtomic } from "../core/fs-utils.js";
-import { touchSession } from "../core/sessions.js";
+import { assertActor, touchSession } from "../core/sessions.js";
 import type { SkillInstallResult } from "../core/skill.js";
 import {
   SKILLS_RELATIVE_DIR,
@@ -19,11 +19,14 @@ import {
 } from "../core/skill.js";
 import {
   configTemplate,
+  defaultRoster,
   gitignoreTemplate,
   readmeTemplate,
 } from "../core/templates.js";
 import type { Identity } from "../core/types.js";
 import {
+  AGENT_ACTOR,
+  AGENT_DESCRIPTION,
   CONFIG_FILENAME,
   GITIGNORE_FILENAME,
   LOCKS_DIRNAME,
@@ -37,13 +40,19 @@ interface InitOptions {
   force?: boolean;
   /** `--no-skill` sets it to false. */
   skill?: boolean;
+  /** `--actors`: `true` for the proposed roster, else the names given. */
+  actors?: string | true;
   json?: boolean;
 }
+
+type Roster = Record<string, string | null>;
 
 /** What `init --json` prints. */
 export interface InitJson {
   actor: string;
   via: string | null;
+  /** The roster `--actors` wrote, in order; `null` when it stays commented. */
+  actors: string[] | null;
   tasksDir: string;
   /** Absolute paths of the files and directories this run created. */
   created: string[];
@@ -98,6 +107,40 @@ function actorLine(identity: Identity): string {
   return `  actor: ${ui.bold(identity.actor)}${via} ${ui.dim("(heads every log entry you write; TASKS_ACTOR or --as changes it)")}`;
 }
 
+function actorsLine(roster: Roster | null): string {
+  if (roster === null) {
+    return `  actors: ${ui.dim(`none listed; uncomment actors: in ${CONFIG_FILENAME} to keep a roster`)}`;
+  }
+  return `  actors: ${ui.bold(Object.keys(roster).join(", "))} ${ui.dim(`(listed in ${CONFIG_FILENAME}; other names are refused until added there)`)}`;
+}
+
+/**
+ * The roster `--actors` asks for: the proposed one (the resolved actor and
+ * `agent`) without a value, else the names given, comma-separated. Checked
+ * before anything is written.
+ */
+function rosterFrom(
+  value: string | true | undefined,
+  actor: string,
+): Roster | null {
+  if (value === undefined) return null;
+  if (value === true) return defaultRoster(actor);
+  const roster = Object.create(null) as Roster;
+  for (const part of value.split(",")) {
+    const name = part.trim();
+    if (name === "") continue;
+    assertActor(name, "--actors");
+    roster[name] = name === AGENT_ACTOR ? AGENT_DESCRIPTION : null;
+  }
+  if (Object.keys(roster).length === 0) {
+    throw TaskError.usage(
+      `--actors needs a comma-separated list of actors, or no value for the resolved actor and ${AGENT_ACTOR}.`,
+      { option: "--actors", value },
+    );
+  }
+  return roster;
+}
+
 export function initCommand(): Command {
   return new Command("init")
     .description(
@@ -111,6 +154,10 @@ export function initCommand(): Command {
       "--no-skill",
       `skip installing the agent skill into ${SKILLS_RELATIVE_DIR}/`,
     )
+    .option(
+      "--actors [names]",
+      `write the roster of actors tasks may be assigned to, on from the start: the resolved actor and ${AGENT_ACTOR}, or a comma-separated list`,
+    )
     .option("--json", "emit machine-readable JSON")
     .action(async (options: InitOptions, command: Command) => {
       const global = globalOptions(command);
@@ -123,16 +170,32 @@ export function initCommand(): Command {
       // Resolved before anything is written: an invalid --as, TASKS_ACTOR or
       // --session fails the command with nothing on disk.
       const identity = await resolveCommandIdentity(global, root);
+      const roster = rosterFrom(options.actors, identity.actor);
 
       const tasksDir = path.join(root, TASKS_DIRNAME);
       if (await pathExists(tasksDir)) {
         await checkExisting(root, tasksDir, options.force === true);
       }
+      // The roster goes into a config.yml this run writes; an existing one
+      // is never rewritten, so the names belong in it by hand.
+      const configFile = path.join(tasksDir, CONFIG_FILENAME);
+      if (roster !== null && (await pathExists(configFile))) {
+        throw TaskError.usage(
+          `${configFile} exists; list the actors under actors: there instead of passing --actors.`,
+          { file: configFile, option: "--actors" },
+        );
+      }
 
       const created: string[] = [];
       await fs.mkdir(tasksDir, { recursive: true });
       const files: ReadonlyArray<readonly [string, string]> = [
-        [CONFIG_FILENAME, configTemplate()],
+        [
+          CONFIG_FILENAME,
+          configTemplate({
+            actors: roster ?? defaultRoster(identity.actor),
+            live: roster !== null,
+          }),
+        ],
         [README_FILENAME, readmeTemplate()],
         [GITIGNORE_FILENAME, gitignoreTemplate()],
       ];
@@ -157,6 +220,7 @@ export function initCommand(): Command {
         const result: InitJson = {
           actor: identity.actor,
           via: identity.via,
+          actors: roster === null ? null : Object.keys(roster),
           tasksDir,
           created,
           skill: skill && {
@@ -182,6 +246,7 @@ export function initCommand(): Command {
             ),
       );
       writeOut(actorLine(identity));
+      if (created.includes(configFile)) writeOut(actorsLine(roster));
       for (const target of created) writeOut(`  ${ui.dim(shown(target))}`);
       if (skill?.installed) {
         for (const file of skill.files) writeOut(`  ${ui.dim(shown(file))}`);

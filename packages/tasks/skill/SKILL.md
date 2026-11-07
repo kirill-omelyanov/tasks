@@ -27,7 +27,10 @@ tasks mine --json
 ```
 
 - Exit `3`, no `.tasks/` found: the project is not set up. **Ask before running
-  `tasks init`** — creating a tree is the person's decision.
+  `tasks init`** — creating a tree is the person's decision — and ask whom to
+  list as actors: `tasks init --actors <person>,agent` writes the roster at
+  once; without the flag it stays off until someone uncomments `actors:` in
+  `config.yml`.
 - Exit `2`, "a .tasks v1 tree": tell the person; the one-time `tasks migrate` is
   theirs to run.
 - If `tasks` is not on PATH, use `npx @speekl/tasks` in its place everywhere.
@@ -170,7 +173,7 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | `tasks archive`, `restore`, `purge`, `delete`                     | Archive a resolved subtree (`--resolved-before 30d`: all older ones); undo; release a path; remove unworked. |
 | `tasks session-check` / `heartbeat` / `session-end`               | Exit invariant; liveness (run by the harness).                                                               |
 | `tasks validate [--fix]` / `tasks reindex`                        | Check the tree; regenerate `index.md`.                                                                       |
-| `tasks init` / `tasks skill install`                              | Scaffold a tree (ask first); refresh this skill.                                                             |
+| `tasks init [--actors [<names>]]` / `tasks skill install`         | Scaffold a tree (ask first; `--actors` lists who tasks go to); refresh this skill.                           |
 | `tasks hooks install [--actor <name>]`                            | Write the harness hooks into `.claude/settings.json` (ask first).                                            |
 
 `--force` overrides authorization and, per command, the start gate, a live

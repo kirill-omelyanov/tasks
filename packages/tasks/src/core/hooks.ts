@@ -4,12 +4,13 @@ import { isDeepStrictEqual } from "node:util";
 
 import { TaskError } from "../errors.js";
 import { errnoCode, writeFileAtomic } from "./fs-utils.js";
+import { AGENT_ACTOR } from "./types.js";
 
 /** Claude Code's shared project settings, where its hooks are configured. */
 export const SETTINGS_RELATIVE_PATH = path.join(".claude", "settings.json");
 
 /** The actor the hooks act as unless `--actor` names another. */
-export const DEFAULT_HOOKS_ACTOR = "agent";
+export const DEFAULT_HOOKS_ACTOR = AGENT_ACTOR;
 
 /** The events the hooks attach to, in the order the block lists them. */
 export const HOOK_EVENTS = [

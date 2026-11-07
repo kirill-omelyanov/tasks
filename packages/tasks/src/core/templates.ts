@@ -1,11 +1,50 @@
+import { AGENT_ACTOR, AGENT_DESCRIPTION } from "./types.js";
+
 /**
  * The scaffolds the CLI writes: a new tree's `config.yml`, `README.md` and
  * `.gitignore`, a new task's body, and the frame of `index.md`. Functions,
  * not constants, so a caller always gets a fresh string.
  */
 
-/** Every key commented out, so the defaults apply until someone opts in. */
-export function configTemplate(): string {
+export interface ConfigTemplateOptions {
+  /**
+   * The roster under `actors:`, in order: what `init` proposes (the resolved
+   * actor, then `agent`). The generic example when absent.
+   */
+  actors?: Record<string, string | null>;
+  /** Write the roster live, not as a commented example. */
+  live?: boolean;
+}
+
+/** The roster `init` proposes: the resolved actor, then `agent`. */
+export function defaultRoster(actor: string): Record<string, string | null> {
+  const roster = Object.create(null) as Record<string, string | null>;
+  roster[actor] = null;
+  roster[AGENT_ACTOR] = AGENT_DESCRIPTION;
+  return roster;
+}
+
+function exampleRoster(): Record<string, string | null> {
+  const roster = Object.create(null) as Record<string, string | null>;
+  roster.alice = "maintainer; approves plans and does releases";
+  roster[AGENT_ACTOR] = AGENT_DESCRIPTION;
+  return roster;
+}
+
+/**
+ * Every key commented out, so the defaults apply until someone opts in; the
+ * `actors:` block alone can be written live, which switches the roster on
+ * from the first command. Actors match the actor pattern and the
+ * descriptions are the CLI's own words, so both are safe as plain YAML.
+ */
+export function configTemplate(options: ConfigTemplateOptions = {}): string {
+  const prefix = options.live === true ? "" : "# ";
+  const roster = Object.entries(options.actors ?? exampleRoster())
+    .map(
+      ([actor, description]) =>
+        `${prefix}  ${actor}:${description === null ? "" : ` ${description}`}`,
+    )
+    .join("\n");
   return `# .tasks convention v2. See \`tasks --help\` or .tasks/README.md.
 version: 2
 
@@ -21,9 +60,8 @@ version: 2
 
 # The actors tasks may be assigned to, each with a line on who they are. Once
 # any is listed, assign, handoff, new --assign and --as refuse other names.
-# actors:
-#   alice: maintainer; approves plans and does releases
-#   agent: the coding agent
+${prefix}actors:
+${roster}
 
 # Sibling trees by alias, as paths relative to this project's root.
 # projects:

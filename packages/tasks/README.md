@@ -56,7 +56,7 @@ path, an unambiguous suffix of one, or `alias:path` in a listed project.
 
 | Command                                                                         | Purpose                                                                                                                    |
 | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `tasks init [--force] [--no-skill]`                                             | Scaffold `.tasks/`, print the resolved actor, install the agent skill.                                                     |
+| `tasks init [--force] [--no-skill] [--actors [<names>]]`                        | Scaffold `.tasks/`, print the resolved actor, install the agent skill; `--actors` writes the roster.                       |
 | `tasks skill install [--force]`                                                 | Install or refresh the agent skill in `.claude/skills/tasks/`.                                                             |
 | `tasks hooks install [--actor <name>] [--force]`                                | Write the Claude Code harness hooks into `.claude/settings.json`; they need `jq`.                                          |
 | `tasks show <task>`                                                             | The task: fields, derived conditions, workspace files, who references it, body.                                            |
@@ -154,7 +154,9 @@ resolved. Give agents their own name with `TASKS_ACTOR`: `agent` by convention,
 which the hooks export and the skill sets without them. List who tasks may be
 assigned to under `actors:` — `assign`, `handoff`, `new --assign` and `--as` then
 refuse other names, `validate` flags an unlisted assignee or claimant, and
-`tasks actors` shows who is around.
+`tasks actors` shows who is around. `tasks init --actors` writes the list from
+the start; without the flag the scaffold carries your name and `agent`
+commented out, ready to switch on.
 
 The **session** is `--session <token>`, else `TASKS_SESSION`. A claim records it,
 every command with a session keeps its heartbeat fresh, and a claim whose session

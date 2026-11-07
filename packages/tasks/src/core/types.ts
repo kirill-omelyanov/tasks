@@ -143,6 +143,10 @@ export const LOCK_STALE_MS = 10_000;
 export const ACTOR_ENV = "TASKS_ACTOR";
 export const SESSION_ENV = "TASKS_SESSION";
 
+/** The conventional actor of an agent: what the hooks export and the skill sets. */
+export const AGENT_ACTOR = "agent";
+export const AGENT_DESCRIPTION = "the coding agent";
+
 /* ------------------------------------------------------------------------ */
 /* The manifest                                                             */
 /* ------------------------------------------------------------------------ */

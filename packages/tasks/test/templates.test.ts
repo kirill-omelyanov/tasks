@@ -5,6 +5,7 @@ import { renderTaskFile, safeParseTaskFile } from "../src/core/frontmatter.js";
 import { titleOf } from "../src/core/task.js";
 import {
   configTemplate,
+  defaultRoster,
   gitignoreTemplate,
   indexTemplate,
   readmeTemplate,
@@ -33,6 +34,33 @@ describe("configTemplate", () => {
       agent: "the coding agent",
     });
     expect({ ...detected.config.projects }).toEqual({ backend: "../backend" });
+  });
+
+  it("names the proposed roster, commented, and writes it live on request", () => {
+    const proposed = configTemplate({ actors: defaultRoster("ada") });
+    expect(proposed).toContain(
+      "# actors:\n#   ada:\n#   agent: the coding agent\n",
+    );
+    expect(parseConfigText(proposed, "config.yml")).toEqual({
+      kind: "v2",
+      config: defaultConfig(),
+    });
+
+    const live = configTemplate({ actors: defaultRoster("ada"), live: true });
+    expect(live).toContain("\nactors:\n  ada:\n  agent: the coding agent\n");
+    const detected = parseConfigText(live, "config.yml");
+    expect(detected.kind).toBe("v2");
+    if (detected.kind !== "v2") return;
+    expect(Object.entries(detected.config.actors)).toEqual([
+      ["ada", null],
+      ["agent", "the coding agent"],
+    ]);
+  });
+
+  it("proposes agent once when the agent itself runs init", () => {
+    expect(Object.entries(defaultRoster("agent"))).toEqual([
+      ["agent", "the coding agent"],
+    ]);
   });
 
   it("points at the help and the README", () => {

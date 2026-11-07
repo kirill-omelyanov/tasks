@@ -277,6 +277,7 @@ describe("resolveIdentity", () => {
       });
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]).toContain('git user.name "Ada L" does not match');
+      expect(diagnostics[0]).toContain("for instance ada");
     },
   );
 

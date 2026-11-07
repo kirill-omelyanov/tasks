@@ -527,14 +527,15 @@ recreated at that path. `delete` confirms the removal.
 ### Setup and sessions
 
 ```json
-{ "actor": "alice", "via": null, "tasksDir": "/Users/you/acme-api/.tasks", "created": ["/Users/you/acme-api/.tasks/config.yml", "…"], "skill": { "installed": true, "dir": "/Users/you/acme-api/.claude/skills/tasks", "files": ["…"] } }
+{ "actor": "alice", "via": null, "actors": null, "tasksDir": "/Users/you/acme-api/.tasks", "created": ["/Users/you/acme-api/.tasks/config.yml", "…"], "skill": { "installed": true, "dir": "/Users/you/acme-api/.claude/skills/tasks", "files": ["…"] } }
 { "installed": false, "dir": "/Users/you/acme-api/.claude/skills/tasks", "files": [], "skipped": "exists" }
 { "installed": true, "file": "/Users/you/acme-api/.claude/settings.json", "actor": "agent", "written": ["SessionStart", "PostToolUse", "SessionEnd"], "kept": ["Stop"] }
 { "path": "/Users/you/acme-api/.tasks/index.md", "written": true }
 { "session": "7f3a", "touched": ["/Users/you/acme-api/.tasks", "/Users/you/backend/.tasks"] }
 ```
 
-In order: `init` (`skill` is `null` under `--no-skill`), `skill install`,
+In order: `init` (`actors` lists the roster `--actors` wrote, else `null`; `skill` is
+`null` under `--no-skill`), `skill install`,
 `hooks install`, `reindex`, `heartbeat`. `hooks install` names in `written` the events
 whose tasks hook it added or replaced and in `kept` those whose tasks hook it left as it
 was; when it wrote nothing, `installed` is `false` and `skipped` is `"exists"`, as for

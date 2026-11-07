@@ -65,15 +65,18 @@ Scaffold a `.tasks/` tree in the current directory (or `-C <dir>`), print the ac
 resolved, and install the agent skill.
 
 ```sh
-tasks init [--force] [--no-skill] [--json]
+tasks init [--force] [--no-skill] [--actors [<names>]] [--json]
 ```
 
-| Option       | Effect                                                                 |
-| ------------ | ---------------------------------------------------------------------- |
-| `--force`    | Add the scaffold files an existing tree lacks. Never overwrites a file. |
-| `--no-skill` | Skip installing the agent skill into `.claude/skills/tasks/`.           |
+| Option               | Effect                                                                 |
+| -------------------- | ---------------------------------------------------------------------- |
+| `--force`            | Add the scaffold files an existing tree lacks. Never overwrites a file. |
+| `--no-skill`         | Skip installing the agent skill into `.claude/skills/tasks/`.           |
+| `--actors [<names>]` | Write [`actors:`](/docs/reference/configuration#actors) live, so the roster is on from the first command: the actor it resolved and `agent`, or the comma-separated names given. |
 
-**Writes** `.tasks/config.yml` (`version: 2`, every other key commented out),
+**Writes** `.tasks/config.yml` (`version: 2`, every other key commented out; the
+`actors:` example already names the actor it resolved and `agent`, so switching the roster
+on later is uncommenting two lines),
 `.tasks/README.md`, `.tasks/.gitignore` (ignoring `.locks/`), the `.tasks/.locks/`
 directory, and the [skill](/docs/guides/agent-protocol#the-skill) unless `--no-skill`.
 `init` does not discover: it scaffolds exactly where it runs. It never prompts — agents
@@ -82,7 +85,9 @@ agent asks the person first.
 
 **Fails** with exit `4` when `.tasks/` already exists and `--force` was not given, and
 with exit `2` when the existing tree is a v1 tree, `--force` or not: upgrade it with
-[`migrate`](#tasks-migrate).
+[`migrate`](#tasks-migrate). Exit `2` too when `--actors` names an actor that fails the
+pattern, or is given while a `config.yml` already exists: the names go into that file by
+hand.
 
 ### `tasks skill install`
 

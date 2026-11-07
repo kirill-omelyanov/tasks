@@ -166,7 +166,7 @@ async function searchOperator(
     if (value === null) continue;
     if (ACTOR_PATTERN.test(value)) return { operator: value, osUser: null };
     options.diagnose?.(
-      `git ${key} ${JSON.stringify(value)} does not match ${ACTOR_PATTERN.source}; skipped (set ${ACTOR_ENV} to choose the actor).`,
+      `git ${key} ${JSON.stringify(value)} does not match ${ACTOR_PATTERN.source}; skipped (set ${ACTOR_ENV} to a short name${shortNameHint(value)}).`,
     );
   }
 
@@ -175,6 +175,12 @@ async function searchOperator(
     return { operator: osUser, osUser };
   }
   return { operator: null, osUser };
+}
+
+/** The first word of a skipped git name, lower-cased, when it would do. */
+function shortNameHint(value: string): string {
+  const first = value.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  return ACTOR_PATTERN.test(first) ? `, for instance ${first}` : "";
 }
 
 /** Why the search found nobody, for the error and the `--as` diagnostic. */

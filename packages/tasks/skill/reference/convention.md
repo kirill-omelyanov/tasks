@@ -198,7 +198,8 @@ refuse other names (exit `2`; `details.actors` lists the roster, `details.file`
 the `config.yml` to extend — the one of the tree that holds the task), an
 unlisted acting identity is reported on stderr but not refused, and `validate`
 warns `unknown-actor` for an open task whose assignee or claimant is unlisted.
-`tasks actors` shows the roster with each actor's open tasks.
+`tasks actors` shows the roster with each actor's open tasks, and
+`tasks init --actors [<names>]` writes the key from the start.
 
 ## References
 

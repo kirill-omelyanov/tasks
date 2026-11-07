@@ -139,7 +139,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 
 | Command | Behaviour |
 | --- | --- |
-| `init` | Scaffold a tree: `config.yml` with `version: 2`, `README.md`, `.gitignore`. Ask before creating; print the resolved actor. |
+| `init` | Scaffold a tree: `config.yml` with `version: 2`, `README.md`, `.gitignore`. Ask before creating; print the resolved actor; MAY write the roster on request (`--actors`). |
 | `new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group at the path becomes the task; refuse an existing task, a resolved parent, a reserved path; `--assign` names a listed actor when the tree lists actors. |
 | `show <task>` | The task object with derived conditions and the body. |
 | `resume <task>` | The task object; one line per ancestor (id, title, status, workspace files); children with statuses and conditions; the workspace file list; `state.md` in full; the last log entry. |

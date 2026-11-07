@@ -13,7 +13,9 @@ icon: Settings
 ## `config.yml`
 
 `.tasks/config.yml` is **required** and declares the convention version. `tasks init`
-scaffolds it with every optional key commented out:
+scaffolds it with every optional key commented out; the `actors:` example already names
+the actor it resolved (`alice` below) and `agent`, and `tasks init --actors` writes that
+block live:
 
 ```yaml title=".tasks/config.yml"
 # .tasks convention v2. See `tasks --help` or .tasks/README.md.
@@ -32,7 +34,7 @@ version: 2
 # The actors tasks may be assigned to, each with a line on who they are. Once
 # any is listed, assign, handoff, new --assign and --as refuse other names.
 # actors:
-#   alice: maintainer; approves plans and does releases
+#   alice:
 #   agent: the coding agent
 
 # Sibling trees by alias, as paths relative to this project's root.
@@ -153,6 +155,9 @@ bare name (`bob:`) needs no description. With at least one actor listed:
 
 [`tasks actors`](/docs/reference/commands#tasks-actors) shows the roster with each actor's
 open tasks, and the names in use that it lacks. Without the key, any name may be assigned.
+`tasks init --actors [<names>]` writes the key from the start, with the actor it resolved
+and `agent`, or the names given; without the flag the scaffold carries those two names
+commented out, ready to switch on.
 
 ### `projects`
 

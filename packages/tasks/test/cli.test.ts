@@ -14,6 +14,7 @@ import { readSession } from "../src/core/sessions.js";
 import { SKILLS_RELATIVE_DIR, SKILL_NAME } from "../src/core/skill.js";
 import {
   configTemplate,
+  defaultRoster,
   gitignoreTemplate,
   readmeTemplate,
 } from "../src/core/templates.js";
@@ -364,7 +365,9 @@ describe("init", () => {
     const result = await sandbox.run("init", "--no-skill");
     expect(result.code).toBe(ExitCode.Success);
 
-    expect(await sandbox.read(".tasks/config.yml")).toBe(configTemplate());
+    expect(await sandbox.read(".tasks/config.yml")).toBe(
+      configTemplate({ actors: defaultRoster("tester") }),
+    );
     expect(await sandbox.read(".tasks/README.md")).toBe(readmeTemplate());
     expect(await sandbox.read(".tasks/.gitignore")).toBe(gitignoreTemplate());
     const locks = await fs.stat(path.join(sandbox.tasksDir, ".locks"));
@@ -410,6 +413,7 @@ describe("init", () => {
     expect(Object.keys(json)).toEqual([
       "actor",
       "via",
+      "actors",
       "tasksDir",
       "created",
       "skill",
@@ -428,6 +432,119 @@ describe("init", () => {
     expect(json.skill).toMatchObject({ installed: true, dir: skillDir });
     expect(json.skill?.files).toContain(path.join(skillDir, "SKILL.md"));
     expect(await sandbox.exists(".claude/skills/tasks/SKILL.md")).toBe(true);
+  });
+
+  it("names the resolved actor and agent in the commented actors example", async () => {
+    sandbox = await makeSandbox();
+    const result = await sandbox.run(
+      "init",
+      "--no-skill",
+      "--as",
+      "alice",
+      "--json",
+    );
+    expect(result.json<InitJson>().actors).toBeNull();
+    expect(await sandbox.read(".tasks/config.yml")).toContain(
+      "# actors:\n#   alice:\n#   agent: the coding agent\n",
+    );
+    const listed = await sandbox.run("actors", "--json");
+    expect(
+      listed
+        .json<{ actors: { listed: boolean }[] }>()
+        .actors.every((row) => !row.listed),
+    ).toBe(true);
+  });
+
+  it("writes the roster live with --actors: the resolved actor and agent, or the names given", async () => {
+    sandbox = await makeSandbox();
+    const result = await sandbox.run(
+      "init",
+      "--no-skill",
+      "--actors",
+      "--json",
+    );
+    expect(result.code).toBe(ExitCode.Success);
+    expect(result.json<InitJson>().actors).toEqual(["tester", "agent"]);
+    expect(await sandbox.read(".tasks/config.yml")).toContain(
+      "\nactors:\n  tester:\n  agent: the coding agent\n",
+    );
+    const listed = await sandbox.run("actors", "--json");
+    expect(
+      listed
+        .json<{ actors: { actor: string; listed: boolean }[] }>()
+        .actors.map((row) => [row.actor, row.listed]),
+    ).toEqual([
+      ["tester", true],
+      ["agent", true],
+    ]);
+    // The roster is on from the first command.
+    expect((await sandbox.run("new", "a", "A", "--assign", "bob")).code).toBe(
+      ExitCode.Usage,
+    );
+
+    await fs.rm(sandbox.tasksDir, { recursive: true });
+    const named = await sandbox.run(
+      "init",
+      "--no-skill",
+      "--actors",
+      " alice, agent,,dan ",
+      "--json",
+    );
+    expect(named.json<InitJson>().actors).toEqual(["alice", "agent", "dan"]);
+    expect(await sandbox.read(".tasks/config.yml")).toContain(
+      "\nactors:\n  alice:\n  agent: the coding agent\n  dan:\n",
+    );
+  });
+
+  it("prints the roster it wrote, or how to switch one on", async () => {
+    sandbox = await makeSandbox();
+    const on = await sandbox.run("init", "--no-skill", "--actors", "ada,agent");
+    expect(plain(on.stdout)).toMatch(
+      /^ {2}actors: ada, agent \(listed in config\.yml/m,
+    );
+    await fs.rm(sandbox.tasksDir, { recursive: true });
+    const off = await sandbox.run("init", "--no-skill");
+    expect(plain(off.stdout)).toMatch(
+      /^ {2}actors: none listed; uncomment actors: in config\.yml/m,
+    );
+  });
+
+  it("refuses --actors with a bad name, an empty list or an existing config.yml, writing nothing", async () => {
+    sandbox = await makeSandbox();
+    const bad = await sandbox.run(
+      "init",
+      "--no-skill",
+      "--actors",
+      "two words",
+      "--json",
+    );
+    expect(bad.code).toBe(ExitCode.Usage);
+    expect(await sandbox.exists(".tasks")).toBe(false);
+    const empty = await sandbox.run(
+      "init",
+      "--no-skill",
+      "--actors",
+      " , ",
+      "--json",
+    );
+    expect(empty.code).toBe(ExitCode.Usage);
+    expect(await sandbox.exists(".tasks")).toBe(false);
+
+    await sandbox.run("init", "--no-skill");
+    await fs.rm(path.join(sandbox.tasksDir, "README.md"));
+    const existing = await sandbox.run(
+      "init",
+      "--no-skill",
+      "--force",
+      "--actors",
+      "--json",
+    );
+    expect(existing.code).toBe(ExitCode.Usage);
+    expect(
+      (JSON.parse(existing.stderr) as { error: { details: unknown } }).error
+        .details,
+    ).toMatchObject({ option: "--actors" });
+    expect(await sandbox.exists(".tasks/README.md")).toBe(false);
   });
 
   it("skips the skill with --no-skill", async () => {

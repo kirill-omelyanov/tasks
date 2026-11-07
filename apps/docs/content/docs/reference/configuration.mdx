@@ -191,7 +191,9 @@ not among them is reported on stderr by every command, and `--as` must name a li
 <Callout type="info" title="Give agents their own name">
   A person and an agent often share one machine and one git identity. Export
   `TASKS_ACTOR` for the agent — the [harness hooks](/docs/guides/harness) do — so the
-  log, the inbox and the authorization rules tell the two apart.
+  log, the inbox and the authorization rules tell the two apart. By convention the name
+  is `agent`: the hooks export it and the skill sets it without them, so
+  `tasks assign <task> agent` reaches the agent either way.
 </Callout>
 
 ## The session

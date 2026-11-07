@@ -32,18 +32,23 @@ tasks mine --json
   theirs to run.
 - If `tasks` is not on PATH, use `npx @speekl/tasks` in its place everywhere.
 
-## Your session token
+## Your name and session token
 
-Act with **one session token on every command** of this session; a claim
+You act as **`agent`** (unless `tasks actors` lists another name for the
+agent) with **one session token on every command** of this session; a claim
 without one cannot be told from live work and is recovered only by force.
-Subagents use the same token.
+Subagents use the same name and token.
 
 - **With the harness hooks**, `TASKS_SESSION` and `TASKS_ACTOR` are already set
   (`echo $TASKS_SESSION`), and you pass nothing.
 - **Without them**, generate a token once (`uuidgen`, or a timestamp; it must
-  match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`) and pass `--session <token>` to every
-  command. Shell variables may not survive between tool calls, so prefer the
-  flag to an `export`.
+  match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`), then prefix every command with
+  `TASKS_ACTOR=agent` and pass `--session <token>` to it:
+  `TASKS_ACTOR=agent tasks claim --next --session <token>`. Shell variables may
+  not survive between tool calls, so prefer the prefix and the flag to an
+  `export`. Never `--as agent`: `--as` records the person as the operator.
+  Without the name you act under the person's git identity, and nothing tells
+  your work from theirs.
 
 ## Entry
 

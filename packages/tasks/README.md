@@ -150,7 +150,8 @@ The **actor** heading every log entry is resolved from `--as`, then
 `TASKS_ACTOR`, then `git config user.name`, then `user.email`, then the
 operating-system user; it must match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`, and a git
 name with spaces is skipped with a diagnostic. `tasks init` prints the actor it
-resolved. Give agents their own name with `TASKS_ACTOR`. List who tasks may be
+resolved. Give agents their own name with `TASKS_ACTOR`: `agent` by convention,
+which the hooks export and the skill sets without them. List who tasks may be
 assigned to under `actors:` — `assign`, `handoff`, `new --assign` and `--as` then
 refuse other names, `validate` flags an unlisted assignee or claimant, and
 `tasks actors` shows who is around.

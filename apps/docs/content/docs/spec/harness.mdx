@@ -7,7 +7,7 @@ icon: Plug
 The protocol above becomes automatic when the agent's harness enforces it. With Claude Code hooks
 as the example:
 
-- **Environment.** Export `TASKS_ACTOR` for the agent (for instance `claude`). Claude Code puts no
+- **Environment.** Export `TASKS_ACTOR` for the agent (`agent`, the conventional name). Claude Code puts no
   session id in the environment by itself; every hook receives it as the `session_id` field of its
   JSON input, and the `SessionStart` hook writes `export TASKS_SESSION=<id>` (and `TASKS_ACTOR`) to
   the file named by `CLAUDE_ENV_FILE`, which Claude Code sources for every later shell command of

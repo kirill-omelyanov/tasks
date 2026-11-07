@@ -37,8 +37,10 @@ actor's description and open tasks, and names the actors open tasks carry that t
 
 <Callout type="info" title="Non-normative">
   Two actors share one machine in the target mode: the maintainer's terminal
-  takes the git identity, the agent's harness exports `TASKS_ACTOR` (for instance `claude`). Without
-  that split, human and agent actions are indistinguishable in the log and in authorization.
+  takes the git identity, the agent's harness exports `TASKS_ACTOR`. By convention the agent's
+  name is `agent`: the harness hooks export it, and an agent without them sets it on every
+  command itself, so `assign <task> agent` reaches the agent either way. Without that split,
+  human and agent actions are indistinguishable in the log and in authorization.
 </Callout>
 
 ## Session tokens

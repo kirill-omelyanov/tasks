@@ -33,19 +33,21 @@ survive. Commit `.claude/skills/tasks/` so every agent working in the repository
 
 ## The session token
 
-An agent acts with a **session token** on every command. A claim taken without one
-cannot be told apart from live work, so nobody — not even the agent's own next session —
-can take it over without a force. Subagents act under the same token as the agent that
-spawned them.
+An agent acts as the actor **`agent`** — the conventional name, unless the tree's
+[roster](/docs/reference/configuration#actors) names it otherwise — with a **session
+token** on every command. A claim taken without one cannot be told apart from live work,
+so nobody — not even the agent's own next session — can take it over without a force.
+Subagents act under the same name and token as the agent that spawned them.
 
 - **With the harness hooks**, `TASKS_SESSION` and `TASKS_ACTOR` are exported for every
   shell command of the session, and the agent passes nothing.
 - **Without them**, the agent generates one token at the start of the session — a UUID
-  or a timestamp, matching `^[A-Za-z0-9][A-Za-z0-9._@+-]*$` — and passes
-  `--session <token>` to every command. Shell state often does not survive between an
-  agent's tool calls, so the flag is safer than an `export`. Without `TASKS_ACTOR` the
-  agent acts under the repository's git identity, which is the person's: it works, but
-  the log cannot tell the two apart.
+  or a timestamp, matching `^[A-Za-z0-9][A-Za-z0-9._@+-]*$` — and runs every command as
+  `TASKS_ACTOR=agent tasks … --session <token>`. Shell state often does not survive
+  between an agent's tool calls, so the prefix and the flag are safer than an `export`.
+  Without `TASKS_ACTOR` the agent acts under the repository's git identity, which is the
+  person's: it works, but the log cannot tell the two apart, and a task assigned to
+  `agent` never reaches it.
 
 The actor names who acted; the session names which run. Two sessions of the same agent
 are the same actor, and the log, the liveness rules and `mine` tell them apart by token.
@@ -192,9 +194,9 @@ Every case maps to a stored status plus what overviews show:
 | not started, waits for a task                             | `TODO` + `depends_on`                 | `blocked by X`                                |
 | not started, not scheduled                                | `BACKLOG`                             | `backlog`                                     |
 | a specific person's own step (deploy, release)            | `TODO` + `assignee`                   | `assigned alice`                              |
-| being worked                                              | `IN_PROGRESS`                         | `working by claude · live`                    |
+| being worked                                              | `IN_PROGRESS`                         | `working by agent · live`                     |
 | session ended deliberately, work unfinished               | `pause` → `PAUSED`                    | `ready · started`, first in `ready`           |
-| session ended without `pause`, or crashed                 | `IN_PROGRESS`                         | `working by claude · orphaned since T`; the next session takes over |
+| session ended without `pause`, or crashed                 | `IN_PROGRESS`                         | `working by agent · orphaned since T`; the next session takes over |
 | started, waits for a task                                 | `pause` + `dep add` → `PAUSED`        | `blocked by X · started`                      |
 | started, needs a decision or review                       | `handoff alice` → `PAUSED`            | `waiting for alice`                           |
 | started, set aside                                        | `pause`, then `defer` → `BACKLOG`     | `parked`; `schedule` brings it back to `PAUSED` |

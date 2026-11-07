@@ -13,6 +13,12 @@ An agent MUST act with a session token (see [Session tokens](/docs/spec/sessions
 a claim without one cannot be told from live work and is recovered only by force. Subagents the
 agent spawns act under the same token.
 
+An agent SHOULD act as the actor `agent` unless its harness or the tree's roster names it
+otherwise: the harness hooks export `TASKS_ACTOR=agent`, and without them the agent sets
+`TASKS_ACTOR=agent` on every command itself, never `--as`, which records an operator. An agent
+that sets no name acts under the working copy's git identity, the person's, and nothing tells
+its work from theirs.
+
 ## Entry
 
 1. Run `mine`. Continue any task claimed by this session, and take over any orphaned task claimed

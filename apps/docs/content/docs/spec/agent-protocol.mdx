@@ -37,7 +37,8 @@ agent spawns act under the same token.
   **outside** the parent, linking to the context in its body.
 - A step that a person must take — a review, an approval, a deploy — is a `handoff` to that person
   when it concerns this task, and a separate task assigned to that person only when other tasks
-  must depend on it.
+  must depend on it. The tree's roster (`actors`) says who the people are and how they are named;
+  an agent corrects a refused name and never extends the roster on its own initiative.
 - A child is never created for a phase of the task's own work — planning, review, verification:
   the plan is `plan.md`, the review is a `handoff`. Children are parts of the deliverable
   ([Containment](/docs/spec/containment)).

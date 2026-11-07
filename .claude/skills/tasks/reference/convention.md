@@ -9,7 +9,7 @@ enough. The normative text is at https://agenttasks.dev/docs/spec.
 
 ```
 .tasks/
-  config.yml          REQUIRED: version: 2, plus optional scope, session timeout, projects
+  config.yml          REQUIRED: version: 2, plus optional scope, session timeout, actors, projects
   README.md           describes the convention to a cold reader
   .gitignore          ignores .locks/
   index.md            optional generated overview; never read by any command
@@ -181,6 +181,9 @@ version: 2
 scope: auth-rework # default scope for list, ready, tree and claim --next
 session_timeout_minutes: 30 # heartbeat age after which a claim is orphaned
 archive_resolved_after_days: 30 # resolved this long ago and still live: reported
+actors: # who tasks may be assigned to, each with a line on who they are
+  alice: maintainer; approves plans and does releases
+  agent: the coding agent
 projects: # sibling trees by alias, relative to the project root
   backend: ../backend
 ```
@@ -189,6 +192,13 @@ projects: # sibling trees by alias, relative to the project root
 (exit `2`): v1's `active_phase` is `scope` now, and `statuses`, `roles` and
 `transitions` are gone. A tree without `version: 2` is a v1 tree, refused by
 every command except `tasks migrate`.
+
+Once `actors` lists anyone, `assign`, `handoff`, `new --assign` and `--as`
+refuse other names (exit `2`; `details.actors` lists the roster, `details.file`
+the `config.yml` to extend — the one of the tree that holds the task), an
+unlisted acting identity is reported on stderr but not refused, and `validate`
+warns `unknown-actor` for an open task whose assignee or claimant is unlisted.
+`tasks actors` shows the roster with each actor's open tasks.
 
 ## References
 
@@ -230,8 +240,8 @@ Errors (exit `4`): `malformed`, `unknown-status`, `unknown-priority`,
 `duplicate-id`, `log-conflict-markers`.
 
 Warnings (exit `0`): `paused-without-state`, `todo-with-state`,
-`unsatisfiable-ref`, `claim-liveness`, `unknown-key`, `project-unavailable`,
-`duplicate-project`, `resolved-unarchived`, `index-stale`.
+`unsatisfiable-ref`, `claim-liveness`, `unknown-key`, `unknown-actor`,
+`project-unavailable`, `duplicate-project`, `resolved-unarchived`, `index-stale`.
 
 `--fix` only regenerates `index.md`; every other finding needs a person's
 intent. Exit `0` with `{"ok": true, "findings": []}` means the tree is clean.

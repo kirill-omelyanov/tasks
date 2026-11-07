@@ -19,7 +19,7 @@ them to any invocation:
 | Option              | Effect                                                                                                                                      |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-C`, `--dir <dir>` | Start the search for `.tasks/` in `<dir>` instead of the current directory. For `init`, the directory to scaffold in.                        |
-| `--as <actor>`      | Act as this actor. The identity that would have acted is recorded as the operator: `alice via agent`. See [the actor](/docs/reference/configuration#the-actor). |
+| `--as <actor>`      | Act as this actor. The identity that would have acted is recorded as the operator: `alice via agent`. Must be listed when `config.yml` lists [actors](/docs/reference/configuration#actors). See [the actor](/docs/reference/configuration#the-actor). |
 | `--session <token>` | The session token, else `TASKS_SESSION`. Recorded on claims and in every log heading. See [sessions](/docs/reference/configuration#the-session). |
 | `-v`, `--version`   | Print the CLI version and exit `0`.                                                                                                          |
 | `-h`, `--help`      | Print help for the program or a command and exit `0`.                                                                                        |
@@ -35,7 +35,7 @@ for every shape.
 | ---- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `0`  | Success. An empty result is success.                                                                                            |
 | `1`  | Internal: an unexpected failure.                                                                                                |
-| `2`  | Usage: an unknown option, a malformed reference, an ambiguous suffix, a missing message, an invalid `config.yml`, a v1 tree, an actor or session that does not match its pattern. |
+| `2`  | Usage: an unknown option, a malformed reference, an ambiguous suffix, a missing message, an invalid `config.yml`, a v1 tree, an actor or session that does not match its pattern, an actor the roster does not list. |
 | `3`  | Not found: no tree discovered, no such task, a path that exists only in `.archive/`, nothing to take for `claim --next`.         |
 | `4`  | Conflict: the tree's state forbids the command — an illegal transition, an authorization failure, a gate, `state.md`, a live claim, a cycle, a reserved path, a failed session check, a busy lock. |
 
@@ -111,7 +111,7 @@ tasks hooks install [--actor <name>] [--force] [--json]
 
 | Option           | Effect                                                                                   |
 | ---------------- | ---------------------------------------------------------------------------------------- |
-| `--actor <name>` | The actor the hooks act as, set as `TASKS_ACTOR` in all four commands. Default: `agent`. |
+| `--actor <name>` | The actor the hooks act as, set as `TASKS_ACTOR` in all four commands. Default: `agent`. Must be listed when the tree lists [actors](/docs/reference/configuration#actors). |
 | `--force`        | Replace the tasks hooks already in the file with the documented ones.                    |
 
 The file and `.claude/` are created when absent, and what is written is the guide's
@@ -187,6 +187,19 @@ your other claims (orphaned ones are yours to take over), then the tasks merely 
 to you — your inbox. Each row carries its situation, liveness and last log entry, which
 is where a handoff's note is read. Not restricted by `scope`. Use `--as <actor>` to see
 someone else's.
+
+### `tasks actors`
+
+```sh
+tasks actors [--local] [--json]
+```
+
+Who is around: the actors `config.yml` lists under
+[`actors`](/docs/reference/configuration#actors), in their order, each with its
+description and how many open tasks it has claimed and is assigned; then, by name, every
+other actor an open task names — a name to add to the roster, or to correct — and you,
+marked `(you)`. The counts span the listed projects unless `--local`; the roster is this
+tree's. Without a roster the footer says so: any name may be assigned.
 
 ### `tasks list`
 
@@ -423,6 +436,9 @@ now waits for: the task reads `waiting for <actor>`. One log entry,
 `handoff <actor>: IN_PROGRESS → PAUSED`. Same `state.md` rule as `pause`. On an epic, the
 assignment keeps holding the children until the assignee releases them.
 
+**Fails** with exit `2`, writing nothing, when the tree lists
+[actors](/docs/reference/configuration#actors) and `<actor>` is not among them.
+
 ### `tasks assign` and `tasks unassign`
 
 ```sh
@@ -434,6 +450,9 @@ Set or clear the actor a task waits on, in any open status; the status does not 
 An assigned task **holds** its subtree, so the result of `assign` reports `holds` when
 open descendants exist. `unassign` on a task with no assignee is refused
 (`not-assigned`). Assigning the current assignee again only writes the log entry.
+
+**Fails** with exit `2`, writing nothing, when the tree lists
+[actors](/docs/reference/configuration#actors) and `<actor>` is not among them.
 
 ### `tasks priority`
 
@@ -457,7 +476,7 @@ tasks new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>] 
 | `<path>`             | The new task's id, e.g. `auth-rework/token-schema`; `alias:path` creates it in a listed project. Never a suffix. |
 | `<title…>`           | The title, one line: the first heading of `task.md`. Unquoted words are joined.  |
 | `--backlog`          | Create it in `BACKLOG`, not yet scheduled.                                       |
-| `--assign <actor>`   | Set the assignee, who must act on it next.                                       |
+| `--assign <actor>`   | Set the assignee, who must act on it next; a listed actor when the tree that holds the task lists [actors](/docs/reference/configuration#actors). |
 | `--priority <level>` | `urgent`, `high`, `normal` (default) or `low`.                                    |
 
 Creates the task in `TODO` — in `BACKLOG` with `--backlog`, and always under a `BACKLOG`
@@ -471,7 +490,8 @@ with an ordinary edit at the `path` in the result.
 **Fails** with exit `4` when a task already exists there (`exists`), the path is
 reserved by an archived task (`reserved`; purge or restore it), an ancestor is resolved
 (`resolved-ancestor`), or `--backlog` would put open, scheduled tasks under an
-unscheduled one (`backlog-invariant`).
+unscheduled one (`backlog-invariant`); with exit `2` when `--assign` names an actor the
+tree's roster lacks.
 
 ### `tasks dep` and `tasks after`
 

@@ -29,6 +29,12 @@ version: 2
 # older ones, and tasks archive --resolved-before without a value uses it.
 # archive_resolved_after_days: 30
 
+# The actors tasks may be assigned to, each with a line on who they are. Once
+# any is listed, assign, handoff, new --assign and --as refuse other names.
+# actors:
+#   alice: maintainer; approves plans and does releases
+#   agent: the coding agent
+
 # Sibling trees by alias, as paths relative to this project's root.
 # projects:
 #   backend: ../backend
@@ -58,6 +64,12 @@ version: 2
         "Days after which a resolved subtree is expected to be archived: validate reports the ones still live, and archive --resolved-before without a value uses it.",
       type: "integer ≥ 1",
       default: "none",
+    },
+    actors: {
+      description:
+        "The roster: who tasks may be assigned to, each with a line on who they are. Once any is listed, assign, handoff, new --assign and --as refuse other names.",
+      type: "map of actor → line or null",
+      default: "{}",
     },
     projects: {
       description:
@@ -114,6 +126,34 @@ roots, and `tasks archive --resolved-before` without a value archives exactly th
 [archive](/docs/reference/commands#tasks-archive)). Nothing is archived on its own: the
 warning is the signal, the command the action. Unset, neither applies.
 
+### `actors`
+
+```yaml
+actors:
+  alice: maintainer; approves plans and does releases
+  agent: the coding agent
+  bob:
+```
+
+The roster: who tasks may be assigned to, each with a line on who they are — what an
+agent reads to pick the right person for a `handoff`. Names match the actor pattern; a
+bare name (`bob:`) needs no description. With at least one actor listed:
+
+- `tasks assign`, `tasks handoff` and `tasks new --assign` refuse a name that is not
+  listed, with exit `2`, naming the listed actors and the file; a name that differs in
+  case alone is suggested. The roster that applies is the one of the tree that holds the
+  task, so a task created in a listed project is judged by that project's `config.yml`.
+- `--as` and `tasks hooks install --actor` refuse an unlisted name the same way.
+- The actor a command resolves for itself — from `TASKS_ACTOR`, git or the OS user — is
+  never refused for being unlisted, but every command says so on stderr until you set
+  `TASKS_ACTOR` to a listed name or add yours. The operator behind an `--as` is diagnosed
+  the same way.
+- `tasks validate` warns `unknown-actor` for every open task whose `assignee` or
+  `claimed_by` is not listed.
+
+[`tasks actors`](/docs/reference/commands#tasks-actors) shows the roster with each actor's
+open tasks, and the names in use that it lacks. Without the key, any name may be assigned.
+
 ### `projects`
 
 ```yaml
@@ -145,7 +185,8 @@ headings parseable. A `--as` or `TASKS_ACTOR` that does not match is a usage err
 identity that does not match is skipped with a diagnostic on stderr: a one-word
 `user.name` is used, a name with spaces falls through to `user.email`. Nothing is
 normalized silently. `tasks init` prints the actor it resolved, so you see the name that
-will head every entry you write.
+will head every entry you write. With [`actors`](#actors) listed, a resolved identity that is
+not among them is reported on stderr by every command, and `--as` must name a listed actor.
 
 <Callout type="info" title="Give agents their own name">
   A person and an agent often share one machine and one git identity. Export

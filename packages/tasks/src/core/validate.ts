@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { CommandContext } from "../context.js";
+import { hasRoster, isListed, listedActors } from "./actors.js";
 import { resolvedRoots } from "./archive.js";
 import type { DerivedTask } from "./derive.js";
 import { errnoCode, isDirectory } from "./fs-utils.js";
@@ -91,6 +92,7 @@ const SEVERITY: Record<FindingKind, FindingSeverity> = {
   "unsatisfiable-ref": "warning",
   "claim-liveness": "warning",
   "unknown-key": "warning",
+  "unknown-actor": "warning",
   "project-unavailable": "warning",
   "duplicate-project": "warning",
   "resolved-unarchived": "warning",
@@ -150,6 +152,7 @@ export async function validateTree(
     ...workspaceFindings(tree),
     ...(await referenceFindings(context, load)),
     ...(await livenessFindings(tree)),
+    ...actorFindings(tree),
     ...archiveFindings(tree),
     ...(await projectFindings(context)),
     ...(await indexFindings(context, load)),
@@ -735,6 +738,41 @@ async function livenessFindings(tree: Tree): Promise<FindingJson[]> {
 /* ------------------------------------------------------------------------ */
 
 /** Every listed project that did not load, in configuration order. */
+/**
+ * An open task whose assignee or claimant the roster does not list: the
+ * name is misspelt or the roster is behind, and either way the task is in
+ * nobody's `mine`. Resolved tasks keep their names as history and are not
+ * judged; without a roster there is nothing to judge against.
+ */
+function actorFindings(tree: Tree): FindingJson[] {
+  if (!hasRoster(tree.config)) return [];
+  const out: FindingJson[] = [];
+  const listed = listedActors(tree.config).join(", ");
+  for (const task of tree.tasks) {
+    if (!isOpenTask(task)) continue;
+    const { assignee, claimed_by: claimant } = task.frontmatter;
+    if (assignee !== null && !isListed(tree.config, assignee)) {
+      out.push(
+        finding(
+          "unknown-actor",
+          task.id,
+          `is assigned to ${assignee}, who is not listed under actors: in config.yml (${listed}); \`tasks assign\` a listed actor, or add the name there`,
+        ),
+      );
+    }
+    if (claimant !== null && !isListed(tree.config, claimant)) {
+      out.push(
+        finding(
+          "unknown-actor",
+          task.id,
+          `is claimed by ${claimant}, who is not listed under actors: in config.yml (${listed}); add the name there, or have the claim released and taken again by a listed actor`,
+        ),
+      );
+    }
+  }
+  return out;
+}
+
 async function projectFindings(
   context: CommandContext,
 ): Promise<FindingJson[]> {

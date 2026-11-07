@@ -26,7 +26,8 @@ A Writer MUST additionally: write atomically and canonically, preserving unknown
 keys; set `created` once and `updated` on every mutation; keep claim fields consistent with
 status; enforce every transition precondition,
 including messages, the `state.md` rules and the cascades of [Containment](/docs/spec/containment) with
-their order and logging; refuse creation under a resolved parent; refuse the
+their order and logging; refuse creation under a resolved parent; refuse an actor named for
+someone else that the roster lacks ([Actors](/docs/spec/sessions#actors)); refuse the
 dependency edits listed under [Cycles](/docs/spec/dependencies#cycles); relocate with reference rewriting in this tree and in the trees it lists; append a log
 entry for every transition in the defined heading shape; write only under the tree lock; write
 into another tree only when it is listed in `projects:`. A Writer MUST NOT rewrite the body,

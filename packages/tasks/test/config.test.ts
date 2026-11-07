@@ -59,7 +59,45 @@ describe("parsing a v2 config.yml", () => {
       scope: null,
       sessionTimeoutMinutes: 30,
       archiveResolvedAfterDays: null,
+      actors: {},
       projects: {},
+    });
+  });
+
+  it("reads the actors with their descriptions, a bare name as none", () => {
+    const config = v2(`version: 2
+actors:
+  alice: maintainer; approves plans and does releases
+  bob:
+  agent: ""
+  carol.d@example.com: "  reviews: everything  "
+`);
+    expect(Object.entries(config.actors)).toEqual([
+      ["alice", "maintainer; approves plans and does releases"],
+      ["bob", null],
+      ["agent", null],
+      ["carol.d@example.com", "reviews: everything"],
+    ]);
+    expect(Object.hasOwn(config.actors, "constructor")).toBe(false);
+  });
+
+  it("refuses actors that are not a mapping of actor to a line", () => {
+    expect(
+      usage(() => v2("version: 2\nactors:\n  - alice\n  - bob\n")).message,
+    ).toContain("actors must be a mapping of actor to a one-line description");
+    expect(
+      usage(() => v2("version: 2\nactors:\n  two words: here\n")).message,
+    ).toContain('actor "two words" must match');
+    expect(
+      usage(() => v2("version: 2\nactors:\n  alice: 42\n")).message,
+    ).toContain('actor "alice" must carry a one-line description or nothing');
+    expect(
+      usage(() => v2("version: 2\nactors:\n  alice: |\n    one\n    two\n"))
+        .message,
+    ).toContain("got several lines");
+    expect(usage(() => v2("version: 2\nactors: alice\n")).details).toEqual({
+      file: FILE,
+      key: "actors",
     });
   });
 
@@ -328,6 +366,23 @@ projects:
   backend: ../backend
   web: "packages/web site"
 `);
+  });
+
+  it("writes the actors before the projects, a bare name without a value", () => {
+    const config = defaultConfig();
+    config.actors.alice = "maintainer; approves plans and does releases";
+    config.actors.bob = null;
+    config.actors.agent = "the coding agent: Claude";
+    config.projects.backend = "../backend";
+    expect(renderConfig(config)).toBe(`version: 2
+actors:
+  alice: "maintainer; approves plans and does releases"
+  bob:
+  agent: "the coding agent: Claude"
+projects:
+  backend: ../backend
+`);
+    expect(v2(renderConfig(config))).toEqual(config);
   });
 
   it("round-trips through the parser", () => {

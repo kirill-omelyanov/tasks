@@ -91,6 +91,7 @@ be reworded in a patch release; codes may not. `--help` and `--version` exit `0`
 | A task that exists only in the archive    | `id`, `archived: true`                                                    |
 | A v1 tree                                 | `tasksDir`, `version: 1`, `upgrade: "tasks migrate"`                      |
 | A busy tree lock                          | `lock`, `holder`                                                          |
+| An actor the roster does not list         | `field`, `value`, `actors`, `file`                                        |
 
 Conflicts also carry **`details.kind`**, one word naming the refusal, so a caller can
 branch without reading the message:
@@ -419,6 +420,18 @@ Every reference, satisfied or not. `project` is the target's alias, `null` for t
 tree, or its project path for a tree reached without an alias; `id` is the target inside
 its own tree; `reason` is `null` when satisfied; `status` is `null` when the target is not
 a live, readable task.
+
+### `actors`
+
+```json
+{ "actor": "agent", "via": null, "projects": ["backend"], "actors": [ { "actor": "alice", "description": "maintainer; approves plans and does releases", "listed": true, "claimed": 1, "assigned": 2 }, { "actor": "agent", "description": "the coding agent", "listed": true, "claimed": 0, "assigned": 0 }, { "actor": "zed", "description": null, "listed": false, "claimed": 0, "assigned": 1 } ], "unavailable": [] }
+```
+
+`actor` and `via` are the caller, as `init` reports them. `actors` lists the roster in
+its configured order, then by name every other actor an open task names and the caller;
+`description` is the roster's line or `null`, `listed` whether `config.yml` names the
+actor, `claimed` and `assigned` count the open tasks across the spanned trees. `projects`
+and `unavailable` are as in the collection object.
 
 ### `state`
 

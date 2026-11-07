@@ -19,7 +19,7 @@ output is unspecified and MUST NOT be parsed.
 | --- | --- | --- |
 | `0` | success | The command completed. An empty result set is success. |
 | `1` | internal | An unexpected failure in the implementation. |
-| `2` | usage | Invalid invocation or configuration: unknown flag, malformed reference, ambiguous suffix, missing required message, invalid `config.yml`, unsupported `version`, a v1 tree for any command but `migrate`, an actor or session that does not match its pattern. |
+| `2` | usage | Invalid invocation or configuration: unknown flag, malformed reference, ambiguous suffix, missing required message, invalid `config.yml`, unsupported `version`, a v1 tree for any command but `migrate`, an actor or session that does not match its pattern, an actor the tree's roster does not list. |
 | `3` | not found | No tree discovered, no task at the given path, a path that exists only under `.archive/`, nothing to take for `claim --next`. |
 | `4` | conflict | The tree's state forbids the command: an illegal transition, an authorization failure, an unsatisfied gate, a missing or present `state.md`, a claim that is live or unknown, an archive with dependents, a cycle, a reserved path, a session check that fails. |
 
@@ -49,6 +49,7 @@ parsed. `error.details` is OPTIONAL and SHOULD carry the structured facts:
 | Missing or present `state.md` | `kind` |
 | Ambiguous suffix | `candidates` |
 | Archive with dependents | `dependents` |
+| An actor the roster does not list | `value`, `actors`, `file` |
 
 ## Task object
 
@@ -116,6 +117,18 @@ it, not a property of the JSON.
 with its alias for a foreign tree, `via` and `session` are `null` when the heading has none, and
 `text` is the entry's body below the heading.
 
+## Actors object
+
+```json
+{ "actor": "agent", "via": null, "projects": ["backend"], "actors": [ { "actor": "alice", "description": "maintainer; approves plans and does releases", "listed": true, "claimed": 1, "assigned": 2 } ], "unavailable": [] }
+```
+
+`actor` and `via` are the caller's identity as `init` reports it. `actors` lists the roster in its
+configured order, then by name every other actor an open task of the spanned trees names, and the
+caller; each row carries `description` (the roster's line, or `null`), `listed`, and the open
+tasks the actor is `claimed` on and `assigned` to. `projects` and `unavailable` are as in the
+[collection object](/docs/spec/cli#collection-object).
+
 ## Commands
 
 Command names are not contract — only the JSON shapes and exit codes are — but an implementation
@@ -127,11 +140,12 @@ directory for [discovery](/docs/spec/layout#discovery).
 | Command | Behaviour |
 | --- | --- |
 | `init` | Scaffold a tree: `config.yml` with `version: 2`, `README.md`, `.gitignore`. Ask before creating; print the resolved actor. |
-| `new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group at the path becomes the task; refuse an existing task, a resolved parent, a reserved path. |
+| `new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group at the path becomes the task; refuse an existing task, a resolved parent, a reserved path; `--assign` names a listed actor when the tree lists actors. |
 | `show <task>` | The task object with derived conditions and the body. |
 | `resume <task>` | The task object; one line per ancestor (id, title, status, workspace files); children with statuses and conditions; the workspace file list; `state.md` in full; the last log entry. |
 | `ready [--scope <path>] [--all] [--local]` | The ready set for the calling actor in ready order: effective priority, `PAUSED` first, oldest first. |
 | `mine [--as <actor>] [--local]` | Open tasks whose assignee or claimant is the actor, each with its situation, liveness and last log entry. |
+| `actors [--local]` | OPTIONAL, RECOMMENDED: the actors `config.yml` lists, each with its description and its open tasks, then every other actor an open task names, and the caller: the [actors object](/docs/spec/cli#actors-object). |
 | `list [--<situation>]`, `tree` | Overviews by [situation](/docs/spec/lifecycle#situation); `list` filters by situation (`--parked`, `--blocked`, `--waiting`, …); `tree` nests by containment in its human output and renders `finishes_after` entries under their task, tagged with their project; its JSON is the flat [collection object](/docs/spec/cli#collection-object). |
 | `schedule`, `defer`, `claim [--next [--scope <path>]]`, `pause -m`, `release`, `done -m`, `cancel -m`, `reopen -m`, `handoff <actor> -m`, `assign <actor>`, `unassign`, `priority <level>` | The [transitions](/docs/spec/lifecycle#transitions); `--force` as defined under [Force](/docs/spec/lifecycle#force). |
 | `dep add\|rm\|list <task> [<ref>…]` and `after add\|rm\|list <task> [<ref>…]` | Edit and inspect `depends_on` and `finishes_after` with the [mutation constraints](/docs/spec/dependencies#cycles); `<ref>` resolves like `<task>` ([addressing](/docs/spec/identity#command-line-addressing)) and is stored in full. |

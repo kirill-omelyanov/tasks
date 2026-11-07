@@ -2,6 +2,7 @@ import path from "node:path";
 
 import type { Command } from "commander";
 
+import { assertListedActor, unlistedActorWarning } from "./core/actors.js";
 import { detectTreeVersion } from "./core/config.js";
 import type { DerivedTask } from "./core/derive.js";
 import type { Project } from "./core/discovery.js";
@@ -121,6 +122,7 @@ export async function openContext(command: Command): Promise<CommandContext> {
 
   const identity = await resolveCommandIdentity(options, project.root);
   const projects = new Projects(await loadTree(project));
+  checkRoster(projects.local.tree, identity, options.as);
   const gates = new GateResolver(projects);
 
   if (identity.session) {
@@ -149,6 +151,33 @@ export async function openContext(command: Command): Promise<CommandContext> {
     },
   };
   return context;
+}
+
+/**
+ * The local roster against the acting identity. `--as` names someone else,
+ * so a name it does not list is refused like any other typed actor; the
+ * identity resolved from the environment is this command's own and is only
+ * diagnosed, since the remedy lies in `TASKS_ACTOR` or in `config.yml`, not
+ * on the command line. With an `--as`, the operator behind it is the one
+ * resolved from the environment, and it is diagnosed the same way.
+ */
+function checkRoster(
+  tree: Tree,
+  identity: Identity,
+  as: string | null | undefined,
+): void {
+  const { config, project } = tree;
+  const overridden = as !== undefined && as !== null;
+  if (overridden) assertListedActor(config, project, identity.actor, "--as");
+  const operator = overridden ? identity.via : identity.actor;
+  if (operator === null) return;
+  const warning = unlistedActorWarning(
+    config,
+    project,
+    operator,
+    overridden ? "operator" : "actor",
+  );
+  if (warning !== null) writeErr(ui.warn(warning));
 }
 
 /**

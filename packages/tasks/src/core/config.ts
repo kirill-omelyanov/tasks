@@ -9,6 +9,7 @@ import { yamlScalar } from "./frontmatter.js";
 import { errnoCode, isDirectory } from "./fs-utils.js";
 import { isMachineBoundPath, isTaskPath } from "./ids.js";
 import {
+  ACTOR_PATTERN,
   CONFIG_FILENAME,
   CONVENTION_VERSION,
   DEFAULT_SESSION_TIMEOUT_MINUTES,
@@ -22,6 +23,11 @@ export interface Config {
   sessionTimeoutMinutes: number;
   /** Days after which a resolved task is expected to be archived; `null` unset. */
   archiveResolvedAfterDays: number | null;
+  /**
+   * Actor → a one-line description or `null`, in configured order: the
+   * roster of who tasks may be assigned to. Has no prototype.
+   */
+  actors: Record<string, string | null>;
   /** Alias → path relative to the project root. Has no prototype. */
   projects: Record<string, string>;
 }
@@ -46,6 +52,7 @@ export const CONFIG_KEYS = [
   "scope",
   "session_timeout_minutes",
   "archive_resolved_after_days",
+  "actors",
   "projects",
 ] as const;
 
@@ -62,6 +69,7 @@ export function defaultConfig(): Config {
     scope: null,
     sessionTimeoutMinutes: DEFAULT_SESSION_TIMEOUT_MINUTES,
     archiveResolvedAfterDays: null,
+    actors: Object.create(null) as Record<string, string | null>,
     projects: Object.create(null) as Record<string, string>,
   };
 }
@@ -156,6 +164,42 @@ function parseV2(doc: Record<string, unknown>, file: string): Config {
       );
     }
     config.archiveResolvedAfterDays = archiveAfter;
+  }
+
+  const actors = doc.actors;
+  if (actors !== undefined && actors !== null) {
+    if (!isMapping(actors)) {
+      throw invalid(
+        file,
+        `actors must be a mapping of actor to a one-line description (alice: maintainer), got ${describe(actors)}.`,
+        "actors",
+      );
+    }
+    for (const [actor, description] of Object.entries(actors)) {
+      if (!ACTOR_PATTERN.test(actor)) {
+        throw invalid(
+          file,
+          `actor "${actor}" must match ${ACTOR_PATTERN.source} (letters, digits and . _ @ + -, no spaces).`,
+          "actors",
+        );
+      }
+      if (description !== null && typeof description !== "string") {
+        throw invalid(
+          file,
+          `actor "${actor}" must carry a one-line description or nothing, got ${describe(description)}.`,
+          "actors",
+        );
+      }
+      const line = description?.trim() ?? "";
+      if (/[\r\n]/.test(line)) {
+        throw invalid(
+          file,
+          `actor "${actor}" must carry a one-line description, got several lines.`,
+          "actors",
+        );
+      }
+      config.actors[actor] = line === "" ? null : line;
+    }
   }
 
   const projects = doc.projects;
@@ -331,7 +375,7 @@ export async function loadConfig(
 
 /**
  * Canonical `config.yml`: `version` first, then only the keys that differ
- * from their defaults, aliases in their configured order.
+ * from their defaults, actors and aliases in their configured order.
  */
 export function renderConfig(config: Config): string {
   const lines = [`version: ${CONVENTION_VERSION}`];
@@ -343,6 +387,17 @@ export function renderConfig(config: Config): string {
     lines.push(
       `archive_resolved_after_days: ${config.archiveResolvedAfterDays}`,
     );
+  }
+  const actors = Object.entries(config.actors);
+  if (actors.length > 0) {
+    lines.push("actors:");
+    for (const [actor, description] of actors) {
+      lines.push(
+        description === null
+          ? `  ${yamlScalar(actor)}:`
+          : `  ${yamlScalar(actor)}: ${yamlScalar(description)}`,
+      );
+    }
   }
   const aliases = Object.entries(config.projects);
   if (aliases.length > 0) {

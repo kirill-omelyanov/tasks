@@ -132,6 +132,7 @@ An implementation offering validation MUST detect at least:
 | A frontmatter key this specification does not define | warning |
 | A configured project is not checked out, or is a v1 or unsupported-version tree | warning |
 | Two configured aliases lead to the same tree | warning |
+| An open task's `assignee` or `claimed_by` that the tree's `actors` does not list, when it lists any | warning |
 | Resolved subtrees older than `archive_resolved_after_days`, when it is set | warning |
 | `index.md` is out of date | warning |
 

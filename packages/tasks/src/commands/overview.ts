@@ -10,7 +10,7 @@ import type { UnavailableTree } from "../core/projects.js";
 import type { TreeDerivation } from "../core/snapshot.js";
 import { snapshotAll, snapshotFromContext } from "../core/snapshot.js";
 import { toMalformedJson } from "../core/tree.js";
-import type { CollectionJson } from "../core/types.js";
+import type { CollectionJson, UnavailableProjectJson } from "../core/types.js";
 import { CONVENTION_VERSION } from "../core/types.js";
 import { emitJson, renderCollectionFooter, ui, writeOut } from "../output.js";
 
@@ -95,6 +95,21 @@ export function allTasks(span: Span): DerivedTask[] {
   return span.trees.flatMap(({ derived }) => [...derived.values()]);
 }
 
+/** The aliases of the listed trees the span read. */
+export function spannedAliases(span: Span): string[] {
+  return span.trees.flatMap(({ load }) =>
+    load.local || load.alias === null ? [] : [load.alias],
+  );
+}
+
+/** The listed projects the span could not read, as the JSON reports them. */
+export function unavailableOf(span: Span): UnavailableProjectJson[] {
+  return span.unavailable.map((load) => ({
+    alias: load.alias ?? load.relPath,
+    reason: unavailableReason(load),
+  }));
+}
+
 /**
  * The collection object. `projects` names the listed trees spanned;
  * `malformed` lists the unreadable manifests the query spans, so a scoped
@@ -106,9 +121,7 @@ export function collectionOf(
 ): CollectionJson {
   return {
     scope: span.scope,
-    projects: span.trees.flatMap(({ load }) =>
-      load.local || load.alias === null ? [] : [load.alias],
-    ),
+    projects: spannedAliases(span),
     count: rows.length,
     tasks: rows.map((d) => d.json),
     malformed: span.trees.flatMap(({ load }) =>
@@ -116,15 +129,12 @@ export function collectionOf(
         .filter((entry) => !load.local || inScope(entry.id, span.scope))
         .map(toMalformedJson),
     ),
-    unavailable: span.unavailable.map((load) => ({
-      alias: load.alias ?? load.relPath,
-      reason: unavailableReason(load),
-    })),
+    unavailable: unavailableOf(span),
   };
 }
 
 /** Why a listed project is missing from the overview, in a few words. */
-function unavailableText(load: UnavailableTree): string {
+export function unavailableText(load: UnavailableTree): string {
   const name = load.alias ?? load.relPath;
   switch (load.kind) {
     case "not-checked-out":

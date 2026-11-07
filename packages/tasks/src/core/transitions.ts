@@ -1,5 +1,6 @@
 import type { CommandContext } from "../context.js";
 import { TaskError } from "../errors.js";
+import { assertListedActor } from "./actors.js";
 import type { SupersededClaim } from "./authorization.js";
 import {
   authorizationDetailsOf,
@@ -625,6 +626,7 @@ interface Outcome {
  * a caller sees is the one the table names first.
  */
 async function decide(run: Run, id: string): Promise<Outcome> {
+  checkListedValue(run);
   const task = lookup(run, id);
   const from = task.frontmatter.status;
   const claimed =
@@ -664,6 +666,17 @@ async function decide(run: Run, id: string): Promise<Outcome> {
     ],
     unchanged,
   };
+}
+
+/**
+ * The actor `assign` and `handoff` name must be on this tree's roster when
+ * it has one; judged inside the lock, by the configuration as it is now.
+ */
+function checkListedValue(run: Run): void {
+  const { value } = run.prepared;
+  if (value === null) return;
+  if (run.command !== "assign" && run.command !== "handoff") return;
+  assertListedActor(run.tree.config, run.tree.project, value, "actor");
 }
 
 /** The task by its exact id in the fresh tree: it may have changed. */

@@ -129,8 +129,8 @@ finishing beats starting. Overviews show a level other than `normal` as a second
 | `done` | any open | `DONE` | authorization; start gate satisfied; finish gate satisfied; message | clears the claim |
 | `cancel` | any open | `CANCELLED` | authorization; cascade liveness rule; message | clears the claim; cascades to open descendants ([Containment](/docs/spec/containment)) |
 | `reopen` | `DONE`, `CANCELLED` | `BACKLOG` under a `BACKLOG` ancestor; else `PAUSED` when `state.md` exists, else `TODO` | authorization; the parent is open; message | |
-| `handoff <actor>` | `IN_PROGRESS` | `PAUSED` | as `pause` | `pause`, then `assign` |
-| `assign <actor>` / `unassign` | any open | unchanged | authorization | sets or clears `assignee` |
+| `handoff <actor>` | `IN_PROGRESS` | `PAUSED` | as `pause`; a listed actor when the tree lists actors | `pause`, then `assign` |
+| `assign <actor>` / `unassign` | any open | unchanged | authorization; `assign` names a listed actor when the tree lists actors ([Actors](/docs/spec/sessions#actors)) | sets or clears `assignee` |
 | `priority <level>` | any open | unchanged | authorization | sets `priority` |
 
 A status transition from a status to itself is never legal. `assign`, `unassign` and `priority`
@@ -142,7 +142,8 @@ logging rules. No other transitions exist.
   [`log.md`](/docs/spec/workspace#logmd)).
 - **Creation.** A new task starts in `TODO`; an implementation MAY create it in `BACKLOG` on
   request, MUST create it in `BACKLOG` under a `BACKLOG` parent, and MAY set `assignee` at
-  creation. A task MUST NOT be created under a resolved parent.
+  creation (a listed actor when the tree lists actors). A task MUST NOT be created under a
+  resolved parent.
 - **`release`** exists for a claim that produced nothing; the absence of `state.md` is the
   evidence. Work that produced anything is paused, not released. A claim taken from `BACKLOG` and
   released lands in `TODO`, which schedules the task; `defer` undoes that.

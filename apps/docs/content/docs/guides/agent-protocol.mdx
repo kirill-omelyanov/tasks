@@ -131,7 +131,9 @@ next ready task. Never reach for `--force` to win a claim.
   context in its body.
 - **A step a person must take** — a review, an approval, a deploy — is a `handoff` to
   that person when it concerns this task, and a separate task assigned to them
-  (`--assign`) only when other tasks must depend on it.
+  (`--assign`) only when other tasks must depend on it. `tasks actors` says who they
+  are and how they are named; a refused name is corrected, never added to `config.yml`
+  on your own.
 - **Children are parts of the deliverable, never phases.** No child for planning,
   review or verification: the plan is `plan.md`, the review is a `handoff`.
 - **A task with open children is never cancelled, deferred or archived on the agent's

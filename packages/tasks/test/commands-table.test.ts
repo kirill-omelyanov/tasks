@@ -93,6 +93,12 @@ const TABLE: Entry[] = [
     options: ["--local"],
   },
   {
+    row: "actors [--local]",
+    path: ["actors"],
+    args: [],
+    options: ["--local"],
+  },
+  {
     row: "list [--<situation>], tree",
     path: ["list"],
     args: [],
@@ -434,6 +440,11 @@ const RUNS: Run[] = [
         "bare",
         "claimed",
       ]),
+  },
+  {
+    argv: ["actors"],
+    check: (json) =>
+      expect(json).toMatchObject({ actor: "agent", via: "tester" }),
   },
   { argv: ["list"], check: readyForAgent },
   { argv: ["tree"], check: readyForAgent },

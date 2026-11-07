@@ -19,6 +19,12 @@ version: 2
 # older ones, and tasks archive --resolved-before without a value uses it.
 # archive_resolved_after_days: 30
 
+# The actors tasks may be assigned to, each with a line on who they are. Once
+# any is listed, assign, handoff, new --assign and --as refuse other names.
+# actors:
+#   alice: maintainer; approves plans and does releases
+#   agent: the coding agent
+
 # Sibling trees by alias, as paths relative to this project's root.
 # projects:
 #   backend: ../backend
@@ -44,7 +50,7 @@ make changes through the CLI, which enforces the rules below.
 
 \`\`\`txt
 .tasks/
-  config.yml        version: 2, plus optional scope, session timeout, projects
+  config.yml        version: 2, plus optional scope, session timeout, actors, projects
   README.md         this file
   .gitignore        keeps .locks/ out of version control
   index.md          optional generated overview; refresh with \`tasks reindex\`

@@ -8,6 +8,8 @@ import {
   resolveCommandIdentity,
   startDirectory,
 } from "../context.js";
+import { assertListedActor } from "../core/actors.js";
+import { detectTreeVersion } from "../core/config.js";
 import { requireProject } from "../core/discovery.js";
 import type { HookEvent } from "../core/hooks.js";
 import {
@@ -83,6 +85,13 @@ export function hooksCommand(): Command {
       // The settings belong to the repository the tree is in: they sit at
       // the root of the discovered tree, wherever below it this runs.
       const project = await requireProject(startDirectory(global));
+
+      // The hooks will write under this name: a v2 tree with a roster must
+      // list it, like any actor named for someone else.
+      const detected = await detectTreeVersion(project.tasksDir);
+      if (detected.kind === "v2") {
+        assertListedActor(detected.config, project, actor, "--actor");
+      }
 
       // Like every command: a bad --as or --session is a usage error before
       // anything is written, and a known session leaves its heartbeat in a

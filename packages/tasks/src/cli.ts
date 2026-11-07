@@ -6,6 +6,7 @@ import {
   purgeCommand,
   restoreCommand,
 } from "./commands/archive.js";
+import { actorsCommand } from "./commands/actors.js";
 import { afterCommand, depCommand } from "./commands/dep.js";
 import { heartbeatCommand } from "./commands/heartbeat.js";
 import { hooksCommand } from "./commands/hooks.js";
@@ -72,6 +73,7 @@ export function buildCli(): Command {
   program.addCommand(resumeCommand());
   program.addCommand(readyCommand());
   program.addCommand(mineCommand());
+  program.addCommand(actorsCommand());
   program.addCommand(listCommand());
   program.addCommand(treeCommand());
   program.addCommand(heartbeatCommand());

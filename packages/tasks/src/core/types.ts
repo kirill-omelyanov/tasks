@@ -378,6 +378,30 @@ export interface CollectionJson<T = TaskWithDerivedJson> {
   unavailable: UnavailableProjectJson[];
 }
 
+/** One row of `actors`: a listed actor, or one that an open task names. */
+export interface ActorJson {
+  actor: string;
+  /** The line `config.yml` gives the actor; `null` without one, or unlisted. */
+  description: string | null;
+  /** Whether `config.yml` lists the actor under `actors:`. */
+  listed: boolean;
+  /** Open tasks the actor is working on: `claimed_by`. */
+  claimed: number;
+  /** Open tasks the actor must act on: `assignee`. */
+  assigned: number;
+}
+
+export interface ActorsJson {
+  /** The calling actor and its operator, as `init` reports them. */
+  actor: string;
+  via: string | null;
+  /** The aliases spanned for the counts. */
+  projects: string[];
+  /** Listed actors in configured order, then the others by name. */
+  actors: ActorJson[];
+  unavailable: UnavailableProjectJson[];
+}
+
 /* ------------------------------------------------------------------------ */
 /* Validation, session-check, session-end                                   */
 /* ------------------------------------------------------------------------ */
@@ -402,6 +426,7 @@ export const FINDING_KINDS = [
   "unsatisfiable-ref",
   "claim-liveness",
   "unknown-key",
+  "unknown-actor",
   "project-unavailable",
   "duplicate-project",
   "resolved-unarchived",

@@ -7,6 +7,7 @@ import type { DerivedTask } from "./core/derive.js";
 import { labels, referenceText, situationText } from "./core/derive.js";
 import { ancestorPaths, compareIds, qualifyId } from "./core/ids.js";
 import type {
+  ActorsJson,
   BlockedByJson,
   CollectionJson,
   FindingJson,
@@ -309,6 +310,47 @@ export function renderMine(
       lines.push(...indentLines(entry.text, "    "));
     }
   }
+  return aligned(lines);
+}
+
+/**
+ * The roster with its counts: listed actors first, in their order, then
+ * the names open tasks carry that the roster lacks, which read as something
+ * to fix. The caller is marked, and the footer says whether any name is
+ * constrained at all.
+ */
+export function renderActors(result: ActorsJson): string {
+  const lines: Array<string[] | string> = [
+    ["ACTOR", "DESCRIPTION", "OPEN"].map((head) => pc.bold(head)),
+  ];
+  for (const row of result.actors) {
+    const name =
+      row.actor === result.actor
+        ? `${row.actor} ${pc.dim("(you)")}`
+        : row.actor;
+    const description = row.listed
+      ? (row.description ?? "")
+      : pc.yellow("not listed in config.yml");
+    const open = [
+      ...(row.claimed > 0 ? [`${row.claimed} claimed`] : []),
+      ...(row.assigned > 0 ? [`${row.assigned} assigned`] : []),
+    ];
+    lines.push([
+      name,
+      description,
+      open.length === 0 ? pc.dim("—") : open.join(" · "),
+    ]);
+  }
+  const listed = result.actors.filter((row) => row.listed).length;
+  const parts = [
+    listed === 0
+      ? "config.yml lists no actors: any name may be assigned"
+      : plural(listed, "listed actor"),
+  ];
+  if (result.projects.length > 0) {
+    parts.push(`projects ${result.projects.join(", ")}`);
+  }
+  lines.push("", pc.dim(parts.join(" · ")));
   return aligned(lines);
 }
 

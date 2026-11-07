@@ -28,6 +28,10 @@ describe("configTemplate", () => {
     if (detected.kind !== "v2") return;
     expect(detected.config.scope).toBe("auth-rework");
     expect(detected.config.sessionTimeoutMinutes).toBe(30);
+    expect({ ...detected.config.actors }).toEqual({
+      alice: "maintainer; approves plans and does releases",
+      agent: "the coding agent",
+    });
     expect({ ...detected.config.projects }).toEqual({ backend: "../backend" });
   });
 

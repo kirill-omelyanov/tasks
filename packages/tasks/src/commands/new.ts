@@ -1,6 +1,7 @@
 import { Command } from "commander";
 
 import { openContext } from "../context.js";
+import { assertListedActor } from "../core/actors.js";
 import {
   addressTree,
   checkPlacement,
@@ -135,6 +136,15 @@ export function newCommand(): Command {
         const { load, path: id } = await addressTree(context, arg, "path");
 
         const status = await withMutation(context, load, async (fresh) => {
+          // The roster of the tree that will hold the task, as it is now.
+          if (assignee !== null) {
+            assertListedActor(
+              fresh.tree.config,
+              fresh.tree.project,
+              assignee,
+              "--assign",
+            );
+          }
           const placement = await checkPlacement(fresh.tree, id, {
             qualify: (value) => context.projects.qualify(fresh.load, value),
           });

@@ -54,43 +54,44 @@ Every command takes the global options `-C, --dir <dir>` (where to look for
 name. Every command that prints something takes `--json`. A `<task>` is a full
 path, an unambiguous suffix of one, or `alias:path` in a listed project.
 
-| Command                                                                         | Purpose                                                                                       |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `tasks init [--force] [--no-skill]`                                             | Scaffold `.tasks/`, print the resolved actor, install the agent skill.                        |
-| `tasks skill install [--force]`                                                 | Install or refresh the agent skill in `.claude/skills/tasks/`.                                |
-| `tasks hooks install [--actor <name>] [--force]`                                | Write the Claude Code harness hooks into `.claude/settings.json`; they need `jq`.             |
-| `tasks show <task>`                                                             | The task: fields, derived conditions, workspace files, who references it, body.               |
-| `tasks resume <task>`                                                           | Everything the next session reads: ancestors, children, `state.md`, last log entry.           |
-| `tasks ready [--scope <path>] [--all] [--local]`                                | What you may take now: effective priority, then paused before todo, then oldest.              |
-| `tasks mine [--local]`                                                          | Your claims, then the tasks assigned to you, each with its last log entry.                    |
-| `tasks list [--scope <path>] [--all] [--local] [--<situation>…]`                | Open tasks by situation; `--ready`, `--blocked`, `--waiting`, `--parked`, `--done`, … filter. |
-| `tasks tree [--scope <path>] [--all] [--local] [--resolved]`                    | Open tasks nested by containment, with `finishes_after` joins.                                |
-| `tasks schedule <task>`                                                         | `BACKLOG` → `TODO`, or `PAUSED` when a `state.md` exists; reaches the subtree.                |
-| `tasks defer <task>`                                                            | `TODO`/`PAUSED` → `BACKLOG`, with every open descendant.                                      |
-| `tasks claim <task>` / `tasks claim --next [--scope <path>] [--all] [--local]`  | Start working: → `IN_PROGRESS`; takes over an orphaned claim.                                 |
-| `tasks pause <task> -m <text>`                                                  | `IN_PROGRESS` → `PAUSED`; needs a `state.md`.                                                 |
-| `tasks release <task>`                                                          | `IN_PROGRESS` → `TODO`, for a claim that produced nothing.                                    |
-| `tasks done <task> -m <text>`                                                   | Close as done; refused while a child or a `finishes_after` task is open.                      |
-| `tasks cancel <task> -m <text>`                                                 | Cancel with every open descendant; lists the dependents it strands.                           |
-| `tasks reopen <task> -m <text>`                                                 | `DONE`/`CANCELLED` → back to work.                                                            |
-| `tasks handoff <task> <actor> -m <text>`                                        | Pause and assign to `<actor>`, whose review or decision it now waits for.                     |
-| `tasks assign <task> <actor>` / `tasks unassign <task>`                         | Set or clear who the task waits on; an assigned task holds its subtree.                       |
-| `tasks priority <task> <level>`                                                 | `urgent`, `high`, `normal` or `low`; descendants inherit the higher level.                    |
-| `tasks new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group becomes the task.                          |
-| `tasks dep add\|rm\|list <task> [<ref>…]`                                       | Edit and inspect `depends_on`, the start gate.                                                |
-| `tasks after add\|rm\|list <task> [<ref>…]`                                     | Edit and inspect `finishes_after`, joins of the finish gate.                                  |
-| `tasks move <source> <destination>`                                             | Relocate a task or group and rewrite every reference, here and in listed trees.               |
-| `tasks state <task> [--edit]`                                                   | Replace `state.md` from stdin, or in `$VISUAL`/`$EDITOR`.                                     |
-| `tasks log <task> "<text>"` / `tasks log --since <when> [--local]`              | Append a narrative entry; list entries since a time across trees.                             |
-| `tasks archive <task> [--force]`                                                | Move a resolved subtree to `.archive/`; refused while open tasks reference it.                |
-| `tasks archive --resolved-before <when>` / `--all-resolved`                      | Archive every resolved subtree older than a threshold (`30d`, a date), skipping and listing the ones open tasks reference. |
-| `tasks restore <path>` / `tasks purge <path>`                                   | Bring an archive entry back; delete one for good and release its path.                        |
-| `tasks delete <task>`                                                           | Remove a never-worked task without archiving it.                                              |
-| `tasks heartbeat` / `tasks session-end`                                         | Mark the session alive; mark it ended, orphaning its claims at once.                          |
-| `tasks session-check`                                                           | Exit `4` when a task claimed by this session has no `state.md`.                               |
-| `tasks validate [--fix]`                                                        | Check the tree; exit `4` on errors; `--fix` regenerates `index.md` only.                      |
-| `tasks reindex`                                                                 | Regenerate `.tasks/index.md`.                                                                 |
-| `tasks migrate [<alias>] [--map OLD=NEW…] [--map-phase OLD=NEW…]`               | Upgrade a v1 tree, once.                                                                      |
+| Command                                                                         | Purpose                                                                                                                    |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `tasks init [--force] [--no-skill]`                                             | Scaffold `.tasks/`, print the resolved actor, install the agent skill.                                                     |
+| `tasks skill install [--force]`                                                 | Install or refresh the agent skill in `.claude/skills/tasks/`.                                                             |
+| `tasks hooks install [--actor <name>] [--force]`                                | Write the Claude Code harness hooks into `.claude/settings.json`; they need `jq`.                                          |
+| `tasks show <task>`                                                             | The task: fields, derived conditions, workspace files, who references it, body.                                            |
+| `tasks resume <task>`                                                           | Everything the next session reads: ancestors, children, `state.md`, last log entry.                                        |
+| `tasks ready [--scope <path>] [--all] [--local]`                                | What you may take now: effective priority, then paused before todo, then oldest.                                           |
+| `tasks mine [--local]`                                                          | Your claims, then the tasks assigned to you, each with its last log entry.                                                 |
+| `tasks actors [--local]`                                                        | Who is around: the listed actors with their open tasks, and the names in use the roster lacks.                             |
+| `tasks list [--scope <path>] [--all] [--local] [--<situation>…]`                | Open tasks by situation; `--ready`, `--blocked`, `--waiting`, `--parked`, `--done`, … filter.                              |
+| `tasks tree [--scope <path>] [--all] [--local] [--resolved]`                    | Open tasks nested by containment, with `finishes_after` joins.                                                             |
+| `tasks schedule <task>`                                                         | `BACKLOG` → `TODO`, or `PAUSED` when a `state.md` exists; reaches the subtree.                                             |
+| `tasks defer <task>`                                                            | `TODO`/`PAUSED` → `BACKLOG`, with every open descendant.                                                                   |
+| `tasks claim <task>` / `tasks claim --next [--scope <path>] [--all] [--local]`  | Start working: → `IN_PROGRESS`; takes over an orphaned claim.                                                              |
+| `tasks pause <task> -m <text>`                                                  | `IN_PROGRESS` → `PAUSED`; needs a `state.md`.                                                                              |
+| `tasks release <task>`                                                          | `IN_PROGRESS` → `TODO`, for a claim that produced nothing.                                                                 |
+| `tasks done <task> -m <text>`                                                   | Close as done; refused while a child or a `finishes_after` task is open.                                                   |
+| `tasks cancel <task> -m <text>`                                                 | Cancel with every open descendant; lists the dependents it strands.                                                        |
+| `tasks reopen <task> -m <text>`                                                 | `DONE`/`CANCELLED` → back to work.                                                                                         |
+| `tasks handoff <task> <actor> -m <text>`                                        | Pause and assign to `<actor>`, whose review or decision it now waits for.                                                  |
+| `tasks assign <task> <actor>` / `tasks unassign <task>`                         | Set or clear who the task waits on; an assigned task holds its subtree.                                                    |
+| `tasks priority <task> <level>`                                                 | `urgent`, `high`, `normal` or `low`; descendants inherit the higher level.                                                 |
+| `tasks new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group becomes the task.                                                       |
+| `tasks dep add\|rm\|list <task> [<ref>…]`                                       | Edit and inspect `depends_on`, the start gate.                                                                             |
+| `tasks after add\|rm\|list <task> [<ref>…]`                                     | Edit and inspect `finishes_after`, joins of the finish gate.                                                               |
+| `tasks move <source> <destination>`                                             | Relocate a task or group and rewrite every reference, here and in listed trees.                                            |
+| `tasks state <task> [--edit]`                                                   | Replace `state.md` from stdin, or in `$VISUAL`/`$EDITOR`.                                                                  |
+| `tasks log <task> "<text>"` / `tasks log --since <when> [--local]`              | Append a narrative entry; list entries since a time across trees.                                                          |
+| `tasks archive <task> [--force]`                                                | Move a resolved subtree to `.archive/`; refused while open tasks reference it.                                             |
+| `tasks archive --resolved-before <when>` / `--all-resolved`                     | Archive every resolved subtree older than a threshold (`30d`, a date), skipping and listing the ones open tasks reference. |
+| `tasks restore <path>` / `tasks purge <path>`                                   | Bring an archive entry back; delete one for good and release its path.                                                     |
+| `tasks delete <task>`                                                           | Remove a never-worked task without archiving it.                                                                           |
+| `tasks heartbeat` / `tasks session-end`                                         | Mark the session alive; mark it ended, orphaning its claims at once.                                                       |
+| `tasks session-check`                                                           | Exit `4` when a task claimed by this session has no `state.md`.                                                            |
+| `tasks validate [--fix]`                                                        | Check the tree; exit `4` on errors; `--fix` regenerates `index.md` only.                                                   |
+| `tasks reindex`                                                                 | Regenerate `.tasks/index.md`.                                                                                              |
+| `tasks migrate [<alias>] [--map OLD=NEW…] [--map-phase OLD=NEW…]`               | Upgrade a v1 tree, once.                                                                                                   |
 
 Transitions take `-m, --message <text>` — required by `pause`, `handoff`, `done`,
 `cancel` and `reopen` — and `--force`, which overrides authorization and, where
@@ -133,6 +134,9 @@ version: 2
 scope: auth-rework # default scope for list, ready, tree and claim --next
 session_timeout_minutes: 30 # silence after which a claim is orphaned
 archive_resolved_after_days: 30 # resolved this long ago and still live: validate reports them
+actors: # who tasks may be assigned to; once any is listed, other names are refused
+  alice: maintainer; approves plans and does releases
+  agent: the coding agent
 projects: # sibling trees, by alias
   backend: ../backend
 ```
@@ -146,7 +150,10 @@ The **actor** heading every log entry is resolved from `--as`, then
 `TASKS_ACTOR`, then `git config user.name`, then `user.email`, then the
 operating-system user; it must match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`, and a git
 name with spaces is skipped with a diagnostic. `tasks init` prints the actor it
-resolved. Give agents their own name with `TASKS_ACTOR`.
+resolved. Give agents their own name with `TASKS_ACTOR`. List who tasks may be
+assigned to under `actors:` — `assign`, `handoff`, `new --assign` and `--as` then
+refuse other names, `validate` flags an unlisted assignee or claimant, and
+`tasks actors` shows who is around.
 
 The **session** is `--session <token>`, else `TASKS_SESSION`. A claim records it,
 every command with a session keeps its heartbeat fresh, and a claim whose session

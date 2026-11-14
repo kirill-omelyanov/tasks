@@ -35,14 +35,16 @@ survive. Commit `.claude/skills/tasks/` so every agent working in the repository
 
 An agent acts as the actor **`agent`** — the conventional name, unless the tree's
 [roster](/docs/reference/configuration#actors) names it otherwise — with a **session
-token** on every command. A claim taken without one cannot be told apart from live work,
-so nobody — not even the agent's own next session — can take it over without a force.
+token** on every command. A claim taken without one has unknown liveness: nobody takes it
+over without a force, and the agent's own next session can only pause it, as the same
+actor, and claim it again.
 Subagents act under the same name and token as the agent that spawned them.
 
 - **With the harness hooks**, `TASKS_SESSION` and `TASKS_ACTOR` are exported for every
   shell command of the session, and the agent passes nothing.
 - **Without them**, the agent generates one token at the start of the session — a UUID
-  or a timestamp, matching `^[A-Za-z0-9][A-Za-z0-9._@+-]*$` — and runs every command as
+  or `date +%s`, matching `^[A-Za-z0-9][A-Za-z0-9._@+-]*$` (an ISO timestamp's colons
+  fail it) — and runs every command as
   `TASKS_ACTOR=agent tasks … --session <token>`. Shell state often does not survive
   between an agent's tool calls, so the prefix and the flag are safer than an `export`.
   Without `TASKS_ACTOR` the agent acts under the repository's git identity, which is the
@@ -159,6 +161,8 @@ next ready task. Never reach for `--force` to win a claim.
   tasks done <task> -m "Merged as abc123; docs: engineering/auth.md updated."
   ```
 
+- **`pause` and `handoff` are refused without a `state.md`**; `release` is only for a
+  claim that produced nothing.
 - **`state.md` names, under _Open_, every uncommitted file and branch** the work leaves
   behind.
 - **Promote knowledge before `done`.** What must outlive the task goes into the
@@ -167,7 +171,9 @@ next ready task. Never reach for `--force` to win a claim.
   shows where that documentation lives, and before `done` the agent brings the listed
   documents that describe what the task changed up to date — within the task's scope,
   never a general revision — and says in the message what changed, or that nothing
-  needed to. A location absent on this machine is named in the message instead.
+  needed to. A location absent on this machine is named in the message instead; a change
+  in another repository that has not landed is named too, and stays under _Open_ in
+  `state.md` with its branch while the task is open.
 - **Project state lives only in the tree.** An agent's private memory keeps preferences
   and reference facts, never the state of a task.
 
@@ -217,7 +223,7 @@ Every case maps to a stored status plus what overviews show:
 - A **conflict means someone else was first** — another agent's claim, a cascade, a
   takeover of your own stale session. Re-read with `tasks resume` and move on.
 - **Never `--force` on your own initiative.** It is for a person's explicit decision, and
-  the log records it.
+  the log records every forced transition (a forced `state` write is not logged).
 - **Never hand-edit frontmatter, never `mv` a task directory.** Both bypass the checks
   that keep the tree trustworthy.
 - If `tasks` is not on `PATH`, use `npx @speekl/tasks` in its place. Exit `3` with no

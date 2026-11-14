@@ -12,14 +12,17 @@ implementation that exposes a command line and claims conformance MUST satisfy i
 
 Unchanged from v1: stdout carries successful output only, stderr errors and diagnostics only;
 every command that produces output MUST accept `--json`, under which success is one JSON document
-on stdout and an error is one JSON document on stderr in the envelope below; without `--json`,
-output is unspecified and MUST NOT be parsed.
+on stdout and an error is one JSON document on stderr in the envelope below and nothing else (a
+diagnostic the command would print for a person is dropped); without `--json`, output is
+unspecified and MUST NOT be parsed. `validate` and `session-check` report a failing verdict as
+their result document on stdout with exit `4`, not as an error (see
+[their output](/docs/spec/cli#validation-session-check-and-session-end-output)).
 
 | Code | Name | Meaning |
 | --- | --- | --- |
 | `0` | success | The command completed. An empty result set is success. |
 | `1` | internal | An unexpected failure in the implementation. |
-| `2` | usage | Invalid invocation or configuration: unknown flag, malformed reference, ambiguous suffix, missing required message, invalid `config.yml`, unsupported `version`, a v1 tree for any command but `migrate`, an actor or session that does not match its pattern, an actor the tree's roster does not list. |
+| `2` | usage | Invalid invocation or configuration: unknown flag, malformed reference, ambiguous suffix, missing required message, invalid `config.yml`, unsupported `version`, a v1 tree for any command that opens it (every command but `migrate`, `skill install` and `hooks install`), an actor or session that does not match its pattern, an actor the tree's roster does not list. |
 | `3` | not found | No tree discovered, no task at the given path, a path that exists only under `.archive/`, nothing to take for `claim --next`. |
 | `4` | conflict | The tree's state forbids the command: an illegal transition, an authorization failure, an unsatisfied gate, a missing or present `state.md`, a claim that is live or unknown, an archive with dependents, a cycle, a reserved path, a session check that fails. |
 
@@ -50,6 +53,20 @@ parsed. `error.details` is OPTIONAL and SHOULD carry the structured facts:
 | Ambiguous suffix | `candidates` |
 | Archive with dependents | `dependents` |
 | An actor the roster does not list | `field`, `value`, `actors`, `file` |
+
+`details.kind` names the refusal in one word, so an agent branches on it rather than on the
+message. A conflict SHOULD carry one of `illegal-transition`, `authorization`, `already-claimed`,
+`start-gate`, `finish-gate`, `held`, `backlog-ancestor`, `backlog-invariant`, `resolved-ancestor`,
+`open-under-resolved`, `malformed`, `malformed-ancestor`, `malformed-descendants`, `cascade-claim`,
+`missing-state`, `present-state`, `state-changed`, `not-assigned`, `not-resolved`,
+`open-descendants`, `dependents`, `descendants`, `history`, `cycle`, `ancestor`, `exists`,
+`reserved`, `path-blocked`, `duplicate`, `collision`, `same-path`, `inside-subtree`,
+`interrupted-move`, `locked`, `editor`; a usage error the option parser raises carries `parser`. A
+later revision MAY add kinds; a kind MUST NOT change meaning. A listed project that cannot be
+addressed fails the same way for every command, with `argument`, `project`, `reason`
+(`not-checked-out`, `unresolved-project` or `unsupported-version`) and `dir`, plus `version` and
+`upgrade` for a v1 tree: not found when the project is absent or holds no tree, usage when its
+tree is of another version, and the configuration's own error when that is what fails.
 
 ## Task object
 
@@ -82,9 +99,10 @@ qualified as `alias:path`.
 
 Commands that report state (`show`, `resume`, `ready`, `list`, `tree`, `mine`) MUST add the
 derived conditions: `situation` (the word of the [Situation](/docs/spec/lifecycle#situation) table), `blocked_by` (a
-list of `{ref, reason, status}`), `ready` (for the calling actor), `effective_priority`, `held_by` (the nearest claimed or assigned ancestor, or `null`), `started`, `children`
-(`{open, resolved}`), `active` (an `IN_PROGRESS` descendant exists), `waiting_for`, for
-`IN_PROGRESS` tasks `liveness` and `last_seen`, and `last_entry`: the task's most recent log entry
+list of `{ref, reason, status}`; empty for a resolved task), `ready` (for the calling actor), `effective_priority`, `held_by` (the nearest claimed or assigned ancestor — or a malformed one, which holds for all anyone can tell — or `null`; `null` for a resolved task), `started`, `children`
+(`{open, resolved}`), `active` (an `IN_PROGRESS` descendant exists), `waiting_for`, `closable`,
+`liveness` and `last_seen` (`null` unless the task is `IN_PROGRESS`; `last_seen` is `null` too for a
+claim without a session), and `last_entry`: the task's most recent log entry
 in the shape of [log entries](/docs/spec/cli#log-entries) without `task`, or `null`. `mine` MUST render
 `last_entry`: it is where a handoff's note is read. `cancel` adds `dependents`: the open tasks,
 qualified by alias where foreign, whose `depends_on` names a task it cancelled (see
@@ -94,7 +112,12 @@ the local tree and in the trees reachable through `projects:`, whose `depends_on
 the documentation locations the holding tree's `config.yml` lists
 ([Configuration](/docs/spec/configuration#documentation)), in configured order, each as
 `{ "name", "path", "present" }` — the path as configured and whether it exists on this machine —
-and an empty list when none is listed.
+and an empty list when none is listed. `show` and `resume` MUST add `body` (the markdown body) and
+`workspace` (the workspace files present, in reading order); `resume` MUST add `ancestors`
+(`{ "id", "title", "status", "workspace" }`, outermost first), `child_tasks` (the children as task
+objects) and `state` (`state.md` in full, or `null`), leaving a malformed ancestor or child out of
+these lists. A transition adds `cascaded` (the ids a cascade reached) and `holds` (the open
+descendants the task now holds) where they apply.
 
 ## Collection object
 
@@ -143,10 +166,10 @@ directory for [discovery](/docs/spec/layout#discovery).
 
 | Command | Behaviour |
 | --- | --- |
-| `init` | Scaffold a tree: `config.yml` with `version: 2`, `README.md`, `.gitignore`. Ask before creating; print the resolved actor; MAY write the roster on request (`--actors`). |
+| `init` | Scaffold a tree: `config.yml` with `version: 2`, `README.md`, `.gitignore`. The caller asks before creating; the command never prompts. Print the resolved actor; MAY write the roster on request (`--actors`). |
 | `new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group at the path becomes the task; refuse an existing task, a resolved parent, a reserved path; `--assign` names a listed actor when the tree lists actors. |
 | `show <task>` | The task object with derived conditions and the body. |
-| `resume <task>` | The task object; one line per ancestor (id, title, status, workspace files); children with statuses and conditions; the workspace file list; `state.md` in full; the last log entry; the documentation locations `config.yml` lists, each with whether it exists here. |
+| `resume <task>` | The task object; one line per ancestor (id, title, status, workspace files); children with statuses and conditions; the workspace file list; the documentation locations `config.yml` lists, each with whether it exists here; `state.md` in full; the last log entry. |
 | `ready [--scope <path>] [--all] [--local]` | The ready set for the calling actor in ready order: effective priority, `PAUSED` first, oldest first. |
 | `mine [--as <actor>] [--local]` | Open tasks whose assignee or claimant is the actor, each with its situation, liveness and last log entry. |
 | `actors [--local]` | OPTIONAL, RECOMMENDED: the actors `config.yml` lists, each with its description and its open tasks, then every other actor an open task names, and the caller: the [actors object](/docs/spec/cli#actors-object). |
@@ -154,7 +177,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 | `schedule`, `defer`, `claim [--next [--scope <path>]]`, `pause -m`, `release`, `done -m`, `cancel -m`, `reopen -m`, `handoff <actor> -m`, `assign <actor>`, `unassign`, `priority <level>` | The [transitions](/docs/spec/lifecycle#transitions); `--force` as defined under [Force](/docs/spec/lifecycle#force). |
 | `dep add\|rm\|list <task> [<ref>…]` and `after add\|rm\|list <task> [<ref>…]` | Edit and inspect `depends_on` and `finishes_after` with the [mutation constraints](/docs/spec/dependencies#cycles); `<ref>` resolves like `<task>` ([addressing](/docs/spec/identity#command-line-addressing)) and is stored in full. |
 | `move <task\|group> <destination>` | Relocate with reference rewriting in this tree and in listed trees; list the trees it could not write and the references it could not rewrite. |
-| `archive <task> [--force]`, `archive --resolved-before <when> \| --all-resolved`, `restore <path>`, `purge <path>` | Archive a resolved subtree, or every resolved subtree of this tree whose root was resolved before a time (a timestamp, a date or a duration back from now), skipping and naming the roots open tasks reference; restore one to a free path, never under a resolved parent; purge an archive entry (see [`.archive/`](/docs/spec/layout#archive)). |
+| `archive <task> [--force]`, `archive --resolved-before [<when>] \| --all-resolved`, `restore <path>`, `purge <path>` | Archive a resolved subtree, or every resolved subtree of this tree whose root was resolved before a time (a timestamp, a date or a duration back from now), skipping and naming the roots open tasks reference; restore one to a free path, never under a resolved parent; purge an archive entry (see [`.archive/`](/docs/spec/layout#archive)). |
 | `delete <task>` | OPTIONAL: remove a never-worked task without archiving it, under the conditions in [`.archive/`](/docs/spec/layout#archive). |
 | `log <task> "<text>"`, `log --since <duration\|timestamp> [--local]` | Append a narrative entry; list entries across the tree(s) by time as [log entries](/docs/spec/cli#log-entries). |
 | `state <task> [--edit]` | OPTIONAL, RECOMMENDED: replace `state.md` with standard input, or open it in the caller's editor with `--edit`; no transition, no log entry (see [`state.md`](/docs/spec/workspace#statemd)). |
@@ -173,7 +196,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 { "session": "7f3a", "ended": "2026-09-22T08:02:41Z", "claims": ["auth-rework/token-schema"] }
 ```
 
-`ok` MUST be `false` if and only if at least one finding or violation has error severity;
+`ok` MUST be `false` if and only if at least one finding has error severity or at least one violation exists;
 `validate` exits `4` on errors and `0` on warnings alone; `session-check` exits `4` on any
 violation. `session-end` lists the tasks whose claims it orphaned and exits `0` even when there
 are none.

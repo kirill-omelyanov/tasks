@@ -75,7 +75,8 @@ A cycle in that graph means the tasks in it can never all resolve.
   as errors.
 - An implementation that offers dependency editing MUST refuse a self-reference, a reference to a
   task that does not exist, a reference from a task to its own ancestor (a guaranteed deadlock
-  with the finish edge), and any reference that would introduce a local cycle.
+  with the finish edge), and any reference that would introduce a local cycle; it MUST authorize
+  the edit as it authorizes a transition of the task ([Authorization](/docs/spec/lifecycle#authorization)).
 - Cross-tree edges MUST NOT be assumed traversable. An implementation SHOULD include them in cycle
   detection when the trees are reachable through `projects:`, and MUST otherwise treat them as
   non-edges.

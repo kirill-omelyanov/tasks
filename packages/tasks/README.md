@@ -84,7 +84,7 @@ path, an unambiguous suffix of one, or `alias:path` in a listed project.
 | `tasks state <task> [--edit]`                                                   | Replace `state.md` from stdin, or in `$VISUAL`/`$EDITOR`.                                                                  |
 | `tasks log <task> "<text>"` / `tasks log --since <when> [--local]`              | Append a narrative entry; list entries since a time across trees.                                                          |
 | `tasks archive <task> [--force]`                                                | Move a resolved subtree to `.archive/`; refused while open tasks reference it.                                             |
-| `tasks archive --resolved-before <when>` / `--all-resolved`                     | Archive every resolved subtree older than a threshold (`30d`, a date), skipping and listing the ones open tasks reference. |
+| `tasks archive --resolved-before [<when>]` / `--all-resolved`                   | Archive every resolved subtree older than a threshold (`30d`, a date), skipping and listing the ones open tasks reference. |
 | `tasks restore <path>` / `tasks purge <path>`                                   | Bring an archive entry back; delete one for good and release its path.                                                     |
 | `tasks delete <task>`                                                           | Remove a never-worked task without archiving it.                                                                           |
 | `tasks heartbeat` / `tasks session-end`                                         | Mark the session alive; mark it ended, orphaning its claims at once.                                                       |
@@ -108,14 +108,15 @@ they change only in a major version.
 - **Exit codes:** `0` success, `1` internal, `2` usage, `3` not found, `4`
   conflict. Branch on these, never on message text.
 - **Streams:** success goes to stdout; under `--json`, an error goes to stderr as
-  `{"error": {"code", "message", "details"}}`, and `details.kind` names the
-  refusal (`missing-state`, `start-gate`, `authorization`, `held`, …).
+  `{"error": {"code", "message", "details"}}` and nothing else does; `details.kind`
+  names the refusal (`missing-state`, `start-gate`, `authorization`, `held`, …).
 - **An empty result is success:** `tasks ready` with nothing available exits `0`
   with `"count": 0`.
 - **Task objects** carry the frontmatter fields, `id`, `name`, `parent`,
   `project`, `title` and `path`, plus the derived conditions — `situation`,
   `blocked_by`, `ready`, `held_by`, `liveness`, `last_entry`, … — on every
-  reporting command. Overviews return `{scope, projects, count, tasks, malformed}`.
+  reporting command. Overviews return
+  `{scope, projects, count, tasks, malformed, unavailable}`.
 
 ```sh
 tasks claim --next --json | jq -r .id
@@ -190,8 +191,9 @@ need `jq` on `PATH`. Commit the file. See
 
 ## Upgrading from v1
 
-A v1 tree — `.tasks/` without `version: 2` — is refused by every command except
-`tasks migrate`, which upgrades it once: phases become groups, `<phase>/<id>.md`
+A v1 tree — `.tasks/` without `version: 2` — is refused by every command that opens it
+(`skill install` and `hooks install` only write beside it); `tasks migrate` upgrades it
+once: phases become groups, `<phase>/<id>.md`
 becomes `<phase>/<id>/task.md`, references become paths, and statuses are mapped
 through the v1 roles. See
 [agenttasks.dev/docs/guides/migration](https://agenttasks.dev/docs/guides/migration).

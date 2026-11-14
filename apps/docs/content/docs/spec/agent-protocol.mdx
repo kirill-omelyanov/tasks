@@ -10,7 +10,8 @@ agent skill, harness integration or autonomous tool that works tasks on behalf o
 ## Identity
 
 An agent MUST act with a session token (see [Session tokens](/docs/spec/sessions#session-tokens)) on every command:
-a claim without one cannot be told from live work and is recovered only by force. Subagents the
+a claim without one has unknown liveness, so it is never taken over without force, and even the
+agent's own next session can only pause it, as the same actor, and claim it again. Subagents the
 agent spawns act under the same token.
 
 An agent SHOULD act as the actor `agent` unless its harness or the tree's roster names it

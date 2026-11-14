@@ -105,6 +105,7 @@ async function editInEditor(initial: string): Promise<Edited> {
           ? `was terminated by ${signal ?? "a signal"}`
           : `exited with code ${code}`;
       throw TaskError.conflict(`The editor ${how}; state.md was not written.`, {
+        kind: "editor",
         editor,
         code,
         signal,

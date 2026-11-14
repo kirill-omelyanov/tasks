@@ -145,7 +145,7 @@ first row that holds.
 | `waiting for X` | `PAUSED` with an assignee                                  |
 | `assigned X`    | an assignee, not `PAUSED`                                  |
 | `blocked by X`  | an unsatisfied `depends_on` reference                      |
-| `closable`      | a parent whose children are all resolved                   |
+| `closable`      | children and `finishes_after` references all resolved      |
 | `open N/M`      | a parent with open children: `N` of `M` resolved           |
 | `ready`         | free and unblocked                                         |
 
@@ -258,10 +258,11 @@ session takes it over with an ordinary `claim`, and the log records which sessio
 superseded and when it was last seen. The superseded session, should it come back, gets
 a conflict on its next write instead of overwriting the new claimant's work.
 
-`--force` is the one override, always recorded in the log. It lifts the authorization
-rules, the start gate, a live or unknown claim, and a hold — never the finish gate, the
-`state.md` rules, a resolved parent, the `BACKLOG` invariant, a cycle, a reserved path,
-or a required message.
+`--force` is the one override, recorded in the log of every transition it forces (a
+forced `state` write leaves no entry). It lifts the authorization rules, the start gate, a
+live or unknown claim, a hold, and `archive`'s refusal over dependents — never the finish
+gate, the `state.md` rules, a resolved parent, the `BACKLOG` invariant, a cycle, a reserved
+path, or a required message.
 
 ## Projects
 

@@ -62,8 +62,9 @@ SHOULD remove a group directory it empties.
 
 Creating a task at the path of an existing group turns the group into a task: the tasks beneath
 it become its children and its finish gate applies to them from then on. An implementation MUST
-allow this (the new task is open, so no invariant can break) and MUST refuse to create a task at
-the path of an existing task as a conflict.
+allow this (the new task is open, so no invariant can break — except a task created in `BACKLOG`
+over a group that holds scheduled open tasks, which would break the `BACKLOG` invariant and MUST
+be refused) and MUST refuse to create a task at the path of an existing task as a conflict.
 
 <Callout type="info" title="Non-normative">
   Reserving one filename is what makes the rule uniform: any directory can be a
@@ -97,8 +98,9 @@ An implementation:
   purge MUST name the live tasks that still reference the entry; it is the explicit decision that
   a task recreated at that path may be reached by those references.
 - MAY offer a **delete** that removes a live task without archiving it, only when the task has no
-  log entry other than its creation, no `state.md`, no children, and no live task references it.
-  Everything else is archived.
+  log entry other than its creation, no `state.md`, nothing beneath it (no child task and no
+  segment-named directory that could hold one), no live task references it, and the caller is
+  authorized as for a transition of it. Everything else is archived.
 
 ## `.locks/`
 
@@ -119,7 +121,8 @@ warning, never an error.
 ## Writes
 
 Every write of a manifest, a tool-owned workspace file, `config.yml` or `index.md` MUST be
-atomic: write a temporary file in the same directory, then rename it into place. Serialization
+atomic: write a temporary file in the same directory, then rename it into place; `log.md`, whose
+existing bytes are never rewritten, is appended in place instead. Serialization
 MUST be canonical (see [Serialization](/docs/spec/task-file#serialization)).
 
 Relocating a task or a group MUST be performed as a single atomic directory rename when source and

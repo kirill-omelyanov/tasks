@@ -53,7 +53,7 @@ status survives in a `task.md` is a person's decision.
 | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `paused-without-state` | A `PAUSED` task has no `state.md` — after a migration, or a hand edit. Write one with `tasks state`.       |
 | `todo-with-state`      | A `TODO` task has a `state.md`: started work is `PAUSED`, not `TODO`.                                       |
-| `unsatisfiable-ref`    | A reference of an open task can never be satisfied: missing, archived, cancelled (for `depends_on`), malformed, in a project that does not resolve, is not checked out, or has an unsupported version. |
+| `unsatisfiable-ref`    | A reference of an open task can never be satisfied: missing, archived, cancelled (for `depends_on`), in a project that does not resolve, is not checked out, or has an unsupported version. A malformed target is reported as `malformed` on the target itself, not here. |
 | `claim-liveness`       | An `IN_PROGRESS` claim is orphaned and may be taken over, or its session has no heartbeat file here (another machine, or a cleaned `.locks/`). A claim without a session is normal and not reported. |
 | `unknown-key`          | A frontmatter key the convention does not define. It is kept on every write; v1's `id` and `phase` are named as such. |
 | `unknown-actor`        | An open task's `assignee` or `claimed_by` is not under `actors:` in `config.yml`: a misspelt name, or a roster that is behind. `tasks assign` a listed actor, or add the name. Only with a roster. |
@@ -99,7 +99,8 @@ tasks validate --fix --json
 - `ok` is `false` if and only if a finding has error severity.
 - `checked` counts the manifests examined: live and archived, parsed or not.
 - `task` is `null` for a finding about the tree rather than one task
-  (`project-unavailable`, `index-stale`).
+  (`project-unavailable`, `duplicate-project`, `docs-missing`, `resolved-unarchived`,
+  `index-stale`, and a `malformed` `task.md` lying directly in `.tasks/`).
 
 ## Fixing what `--fix` cannot
 

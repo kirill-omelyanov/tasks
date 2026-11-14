@@ -56,7 +56,7 @@ const TRANSITION_ROW =
 const DEP_ROW =
   "dep add|rm|list <task> [<ref>…] and after add|rm|list <task> [<ref>…]";
 const ARCHIVE_ROW =
-  "archive <task> [--force], archive --resolved-before <when> | --all-resolved, restore <path>, purge <path>";
+  "archive <task> [--force], archive --resolved-before [<when>] | --all-resolved, restore <path>, purge <path>";
 const LOG_ROW =
   'log <task> "<text>", log --since <duration|timestamp> [--local]';
 

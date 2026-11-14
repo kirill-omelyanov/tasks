@@ -69,12 +69,13 @@ then `created` ascending; aggregated output interleaves projects by the same key
 
 An overview says exactly one word about a task, its **situation**, chosen as the first row below
 whose condition holds; every other condition that holds is shown after it as a secondary label
-(`started`, `blocked by X` — with the reason when the reference can never be satisfied, as in
-`blocked by A (cancelled)` — `active` for a parent with an `IN_PROGRESS` descendant, a
-[priority](/docs/spec/lifecycle#priority) other than `normal`, liveness, the assignee). Implementations MUST compute the
+(`started` for the task's own `state.md`, `blocked by X` — with the reason when the reference can
+never be satisfied, as in `blocked by A (cancelled)` — `active` for a parent with an `IN_PROGRESS`
+descendant, a [priority](/docs/spec/lifecycle#priority) other than `normal`, liveness, the assignee, and `held by X` or
+`closable` when they are not the situation itself). Implementations MUST compute the
 situation by this table, so that two of them agree on what a tree looks like.
 
-| Situation | Condition | Statuses in which it can hold |
+| Situation | Condition | Statuses in which it is shown |
 | --- | --- | --- |
 | `done`, `cancelled` | resolved | one each |
 | `working by X` | a claimant X is recorded; shown with its liveness | `IN_PROGRESS` |
@@ -82,10 +83,10 @@ situation by this table, so that two of them agree on what a tree looks like.
 | `backlog` | `BACKLOG` without started work | `BACKLOG` |
 | `held by X` | an ancestor X is claimed or assigned ([Hold](/docs/spec/containment#hold)) | `TODO`, `PAUSED` |
 | `waiting for X` | `PAUSED` with an assignee | `PAUSED` |
-| `assigned X` | an assignee, not `PAUSED` | `TODO`, `BACKLOG`, `IN_PROGRESS` |
-| `blocked by X` | an unsatisfied `depends_on` reference | any open |
-| `closable` | a task with children or `finishes_after` references whose finish gate is satisfied: closable either way, no cascade | any open |
-| `open N/M` | a parent with open children | any open |
+| `assigned X` | an assignee, not `PAUSED` | `TODO` (an assigned `BACKLOG` task shows `backlog` or `parked`, an assigned `IN_PROGRESS` one `working`) |
+| `blocked by X` | an unsatisfied `depends_on` reference | `TODO`, `PAUSED` |
+| `closable` | a task with children or `finishes_after` references whose finish gate is satisfied: closable either way, no cascade | `TODO`, `PAUSED` |
+| `open N/M` | a parent with open children | `TODO`, `PAUSED` |
 | `ready` | free and unblocked, as defined above | `TODO`, `PAUSED` |
 
 `N/M` is the parent's progress: live children resolved out of live children. Overview commands
@@ -133,11 +134,13 @@ finishing beats starting. Overviews show a level other than `normal` as a second
 | `assign <actor>` / `unassign` | any open | unchanged | `assign` names a listed actor when the tree lists actors ([Actors](/docs/spec/sessions#actors)); authorization | sets or clears `assignee` |
 | `priority <level>` | any open | unchanged | authorization | sets `priority` |
 
-A status transition from a status to itself is never legal. `assign`, `unassign` and `priority`
+A status transition from a status to itself is never legal, with one exception: `claim` on an
+`IN_PROGRESS` task is the takeover of an orphaned claim ([Liveness of a claim](/docs/spec/sessions#liveness-of-a-claim)),
+logged as `claim: IN_PROGRESS → IN_PROGRESS`. `assign`, `unassign` and `priority`
 change one field each; they are not status transitions but follow the same authorization and
 logging rules. No other transitions exist.
 
-- **Messages.** `done`, `pause`, `cancel` and `reopen` REQUIRE a message; every other transition
+- **Messages.** `done`, `pause`, `handoff`, `cancel` and `reopen` REQUIRE a message; every other transition
   MAY carry one. Every transition MUST append an entry to the task's log (see
   [`log.md`](/docs/spec/workspace#logmd)).
 - **Creation.** A new task starts in `TODO`; an implementation MAY create it in `BACKLOG` on
@@ -156,7 +159,8 @@ logging rules. No other transitions exist.
 - **`pause` without a `state.md`** MUST be refused with a conflict that names the missing file;
   this is the mechanism that guarantees a resume point.
 - **`claim --next`** takes, under the tree lock, the first task of the caller's ready set — in
-  ready order, within `--scope` when given — and claims it in the same operation, so that
+  ready order, within `--scope` when given and otherwise within the configured `scope` — and
+  claims it in the same operation, so that
   several agents reading one list do not race for its head. It fails as *not found* when the set
   is empty.
 
@@ -172,13 +176,16 @@ logging rules. No other transitions exist.
 
 - An `IN_PROGRESS` task whose claim is **live** or **unknown** (see
   [Liveness of a claim](/docs/spec/sessions#liveness-of-a-claim)) MUST be transitioned only by its claimant: the same
-  `claimed_by` and, when `claimed_session` is non-null, the same session. An **orphaned** claim
+  `claimed_by` and, when `claimed_session` is non-null, the same session (when it is null, any
+  session of that actor). An **orphaned** claim
   protects nothing: the task MAY be transitioned by any actor the remaining rules authorize, and
   the log entry MUST record the superseded session and when it was last seen, as a takeover does.
   Liveness protects live work; authority governs the rest.
 - An assigned task that is not claimed MUST be transitioned only by its assignee or by the
   assignee of one of its ancestors: authority flows down the tree.
 - Any other task MAY be transitioned by anyone.
+- The same rules authorize every other write to a task — `state`, a dependency edit, `move`,
+  `delete` — not only its transitions.
 - `claim` by an actor the rules above do not authorize MUST be refused like a claim on a claimed
   task.
 - A cascade ([Containment](/docs/spec/containment)) is authorized on the task the command names; the
@@ -193,7 +200,8 @@ Authorization failures are state conflicts (exit `4` under the [CLI contract](/d
 ## Force
 
 An explicit force (`--force`) is the only override in this specification and MUST be recorded in
-the log entry of the transition it forced. It overrides exactly:
+the log entry of the transition it forced; a forced `state` write, which appends no log entry, is
+the one forced write that goes unrecorded. It overrides exactly:
 
 - the [authorization](/docs/spec/lifecycle#authorization) rules, including the claimant rule for `move`;
 - the start gate on `claim` and `done`;

@@ -76,7 +76,7 @@ async function checkExisting(
   if (!(await isDirectory(tasksDir))) {
     throw TaskError.conflict(
       `${tasksDir} exists and is not a directory; move it aside first.`,
-      { path: tasksDir },
+      { kind: "path-blocked", path: tasksDir },
     );
   }
   const entries = await fs.readdir(tasksDir, { withFileTypes: true });
@@ -89,7 +89,7 @@ async function checkExisting(
   if (!force) {
     throw TaskError.conflict(
       `${TASKS_DIRNAME}/ already exists at ${tasksDir}. Use --force to add the scaffold files it lacks; existing files are kept.`,
-      { path: tasksDir },
+      { kind: "exists", path: tasksDir },
     );
   }
 }

@@ -21,8 +21,9 @@ migrated — the current tree, or a listed project named by alias:
    explicit `--map OLD=NEW` argument; without one, the migration MUST refuse and name the
    statuses.
 5. Rewrite every `depends_on` reference from a bare id to its path (`<phase>/<id>`): local
-   references always; external references only when the target tree is reachable and holds the
-   id, otherwise the reference is kept as it is and listed.
+   references whose id names a task of the tree (one that names none is kept as it is and
+   listed); external references only when the target tree is reachable and holds the id,
+   otherwise the reference is kept as it is and listed.
 6. Rewrite `config.yml`: `version: 2`, `active_phase` → `scope`, and remove `statuses`, `roles`,
    `transitions`.
 7. Remove v1's `_index.md` and generate `index.md`.
@@ -61,6 +62,6 @@ validation until one is written.
 | Configuration | statuses, roles, transitions, active phase | `version`, `scope`, `session_timeout_minutes`, `archive_resolved_after_days`, `actors`, `docs`, `projects` |
 | Unknown frontmatter keys | tolerated on read, dropped on write | tolerated on read, preserved on write, reported by validation |
 | Overview file | `_index.md` | `index.md`, a plain reserved root name like `config.yml` |
-| Removal | archive only, ids reserved forever | archive with merge, `purge` releases a path, `delete` for never-worked tasks |
+| Removal | archive only, ids reserved forever | archive with merge, `purge` releases a path, `delete` for never-worked tasks; `archive --resolved-before <when>` archives every resolved subtree older than a threshold in one call, and `archive_resolved_after_days` makes `validate` report the ones due |
 | Working copies | unaddressed | one checkout on the integration branch mutates task state; `.tasks/` on a feature branch is a declared merge hazard |
 | Agent contract | a skill's advice | a normative Agent role with entry, freshness and exit rules |

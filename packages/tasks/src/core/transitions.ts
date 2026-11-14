@@ -10,11 +10,11 @@ import {
 } from "./authorization.js";
 import type { DerivedTask } from "./derive.js";
 import { holdsSubtree, readySet } from "./derive.js";
-import { toBlockedBy, unavailableReason } from "./gates.js";
+import { requireAvailable, toBlockedBy } from "./gates.js";
 import { assertTaskPath, compareIds } from "./ids.js";
 import type { Fresh } from "./mutate.js";
 import { withMutation } from "./mutate.js";
-import type { LoadedTree, UnavailableTree } from "./projects.js";
+import type { LoadedTree } from "./projects.js";
 import { assertActor, claimLiveness } from "./sessions.js";
 import { snapshotAll, snapshotFromContext, snapshotTree } from "./snapshot.js";
 import type { Task } from "./task.js";
@@ -495,8 +495,8 @@ async function locate(
   argument: string,
 ): Promise<{ load: LoadedTree; id: string }> {
   const { target, path } = await context.projects.resolveArgument(argument);
-  if (target.kind !== "ok") throw unavailable(argument, target);
-  if (!target.writable) {
+  const available = requireAvailable(target, argument);
+  if (!available.writable) {
     // Unreachable through an alias, which always names a listed tree; kept
     // so that no path into a read-only tree can ever reach a write.
     throw TaskError.usage(
@@ -504,35 +504,8 @@ async function locate(
       { argument },
     );
   }
-  const load = context.projects.latest(target);
+  const load = context.projects.latest(available);
   return { load, id: resolveTaskId(load.tree, path) };
-}
-
-function unavailable(argument: string, target: UnavailableTree): TaskError {
-  const name = target.alias ?? target.relPath;
-  let why: string;
-  switch (target.kind) {
-    case "not-checked-out":
-      why = `is not checked out at ${target.dir}`;
-      break;
-    case "unsupported-version":
-      why =
-        target.version === 1
-          ? `is a .tasks v1 tree; run \`tasks migrate ${name}\` to upgrade it`
-          : `is a .tasks v${target.version} tree, which this tasks does not support`;
-      break;
-    case "unresolved":
-      why = `does not resolve to a readable .tasks tree at ${target.dir}${target.cause === null ? "" : ` (${target.cause.message})`}`;
-      break;
-  }
-  return TaskError.notFound(
-    `Cannot address ${argument}: project ${name} ${why}.`,
-    {
-      argument,
-      project: name,
-      reason: unavailableReason(target),
-    },
-  );
 }
 
 function nextScope(
@@ -540,6 +513,12 @@ function nextScope(
   options: ClaimNextOptions,
 ): string | null {
   if (typeof options.scope === "string") {
+    if (options.all === true) {
+      throw TaskError.usage(
+        "--scope and --all contradict each other: --all lifts the scope that --scope sets.",
+        { scope: options.scope },
+      );
+    }
     return assertTaskPath(options.scope, "scope");
   }
   return options.all === true ? null : context.tree.config.scope;

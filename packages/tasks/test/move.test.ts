@@ -939,7 +939,8 @@ describe("a writable tree that cannot be written", () => {
     expect(json.unrewritten).toEqual([
       { project: null, task: "l", field: "depends_on", ref: "../backend:x" },
     ]);
-    expect(result.stderr).toContain("index.md was not refreshed");
+    // The warning is for a person: under --json stderr is the envelope's.
+    expect(result.stderr).toBe("");
     expect(await s.exists("../backend/.tasks/y/task.md")).toBe(true);
   });
 });

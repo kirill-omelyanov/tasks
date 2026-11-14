@@ -28,11 +28,12 @@ a session token safe as a file name under `.locks/`.
 A tree MAY list its actors under `actors:` in `config.yml` ([Configuration](/docs/spec/configuration)),
 each with a line on who they are — what an agent reads to pick the right person for a
 `handoff`. A non-empty list is a **roster**: a name typed for someone else — the actor of
-`assign`, `handoff` or `new --assign`, an `--as` — MUST be on it, or the command fails as a
+`assign`, `handoff` or `new --assign`, an `--as` on a command that opens the tree — MUST be on it, or the command fails as a
 usage error naming the listed actors, so a misspelt name cannot create an inbox nobody reads.
 The identity a command resolves for itself is never refused for being unlisted, since the
 remedy lies in the environment or the file, but an implementation SHOULD diagnose it on every
-command. An implementation SHOULD offer a command (`actors`) that lists the roster with each
+command that opens the tree, where stderr is not reserved for the JSON envelope. An implementation
+SHOULD offer a command (`actors`) that lists the roster with each
 actor's description and open tasks, and names the actors open tasks carry that the roster lacks.
 
 <Callout type="info" title="Non-normative">

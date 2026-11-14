@@ -109,7 +109,8 @@ describe("archive", () => {
   it("says on stderr when a manifest could not be read: its references are unknown", async () => {
     const s = await box({ tasks: { d: { status: "DONE" } } });
     await s.write(".tasks/broken/task.md", "garbage\n");
-    const result = await s.run("archive", "d", "--json");
+    // The note is for a person: under --json stderr is the envelope's alone.
+    const result = await s.run("archive", "d");
     expect(result.code).toBe(0);
     expect(result.stderr).toContain("could not be read");
     expect(result.stderr).toContain(path.join("broken", "task.md"));

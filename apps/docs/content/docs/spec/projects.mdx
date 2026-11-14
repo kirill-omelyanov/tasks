@@ -16,7 +16,9 @@ projects:
 - Keys are **aliases** and MUST match the segment pattern. Values are paths relative to the
   project root; absolute paths MUST be rejected.
 - On the command line, `alias:path` addresses a task in that project. In files, references MUST be
-  stored with the configured relative path (see [Reference grammar](/docs/spec/identity#reference-grammar)).
+  stored as the [reference grammar](/docs/spec/identity#reference-grammar) defines: the path from the storing tree's
+  project root to the target's, which is the configured alias path only when the storing tree is
+  the one that configured it.
 - **Writes.** A tree MAY write into a project it lists — transitions, dependency edits, workspace
   files — addressing the task by alias. Every such write takes **that** tree's lock. A `move` or a
   `migrate` run from this tree also rewrites references in every tree it lists, one tree at a time

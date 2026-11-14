@@ -7,9 +7,9 @@ import { detectTreeVersion } from "./core/config.js";
 import type { DerivedTask } from "./core/derive.js";
 import type { Project } from "./core/discovery.js";
 import { requireProject } from "./core/discovery.js";
-import { GateResolver } from "./core/gates.js";
+import { GateResolver, requireAvailable } from "./core/gates.js";
 import { assertTaskPath } from "./core/ids.js";
-import type { LoadedTree, ProjectLoad } from "./core/projects.js";
+import type { LoadedTree } from "./core/projects.js";
 import { Projects } from "./core/projects.js";
 import {
   housekeepSessions,
@@ -86,7 +86,11 @@ export async function resolveCommandIdentity(
     as: options.as,
     session: options.session,
     projectRoot,
-    diagnose: (message) => writeErr(ui.warn(message)),
+    // Under --json stderr is the error envelope's alone.
+    diagnose:
+      options.json === true
+        ? undefined
+        : (message) => writeErr(ui.warn(message)),
   });
 }
 
@@ -99,7 +103,7 @@ export async function assertV2Tree(project: Project): Promise<void> {
   if (detected.kind === "v2") return;
   if (detected.kind === "v1") {
     throw TaskError.usage(
-      `${project.tasksDir} is a .tasks v1 tree. Run \`tasks migrate\` once to upgrade it to v${CONVENTION_VERSION}; every other command refuses a v1 tree.`,
+      `${project.tasksDir} is a .tasks v1 tree. Run \`tasks migrate\` once to upgrade it to v${CONVENTION_VERSION}; every command that opens the tree refuses a v1 tree.`,
       { tasksDir: project.tasksDir, version: 1, upgrade: "tasks migrate" },
     );
   }
@@ -141,7 +145,11 @@ export async function openContext(command: Command): Promise<CommandContext> {
     gates,
     identity,
     json: options.json === true,
-    diagnose: (message) => writeErr(ui.warn(message)),
+    // A warning the command survives; under --json stderr is the error
+    // envelope's alone, so it is dropped there.
+    diagnose: (message) => {
+      if (options.json !== true) writeErr(ui.warn(message));
+    },
     async reload() {
       await projects.reload(projects.local);
       gates.invalidate();
@@ -292,41 +300,6 @@ export function resolveScope(
 }
 
 /**
- * The tree behind a command-line alias, or the error that says why there is
- * none: an absent checkout is not found, a v1 or unsupported tree is refused
- * like a local one, and an unreadable configuration reports its own error.
- */
-function availableTree(target: ProjectLoad): LoadedTree {
-  if (target.kind === "ok") return target;
-  const name = target.alias ?? target.relPath;
-  const details = { alias: target.alias, path: target.relPath };
-  switch (target.kind) {
-    case "not-checked-out":
-      throw TaskError.notFound(
-        `Project ${name} (${target.relPath}) is not checked out: ${target.dir} does not exist.`,
-        { ...details, reason: "not-checked-out" },
-      );
-    case "unsupported-version":
-      if (target.version === 1) {
-        throw TaskError.usage(
-          `Project ${name} is a .tasks v1 tree. Run \`tasks migrate ${name}\` once to upgrade it to v${CONVENTION_VERSION}.`,
-          { ...details, version: 1, upgrade: `tasks migrate ${name}` },
-        );
-      }
-      throw TaskError.usage(
-        `Project ${name} declares .tasks version ${target.version}, which is not supported; this tasks implements v${CONVENTION_VERSION}.`,
-        { ...details, version: target.version },
-      );
-    case "unresolved":
-      if (target.cause !== null) throw target.cause;
-      throw TaskError.notFound(
-        `Project ${name} (${target.relPath}) has no .tasks/ tree at ${target.dir}.`,
-        { ...details, reason: "unresolved-project" },
-      );
-  }
-}
-
-/**
  * Resolve a path or suffix inside one tree, as `resolveTaskId` does, with
  * candidates and messages qualified by the tree's alias: in a listed project
  * the ids the user must type next carry it.
@@ -360,7 +333,7 @@ export async function resolveTaskArgument(
   arg: string,
 ): Promise<TaskTarget> {
   const { target, path: rest } = await context.projects.resolveArgument(arg);
-  const load = availableTree(target);
+  const load = requireAvailable(target, arg);
   const id = resolveIdIn(context.projects, load, rest, arg);
   return { load, task: findTask(load.tree, id) };
 }

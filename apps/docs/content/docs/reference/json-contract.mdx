@@ -28,7 +28,9 @@ Every command that produces output accepts `--json`.
 | **stderr** | Errors and diagnostics: under `--json`, one error envelope and nothing else.    |
 
 The split is absolute, so `tasks ready --json | jq` never chokes on a diagnostic mixed
-into the stream. Two commands answer with a document **and** a non-zero code:
+into the stream: a warning a command would print for a person (a configured scope that
+names nothing, a manifest it could not read, an `index.md` it could not refresh) is dropped
+under `--json`. Two commands answer with a document **and** a non-zero code:
 `validate` with an error finding and `session-check` with a violation print their result
 on stdout and exit `4`.
 
@@ -39,7 +41,8 @@ on stdout and exit `4`.
 1  internal     an unexpected failure
 2  usage        bad invocation or configuration: unknown option, malformed reference,
                 ambiguous suffix, missing message, invalid config.yml, unsupported
-                version, a v1 tree, an actor or session that fails its pattern, an
+                version, a v1 tree (local, or a listed project addressed by alias), an
+                actor or session that fails its pattern, an
                 actor the roster does not list, a command group without its subcommand
 3  not found    no tree discovered, no such task, a path only in .archive/,
                 nothing for claim --next to take
@@ -88,13 +91,16 @@ be reworded in a patch release; codes may not. `--help` and `--version` exit `0`
 | Missing or present `state.md`             | `id`, `kind`                                                              |
 | Ambiguous suffix                          | `argument`, `candidates`                                                  |
 | Archive with dependents                   | `id`, `dependents`                                                        |
-| A task that exists only in the archive    | `id`, `archived: true`                                                    |
+| A task that exists only in the archive, or a `restore`/`purge` path with nothing archived | `id`, `archived: true` |
 | A v1 tree                                 | `tasksDir`, `version: 1`, `upgrade: "tasks migrate"`                      |
-| A busy tree lock                          | `lock`, `holder`                                                          |
+| A listed project that cannot be addressed | `argument`, `project`, `reason`, `dir`; `version` and `upgrade` for a v1 tree; the same for every command |
+| A busy tree lock                          | `kind: "locked"`, `lock`, `holder` (`{pid, hostname, timestamp}` or `null`) |
 | An actor the roster does not list         | `field`, `value`, `actors`, `file`                                        |
 
 Conflicts also carry **`details.kind`**, one word naming the refusal, so a caller can
-branch without reading the message:
+branch without reading the message. An option the parser refuses is a usage error with
+`kind: "parser"` and no other detail; an internal error may carry a kind too, such as
+`special-file` from `move`:
 
 | `kind`                  | Refused by                                     | With                                    |
 | ----------------------- | ---------------------------------------------- | --------------------------------------- |
@@ -105,16 +111,16 @@ branch without reading the message:
 | `finish-gate`           | `done`                                         | `open_children`, `finishes_after`       |
 | `held`                  | `claim` under a claimed or assigned ancestor   | `ancestor`                              |
 | `backlog-ancestor`      | `claim`, `schedule` under a `BACKLOG` ancestor | `ancestor`                              |
-| `resolved-ancestor`     | `claim`, `reopen`, `new`, `restore`, `move` under a resolved ancestor | `ancestor`, `status` |
+| `resolved-ancestor`     | `claim`, `reopen`, `new`, `restore`, `move` under a resolved ancestor | `ancestor`, `status`; `task` too for `restore` |
 | `cascade-claim`         | `defer`, `cancel`, `move` over work in progress | `claims`                               |
 | `missing-state`         | `pause`, `handoff`                             |                                         |
 | `present-state`         | `release`, `delete`                            |                                         |
 | `not-assigned`          | `unassign`                                     | `assignee`                              |
 | `malformed`             | any command on a task whose `task.md` does not parse | `path`, `message`                 |
-| `malformed-ancestor`    | a command that must read an unreadable ancestor | `ancestor`, `path`                     |
+| `malformed-ancestor`    | a command that must read an unreadable ancestor | `ancestor`, `path`; `task`, `ancestor`, `status: null` for `restore` |
 | `malformed-descendants` | a cascade, `move` or `restore` over unreadable tasks | `descendants` or `tasks`          |
-| `exists`                | `new`, `restore` onto a live task; `move` onto anything | `path` for `move`                |
-| `reserved`              | `new`, `move` onto a path an archived task reserves | `archived`                         |
+| `exists`                | `new`, `restore` onto a live task; `move` onto anything; `init` over a tree | `to` for `move`, plus `path` when a group or directory sits there; `path` for `init` |
+| `reserved`              | `new`, `move` onto a path an archived task reserves | `archived` (the archive entry's absolute path) |
 | `same-path`, `inside-subtree` | `move` to where the source is, or inside it | `to`                                |
 | `interrupted-move`      | `move` of a source that holds a `.moving` marker | `path`                                 |
 | `path-blocked`          | a file or a symbolic link where a directory must go | `path`                             |
@@ -125,9 +131,11 @@ branch without reading the message:
 | `cycle`                 | `dep add`, `after add`, `move` that would close a cycle | `cycle`                          |
 | `not-resolved`          | `archive` of an open task                      | `status`                                |
 | `open-descendants`      | `archive` with open tasks beneath              | `open_descendants`                      |
-| `dependents`            | `archive` without `--force`, `delete`          | `dependents`                            |
-| `history`, `descendants` | `delete` of a task that was worked, or has tasks beneath | `entries`, `descendants`       |
+| `dependents`            | `archive` without `--force`, `delete`          | `dependents`; `delete` adds `alternative: "archive"` |
+| `history`, `descendants` | `delete` of a task that was worked, or has tasks beneath | `entries` or `descendants`, and `alternative: "archive"` |
 | `state-changed`         | `state --edit` when the file changed meanwhile | `kept`                                  |
+| `editor`                | `state --edit` when the editor exits non-zero  | `editor`, `code`, `signal`              |
+| `locked`                | any write while another command holds the tree lock | `lock`, `holder`                   |
 
 ### The `migrate` refusal
 
@@ -166,8 +174,9 @@ Every problem carries a `message`.
 
 ## The task object
 
-Every command that reports or changes one task emits the task object: the frontmatter
-fields, the task's identity, and the absolute path of its directory.
+`show`, `resume`, every transition, `new`, `restore` and the gate edits emit the task object
+(`state`, `log`, `archive`, `purge`, `delete` and `move` have shapes of their own): the
+frontmatter fields, the task's identity, and the absolute path of its directory.
 
 | Field             | Notes                                                                             |
 | ----------------- | --------------------------------------------------------------------------------- |
@@ -188,16 +197,16 @@ never stored.
 | Field                | Notes                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------- |
 | `situation`          | One of `done`, `cancelled`, `working`, `parked`, `backlog`, `held`, `waiting`, `assigned`, `blocked`, `closable`, `open`, `ready`. Its object is in the fields below. |
-| `blocked_by`         | Unsatisfied `depends_on` references: `[{ref, reason, status}]`.                       |
+| `blocked_by`         | Unsatisfied `depends_on` references: `[{ref, reason, status}]`; empty for a resolved task. |
 | `ready`              | Ready for the calling actor.                                                          |
 | `effective_priority` | The highest of the task's own priority and its ancestors'.                            |
-| `held_by`            | The nearest claimed or assigned ancestor, or `null`.                                  |
+| `held_by`            | The nearest claimed or assigned ancestor — or a malformed one, which holds for all anyone can tell — or `null`; `null` for a resolved task. |
 | `started`            | A `state.md` exists on the task or beneath it.                                        |
 | `children`           | `{open, resolved}`: live children by state.                                           |
 | `active`             | A task beneath is `IN_PROGRESS`.                                                      |
 | `waiting_for`        | The assignee of a `PAUSED` task, else `null`.                                         |
 | `closable`           | An open task with children or `finishes_after` whose finish gate is satisfied.        |
-| `liveness`           | For `IN_PROGRESS`: `live`, `orphaned` or `unknown`; else `null`.                      |
+| `liveness`           | For `IN_PROGRESS`: `live`, `orphaned` or `unknown`; else `null`. `last_seen` is `null` too for a claim without a session. |
 | `last_seen`          | The claimant session's last heartbeat, or `null`.                                     |
 | `last_entry`         | The most recent log entry — `{time, actor, via, session, text}` — or `null`.          |
 
@@ -273,8 +282,8 @@ A task being worked carries its claim and its liveness:
 
 | Field         | Notes                                                                                  |
 | ------------- | -------------------------------------------------------------------------------------- |
-| `ancestors`   | Outermost first: `[{id, title, status, workspace}]`.                                   |
-| `child_tasks` | The children, as task objects with derived conditions. (`children` stays the count.)  |
+| `ancestors`   | Outermost first: `[{id, title, status, workspace}]`; a malformed ancestor is left out.  |
+| `child_tasks` | The children, as task objects with derived conditions; a malformed child is left out (`children` still counts it). |
 | `state`       | `state.md` in full, or `null`.                                                         |
 | `docs`        | The documentation locations `config.yml` lists, in order: `[{name, path, present}]`; `present` says whether the path exists here. |
 

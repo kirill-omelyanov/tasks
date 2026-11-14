@@ -11,7 +11,8 @@ icon: ArrowUpFromLine
 </Callout>
 
 A v1 tree — one whose `config.yml` is missing, has no `version`, or says `version: 1` —
-is refused by every v2 command except one:
+is refused by every v2 command that opens it (`skill install` and `hooks install` only write
+beside it), except one:
 
 ```txt
 ✗ /Users/you/acme-api/.tasks is a .tasks v1 tree. Run `tasks migrate` once to upgrade it to v2; every other command refuses a v1 tree.
@@ -95,9 +96,10 @@ document — see [the JSON contract](/docs/reference/json-contract#migrate).
 4. **Statuses** are mapped through the v1 roles: the `ready` role's status becomes
    `TODO`, the `claimed` role's `IN_PROGRESS`, the `done` role's `DONE`. With v1's
    defaults that is `PENDING` → `TODO`, `IN_PROGRESS` → `IN_PROGRESS`, `DONE` → `DONE`.
-5. **References.** Every `depends_on` bare id becomes its path, `<phase>/<id>`. An
-   external reference is rewritten when its tree is reachable and holds the id, and is
-   otherwise kept as it was and listed.
+5. **References.** Every `depends_on` bare id that names a task becomes its path,
+   `<phase>/<id>`; one that names none is kept as it was and listed. An external reference
+   is rewritten when its tree is reachable and holds the id, and is otherwise kept as it
+   was and listed.
 6. **`config.yml`** becomes `version: 2`; `active_phase` becomes `scope`; `statuses`,
    `roles` and `transitions` are removed — the lifecycle is fixed.
 7. **The index.** v1's `_index.md` is removed and `index.md` is generated.
@@ -153,7 +155,7 @@ tells you everything to fix:
 | `collision`       | Two phases mapped to one name, a destination that already exists, an archived task landing on a live task's path, an existing `index.md` | Rename one side first; merging phases is `tasks move`'s job afterwards |
 
 ```sh
-tasks migrate --map REVIEW=PAUSED --map BLOCKED=TODO --map-phase release_1.2=release-1-2
+tasks migrate --map REVIEW=PAUSED --map-phase release_1.2=release-1-2
 ```
 
 A custom status usually maps to `PAUSED` (started, waiting) or `TODO` (not started).

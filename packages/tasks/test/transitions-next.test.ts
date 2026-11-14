@@ -322,7 +322,22 @@ describe("transitions in a listed project", () => {
       argument: "gone:x",
       project: "gone",
       reason: "not-checked-out",
+      dir: expect.any(String),
     });
+  });
+
+  it("refuse --scope together with --all, like ready", async () => {
+    sandbox = await treeSandbox({ tasks: { a: {} } });
+    const result = await sandbox.run(
+      "claim",
+      "--next",
+      "--scope",
+      "a",
+      "--all",
+      "--json",
+    );
+    expect(result.code).toBe(2);
+    expect(errorOf(result).details).toEqual({ scope: "a" });
   });
 
   it("refuse an unknown alias as usage", async () => {

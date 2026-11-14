@@ -24,7 +24,7 @@ enforces it. Four hooks are enough:
 ## The hooks block
 
 `tasks hooks install` writes this block into `.claude/settings.json` at the root of the
-repository, merged with any `hooks` you already have: everything else in the file stays
+tree — the directory that holds `.tasks/` — merged with any `hooks` you already have: everything else in the file stays
 as it is. `--actor <name>` puts another actor in all four commands, and `--force` replaces
 the tasks hooks the file already has, which are otherwise kept as they are.
 
@@ -38,7 +38,8 @@ When `config.yml` lists [actors](/docs/reference/configuration#actors), the hook
 must be among them: pass `--actor` with a listed one, or add `agent` to the roster.
 
 Or paste it yourself, merged the same way. Either way, commit the file. It needs `tasks`
-on `PATH` and [`jq`](https://jqlang.org) to read the hook input.
+on `PATH` and [`jq`](https://jqlang.org) to read the hook input and, in the `Stop` hook, to
+turn `session-check` warnings into a message.
 
 ```json title=".claude/settings.json"
 {
@@ -173,7 +174,9 @@ unless `--force`.
   `./node_modules/.bin/tasks`. `npx @speekl/tasks` works but starts slowly, which matters
   inside the SessionEnd budget.
 - **No `jq`.** Any JSON reader works; with Node, which `tasks` needs anyway:
-  `node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).session_id'`.
+  `node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).session_id'`. The `Stop`
+  hook uses `jq` a second time, to build its `systemMessage` from the warnings; without a
+  replacement there the warnings are dropped silently (the exit-4 refusal still works).
 - **The actor in hooks.** Hooks do not read `CLAUDE_ENV_FILE`, so each command sets
   `TASKS_ACTOR` itself: `mine` answers for that actor, and the other three act on the
   session alone.

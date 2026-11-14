@@ -18,10 +18,10 @@ page is enough.
 
 ```txt
 .tasks/
-  config.yml          version: 2, plus optional scope, session timeout, projects
+  config.yml          version: 2, plus optional scope, session timeout, archive threshold, actors, docs, projects
   README.md           describes the convention to a cold reader; scaffolded by init
   .gitignore          ignores .locks/
-  index.md            optional generated overview; never read by any command
+  index.md            optional generated overview; never a source of truth, validate only checks it is current
   <segment>/          a group (no task.md) or a task (task.md), at any depth
     task.md           present ⇒ this directory is a task; its id is its path
     state.md          the resume point
@@ -210,9 +210,11 @@ happened:
 | archive, restore         | `archive` (with `left blocked: …` when forced), `restore`        |
 | a narrative entry        | the text given to `tasks log`                                    |
 
-The message given with `-m` follows the first line. A forced transition is marked
-`(forced)` on its first line, and a transition that passed over an orphaned claim adds
-`supersedes agent s:7f3a, last seen 2026-09-21T16:40:12Z`. A gate edit or a move that went
+A forced transition is marked `(forced)` at the end of its first line; a transition that
+passed over a claim that was not the caller's — an orphaned one, or a live or unknown one
+under `--force` — adds `supersedes agent s:7f3a, last seen 2026-09-21T16:40:12Z`; the task a
+cascade was ordered on adds `reached: <ids>`; the message given with `-m` comes last. A
+gate edit or a move that went
 past a claim leaves the claim in place and adds
 `over the claim of agent s:7f3a (orphaned, last seen 2026-09-21T16:40:12Z)` — `(live, …)`
 when `--force` went past live work.

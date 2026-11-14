@@ -6,7 +6,12 @@ import {
   qualifyId,
   safeParseReference,
 } from "./ids.js";
-import type { LoadedTree, Projects, UnavailableTree } from "./projects.js";
+import type {
+  LoadedTree,
+  ProjectLoad,
+  Projects,
+  UnavailableTree,
+} from "./projects.js";
 import type { Task } from "./task.js";
 import type { Tree } from "./tree.js";
 import {
@@ -24,7 +29,7 @@ import type {
   StartGate,
   Status,
 } from "./types.js";
-import { isOpen } from "./types.js";
+import { CONVENTION_VERSION, isOpen } from "./types.js";
 
 /**
  * Gate resolution over one or more trees: what each stored reference points
@@ -64,6 +69,56 @@ export function unavailableReason(load: UnavailableTree): GateReason {
       return "unresolved-project";
     case "unsupported-version":
       return "unsupported-version";
+  }
+}
+
+/**
+ * The tree a command-line argument addresses, or the error that addressing
+ * it raises, the same for every command: a project that is not checked out,
+ * or holds no tree, is not found; a tree of another version is a usage error
+ * naming the upgrade, as a local one is; a tree whose configuration is
+ * invalid raises that configuration's own error. The details carry
+ * `argument`, `project`, `reason` and `dir`, plus `version` for a tree of
+ * another version and `upgrade` for a listed v1 tree.
+ */
+export function requireAvailable(
+  target: ProjectLoad,
+  arg: string,
+): LoadedTree {
+  if (target.kind === "ok") return target;
+  const project = target.alias ?? target.relPath;
+  const details = {
+    argument: arg,
+    project,
+    reason: unavailableReason(target),
+    dir: target.dir,
+  };
+  switch (target.kind) {
+    case "not-checked-out":
+      throw TaskError.notFound(
+        `${arg}: project ${project} is not checked out at ${target.dir}.`,
+        details,
+      );
+    case "unsupported-version": {
+      const upgrade =
+        target.version === 1 && target.alias !== null
+          ? `tasks migrate ${target.alias}`
+          : null;
+      throw TaskError.usage(
+        `${arg}: project ${project} is a .tasks v${target.version} tree; this tasks implements v${CONVENTION_VERSION}.${upgrade === null ? "" : ` Upgrade it once with \`${upgrade}\`.`}`,
+        {
+          ...details,
+          version: target.version,
+          ...(upgrade === null ? {} : { upgrade }),
+        },
+      );
+    }
+    case "unresolved":
+      if (target.cause !== null) throw target.cause;
+      throw TaskError.notFound(
+        `${arg}: project ${project} holds no .tasks tree (${target.dir}).`,
+        details,
+      );
   }
 }
 

@@ -80,8 +80,10 @@ it, which cannot be reproduced from a laptop.
    node /path/to/tasks/packages/tasks/dist/index.js ready --json
    ```
 
-   The `cli` CI job runs this same sequence on Linux and Windows, on Node 22 and
-   24 — the range `engines` claims.
+   No workflow runs this sequence: CI and the release workflow run the gate on
+   Linux with Node 24 only, so this step is the one place the real bin is
+   exercised, and the only check of the Node 20 floor that `engines` promises
+   is to run it there yourself.
 
 6. **Rehearse the release workflow.** Run it from the Actions tab
    (Release → Run workflow) with `dry_run` left on. It runs the full gate and

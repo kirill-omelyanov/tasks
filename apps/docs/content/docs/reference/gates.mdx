@@ -40,7 +40,7 @@ stores the full form, translating the alias into the relative path:
 
 ```sh
 tasks dep add deploy execute           # both suffixes, stored as full ids
-tasks after add launch backend:claims  # stored as ../backend:kernel/claims-api
+tasks after add launch backend:claims-api  # stored as ../backend:kernel/claims-api
 ```
 
 ## The start gate
@@ -160,7 +160,7 @@ error (`cycle`, and `ancestor-dependency` for a dependency on an ancestor).
 tasks dep add wire-refresh token-schema
 tasks dep rm wire-refresh token-schema
 tasks dep list wire-refresh
-tasks after add launch backend:claims
+tasks after add launch backend:claims-api
 ```
 
 ```txt

@@ -10,7 +10,7 @@ when_to_use: >-
   Use whenever the repo has a .tasks/ directory, or the user asks what to work
   on next, to claim, pause, hand off or finish a task, what is blocked, to add
   or re-scope a task, or to plan work that must outlive this session.
-allowed-tools: Bash(tasks:*) Bash(TASKS_ACTOR=agent tasks:*) Bash(npx @speekl/tasks:*)
+allowed-tools: Bash(tasks:*) Bash(TASKS_ACTOR=agent tasks:*) Bash(npx @speekl/tasks:*) Bash(TASKS_ACTOR=agent npx @speekl/tasks:*) Bash(uuidgen) Bash(echo $TASKS_SESSION) Bash(echo $TASKS_ACTOR)
 ---
 
 Tasks live in `.tasks/` (convention v2): every task is a directory whose
@@ -31,21 +31,23 @@ tasks mine --json
   list as actors: `tasks init --actors <person>,agent` writes the roster at
   once; without the flag it stays off until someone uncomments `actors:` in
   `config.yml`.
-- Exit `2`, "a .tasks v1 tree": tell the person; the one-time `tasks migrate` is
-  theirs to run.
+- Exit `2` with `details.version` `1`, a v1 tree: tell the person; the one-time
+  `tasks migrate` is theirs to run.
 - If `tasks` is not on PATH, use `npx @speekl/tasks` in its place everywhere.
 
 ## Your name and session token
 
 You act as **`agent`** (unless `tasks actors` lists another name for the
-agent) with **one session token on every command** of this session; a claim
-without one cannot be told from live work and is recovered only by force.
+agent) with **one session token on every command** of this session: a claim
+without one has unknown liveness, so nobody takes it over without force, and
+your own next session can only `pause` it as the same actor and claim it again.
 Subagents use the same name and token.
 
 - **With the harness hooks**, `TASKS_SESSION` and `TASKS_ACTOR` are already set
   (`echo $TASKS_SESSION`), and you pass nothing.
-- **Without them**, generate a token once (`uuidgen`, or a timestamp; it must
-  match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`), then prefix every command with
+- **Without them**, generate a token once (`uuidgen`, or `date +%s`; it must
+  match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`, which an ISO timestamp's colons fail),
+  then prefix every command with
   `TASKS_ACTOR=agent` (unless it is already set: `echo $TASKS_ACTOR`) and
   pass `--session <token>` to it:
   `TASKS_ACTOR=agent tasks claim --next --session <token>`. Shell variables may
@@ -116,9 +118,13 @@ criteria` in place; an input received after the start goes to `## Notes`; a
   memory. Only within the task's scope: never a general revision, never
   task-level detail. The `done` message says what changed in the docs, or that
   nothing needed to. A location with `present: false` is named in the message
-  instead of updated; a change in another repository is listed under _Open_ in
-  `state.md` with its branch until it lands.
+  instead of updated; a change in another repository that has not landed is
+  named in the message too, and stays under _Open_ in `state.md` with its branch
+  while the task is open.
 - Project state lives only in the tree, never in your private memory.
+
+The examples below assume the hooks; without them, prefix `TASKS_ACTOR=agent`
+and add `--session <token>` as above.
 
 ```sh
 tasks state <task> <<'MD'
@@ -144,8 +150,9 @@ tasks dep add <task> <ref>…        # start gate: must be DONE before claim or 
 tasks after add <task> <ref>…      # finish gate joins beyond the task's children
 ```
 
-Groups on the path are created on demand. Then write the body at the `path`
-`--json` returns: `## Description`, `## Acceptance criteria`, `## Notes`. A task
+Groups on the path are created on demand. Then write the body in `task.md`
+under the `path` `--json` returns (the task's directory): `## Description`,
+`## Acceptance criteria`, `## Notes`. A task
 whose body is empty is a reminder, not a task — write enough that a different
 agent arriving cold can do the work without asking. Prefer several small
 dependent tasks over one task with a long checklist.
@@ -181,19 +188,21 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | `tasks archive`, `restore`, `purge`, `delete`                     | Archive a resolved subtree (`--resolved-before 30d`: all older ones); undo; release a path; remove unworked. |
 | `tasks session-check` / `heartbeat` / `session-end`               | Exit invariant; liveness (run by the harness).                                                               |
 | `tasks validate [--fix]` / `tasks reindex`                        | Check the tree; regenerate `index.md`.                                                                       |
-| `tasks init [--actors [<names>]]` / `tasks skill install`         | Scaffold a tree (ask first; `--actors` lists who tasks go to); refresh this skill.                           |
+| `tasks init [--actors [<names>]]` / `tasks skill install --force` | Scaffold a tree (ask first; `--actors` lists who tasks go to); refresh this skill.                           |
 | `tasks hooks install [--actor <name>]`                            | Write the harness hooks into `.claude/settings.json` (ask first).                                            |
 
 `--force` overrides authorization and, per command, the start gate, a live
 claim or a hold — never the finish gate or the `state.md` rules — and the log
-records it. **Use it only on a person's explicit instruction.**
+records every forced transition (a forced `state` write is not logged). **Use it
+only on a person's explicit instruction.**
 
 ## Machine-readable contract
 
 Use `--json` whenever you parse; the human output is not stable.
 
 - Success goes to **stdout**. Under `--json`, errors go to **stderr** as
-  `{"error": {"code", "message", "details"}}`; `details.kind` names the refusal.
+  `{"error": {"code", "message", "details"}}` and nothing else does;
+  `details.kind` names the refusal (`parser` for an option the parser refused).
 - Exit codes: `0` success, `1` internal, `2` usage, `3` not found, `4`
   conflict. **Branch on the code and `details`, never on message text.**
 - **An empty result is success:** `tasks ready` with nothing to do exits `0`
@@ -201,10 +210,12 @@ Use `--json` whenever you parse; the human output is not stable.
 - Task objects carry the frontmatter (`status`, `priority`, `depends_on`,
   `finishes_after`, `assignee`, `claimed_by`, `claimed_at`, `claimed_session`,
   `created`, `updated`), `id`, `name`, `parent`, `project`, `title`, `path`, and
-  the derived `situation`, `blocked_by`, `ready`, `held_by`, `children`,
-  `waiting_for`, `liveness`, `last_seen`, `last_entry`. Overviews return
-  `{scope, projects, count, tasks, malformed}`. `resume` adds `ancestors`,
-  `child_tasks`, `workspace`, `state`, `docs`.
+  the derived `situation`, `blocked_by`, `ready`, `effective_priority`,
+  `held_by`, `started`, `children`, `active`, `waiting_for`, `closable`,
+  `liveness`, `last_seen`, `last_entry`. Overviews return
+  `{scope, projects, count, tasks, malformed, unavailable}`. `show` adds `body`,
+  `workspace`, `referenced_by`; `resume` adds those and `ancestors`,
+  `child_tasks`, `state`, `docs`.
 - `session-check` exits `4` with `{"ok": false, "violations": [...]}` on stdout
   when a task of this session has no `state.md`.
 
@@ -213,17 +224,19 @@ Use `--json` whenever you parse; the human output is not stable.
 Run `tasks validate --json` before hand-repairing anything. A conflict means
 someone else was first, or a person decided — re-read with `tasks resume`.
 
-| `details.kind`                     | What to do                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------- |
-| `missing-state`                    | `tasks state <task>`, then `pause` or `handoff` again.                 |
-| `present-state`                    | The claim produced work: `pause` it, do not `release`.                 |
-| `authorization`, `already-claimed` | Not yours, or already yours: check `tasks mine`; take another task.    |
-| `start-gate`                       | `tasks dep list <task>`; the dependency is not `DONE`.                 |
-| `finish-gate`                      | Resolve the open children or `finishes_after` tasks first.             |
-| `held`                             | An ancestor's plan is being written or awaits approval: wait.          |
-| `backlog-ancestor`                 | The epic is unscheduled; ask the person before `tasks schedule` on it. |
-| `illegal-transition`               | `details.allowed` lists the statuses the command applies to.           |
-| `cycle`, `ancestor`                | The reference would deadlock; model it differently.                    |
+| `details.kind`                     | What to do                                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| `missing-state`                    | `tasks state <task>`, then `pause` or `handoff` again.                           |
+| `present-state`                    | The claim produced work: `pause` it, do not `release`.                           |
+| `authorization`, `already-claimed` | Not yours, or already yours: check `tasks mine`; take another task.              |
+| `start-gate`                       | `tasks dep list <task>`; the dependency is not `DONE`.                           |
+| `finish-gate`                      | Resolve the open children or `finishes_after` tasks first.                       |
+| `held`                             | An ancestor's plan is being written or awaits approval: wait.                    |
+| `backlog-ancestor`                 | The epic is unscheduled; ask the person before `tasks schedule` on it.           |
+| `illegal-transition`               | `details.allowed` lists the statuses the command applies to.                     |
+| `cycle`, `ancestor`                | The reference would deadlock; model it differently.                              |
+| `cascade-claim`                    | A live claim beneath that is not yours: wait, or ask the person.                 |
+| `resolved-ancestor`                | The parent is resolved: `tasks reopen <parent> -m` first, or model it elsewhere. |
 
 Never `--force` on your own initiative, never hand-edit frontmatter, never `mv`
 a task directory. A task shown `blocked by X (cancelled)` is stranded: a person

@@ -842,7 +842,8 @@ describe("show", () => {
     const result = await sandbox.run("show", "gone:x", "--json");
     expect(result.code).toBe(ExitCode.NotFound);
     expect(envelope(result).error.details).toMatchObject({
-      alias: "gone",
+      argument: "gone:x",
+      project: "gone",
       reason: "not-checked-out",
     });
   });
@@ -855,7 +856,10 @@ describe("show", () => {
     const shown = await sandbox.run("show", "old:x", "--json");
     expect(shown.code).toBe(ExitCode.Usage);
     expect(envelope(shown).error.details).toMatchObject({
-      alias: "old",
+      argument: "old:x",
+      project: "old",
+      reason: "unsupported-version",
+      version: 1,
       upgrade: "tasks migrate old",
     });
     const listed = await sandbox.run("list");
@@ -1131,7 +1135,9 @@ describe("ready", () => {
     sandbox = await treeSandbox({ scope: "gone", tasks: { a: {} } });
     const result = await sandbox.run("ready", "--json");
     expect(collection(result)).toMatchObject({ scope: "gone", count: 0 });
-    expect(result.stderr).toContain('scope "gone"');
+    // The warning is for a person: under --json stderr is the envelope's.
+    expect(result.stderr).toBe("");
+    expect((await sandbox.run("ready")).stderr).toContain('scope "gone"');
   });
 
   it("spans the listed projects, qualifies their ids and interleaves them by the ready order", async () => {

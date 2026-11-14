@@ -21,7 +21,7 @@ block live:
 # .tasks convention v2. See `tasks --help` or .tasks/README.md.
 version: 2
 
-# Default scope for `list`, `ready` and `tree`: a group or task path.
+# Default scope for `list`, `ready`, `tree` and `claim --next`: a group or task path.
 # scope: auth-rework
 
 # Minutes without a heartbeat after which a claim counts as orphaned.
@@ -57,7 +57,7 @@ version: 2
     },
     scope: {
       description:
-        "Default scope for list, ready and tree when the caller gives none: a group or task path of this tree. Never restricts addressing by id, gates, or validation.",
+        "Default scope for list, ready, tree and claim --next when the caller gives none: a group or task path of this tree. Never restricts addressing by id, gates, or validation.",
       type: "path",
       default: "none",
     },
@@ -166,8 +166,8 @@ bare name (`bob:`) needs no description. With at least one actor listed:
   behind an `--as` is diagnosed the same way.
 - A name YAML would read as a number or a boolean (`007`, `True`) is refused unless
   quoted (`"007":`), so a roster never holds a name nobody typed; `init --actors` quotes
-  such names itself. A purely numeric name sorts first in every listing, whatever its
-  position in the file.
+  such names itself. A name that is a canonical integer (`42`, not `007`) sorts first in
+  every listing, whatever its position in the file.
 - `tasks validate` warns `unknown-actor` for every open task whose `assignee` or
   `claimed_by` is not listed.
 
@@ -237,7 +237,8 @@ identity that does not match is skipped with a diagnostic on stderr: a one-word
 `user.name` is used, a name with spaces falls through to `user.email`. Nothing is
 normalized silently. `tasks init` prints the actor it resolved, so you see the name that
 will head every entry you write. With [`actors`](#actors) listed, a resolved identity that is
-not among them is reported on stderr by every command, and `--as` must name a listed actor.
+not among them is reported on stderr by every command that opens the tree (not under
+`--json`), and `--as` on such a command must name a listed actor.
 
 <Callout type="info" title="Give agents their own name">
   A person and an agent often share one machine and one git identity. Export
@@ -263,7 +264,8 @@ without `--force`.
 
 An agent uses one token for the whole session, on every command. With the harness
 hooks, `TASKS_SESSION` is exported for it; without them, generate a token once at the
-start (`uuidgen`, a timestamp, anything matching the pattern) and pass `--session` to
+start (`uuidgen`, `date +%s`, anything matching the pattern; an ISO timestamp's colons do
+not) and pass `--session` to
 every command. See the [agent protocol](/docs/guides/agent-protocol#the-session-token).
 
 ## `-C <dir>`
@@ -284,7 +286,7 @@ For `tasks init`, `-C` names the directory to scaffold in.
 
 | Variable                | Read by                         | Meaning                                                    |
 | ----------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `TASKS_ACTOR`           | every command                   | The actor, when `--as` is not given.                       |
+| `TASKS_ACTOR`           | every command                   | The actor; with `--as`, the operator recorded behind it. Validated either way. |
 | `TASKS_SESSION`         | every command                   | The session token, when `--session` is not given.          |
 | `VISUAL`, then `EDITOR` | `tasks state --edit`            | The editor to open `state.md` in; a shell command line.    |
-| `TASKS_DEBUG`           | every command                   | When set, an internal error also prints its stack trace.   |
+| `TASKS_DEBUG`           | every command                   | When set, an unexpected error (exit `1` without a tasks error code) also prints its stack trace. |

@@ -36,8 +36,9 @@ updated: "2026-09-21T16:40:12Z"
 
 The file MUST begin with a line containing exactly `---`, a YAML mapping, and a line containing
 exactly `---`. Everything after that is the body. A file with no frontmatter, or whose frontmatter
-is not a mapping, or whose mapping fails the constraints below, MUST be reported as malformed and
-MUST NOT be silently skipped. A malformed manifest MUST NOT abort a query that spans it either: the
+is not a mapping, or whose mapping fails the constraints below (other than the consistency of the
+claim fields with the status, which validation reports as `claim-fields` on a task that otherwise
+reads), MUST be reported as malformed and MUST NOT be silently skipped. A malformed manifest MUST NOT abort a query that spans it either: the
 command completes, lists the task under `malformed` in its [collection object](/docs/spec/cli#collection-object)
 instead of among its tasks, and resolves every gate reference to it as unsatisfied with reason
 `malformed` — fail safe: it blocks whatever depends on it and is never ready. `validate` reports
@@ -97,7 +98,8 @@ and `## Notes`. The intended split, RECOMMENDED for authors and for agent skills
 When an implementation writes a manifest, the frontmatter MUST be emitted in canonical form:
 
 1. The ten fields above, in that order, followed by any keys present on read but not defined
-   here, in the order read and with their values re-emitted unchanged. An implementation MUST NOT
+   here, in the order read (an implementation MAY place a key YAML reads as an integer first,
+   quoted) and with their values re-emitted unchanged. An implementation MUST NOT
    interpret such keys and MUST NOT add any of its own.
 2. Lists as flow sequences: `[a, b]`, or `[]` when empty.
 3. Timestamps always double-quoted; `null` for absent nullable values.
@@ -130,7 +132,7 @@ An implementation offering validation MUST detect at least:
 | A gate reference can never be satisfied (missing, archived, cancelled, unresolvable, not checked out, unsupported version) | warning |
 | An `IN_PROGRESS` claim that is orphaned, or whose non-null session has no heartbeat file | warning |
 | A frontmatter key this specification does not define | warning |
-| A configured project is not checked out, or is a v1 or unsupported-version tree | warning |
+| A configured project is not checked out, leads to no tree, or is a v1 or unsupported-version tree | warning |
 | Two configured aliases lead to the same tree | warning |
 | A configured documentation location does not exist on this machine | warning |
 | An open task's `assignee` or `claimed_by` that the tree's `actors` does not list, when it lists any | warning |

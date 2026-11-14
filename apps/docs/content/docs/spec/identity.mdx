@@ -69,7 +69,8 @@ move MUST:
   that would place a task inside its own subtree;
 - refuse a destination under which a task would depend on its own ancestor or any other local
   cycle would arise — the same rule as for [dependency editing](/docs/spec/dependencies#cycles);
-- when the task or a descendant is `IN_PROGRESS`, require its claimant or a force; the claimant's
+- authorize the move as it authorizes a transition of the task ([Authorization](/docs/spec/lifecycle#authorization));
+  when the task or a descendant is `IN_PROGRESS`, require its claimant or a force; the claimant's
   session finds the task again through `mine`;
 - when the destination lies under a `BACKLOG` parent, defer the moved subtree as
   [Containment](/docs/spec/containment) defines, under the cascade liveness rule.

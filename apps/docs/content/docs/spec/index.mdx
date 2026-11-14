@@ -75,7 +75,9 @@ version: 2
 A tree without `config.yml`, or without `version`, is a v1 tree. v2 is not backward compatible
 with v1 (the layout, the identity model and the lifecycle changed); a v1 tree is upgraded once,
 see [Migration from v1](/docs/spec/migration). On a v1 tree a v2 implementation MUST refuse every
-command except `migrate`, as a usage error that names the upgrade. An implementation that
+command that reads or writes the tree except `migrate`, as a usage error that names the upgrade;
+a command that only installs tooling beside the tree (`skill install`, `hooks install`) MAY
+proceed without touching it. An implementation that
 encounters a `version` it does not support MUST refuse to operate on the tree.
 
 Within v2: fields and configuration keys MAY be added by a later revision. An implementation MUST

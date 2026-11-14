@@ -212,7 +212,7 @@ export async function withTreeLock<T>(
       const holder = await readHolder(file);
       throw TaskError.conflict(
         `The task tree is locked${holderText(holder)}. Another command is writing it; try again.`,
-        { lock: file, holder },
+        { kind: "locked", lock: file, holder },
       );
     }
     // Jitter keeps several waiters from retrying in lockstep.

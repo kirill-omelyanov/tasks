@@ -14,7 +14,7 @@ import {
   removeEmptyDirs,
   renameDir,
 } from "./fs-utils.js";
-import { holdsOpenTask, unavailableReason } from "./gates.js";
+import { holdsOpenTask, requireAvailable } from "./gates.js";
 import {
   ancestorPaths,
   assertTaskPath,
@@ -24,7 +24,7 @@ import {
   segmentsOf,
 } from "./ids.js";
 import { withMutation } from "./mutate.js";
-import type { LoadedTree, ProjectLoad } from "./projects.js";
+import type { LoadedTree } from "./projects.js";
 import { claimLiveness } from "./sessions.js";
 import { snapshotFromContext, snapshotTree } from "./snapshot.js";
 import type { Task } from "./task.js";
@@ -50,7 +50,6 @@ import type {
   TaskWithDerivedJson,
 } from "./types.js";
 import {
-  CONVENTION_VERSION,
   LOG_FILENAME,
   TASK_FILENAME,
   isResolved,
@@ -95,46 +94,6 @@ export interface Addressed {
   load: LoadedTree;
   /** The path as typed, without the alias: a full id or a suffix of one. */
   path: string;
-}
-
-/**
- * The tree a listed project names, or the error that addressing it raises:
- * a project that is not checked out (or holds no tree) is not found, a tree
- * of another version is a usage error naming the upgrade, and a tree whose
- * configuration is invalid raises that configuration's own error.
- */
-export function requireAvailable(target: ProjectLoad, arg: string): LoadedTree {
-  if (target.kind === "ok") return target;
-  const project = target.alias ?? target.relPath;
-  const details = {
-    argument: arg,
-    project,
-    reason: unavailableReason(target),
-    dir: target.dir,
-  };
-  switch (target.kind) {
-    case "not-checked-out":
-      throw TaskError.notFound(
-        `${arg}: project ${project} is not checked out at ${target.dir}.`,
-        details,
-      );
-    case "unsupported-version": {
-      const remedy =
-        target.version === 1 && target.alias !== null
-          ? ` Upgrade it once with \`tasks migrate ${target.alias}\`.`
-          : "";
-      throw TaskError.usage(
-        `${arg}: project ${project} is a .tasks v${target.version} tree; this tasks implements v${CONVENTION_VERSION}.${remedy}`,
-        { ...details, version: target.version },
-      );
-    }
-    case "unresolved":
-      if (target.cause !== null) throw target.cause;
-      throw TaskError.notFound(
-        `${arg}: project ${project} holds no .tasks tree (${target.dir}).`,
-        details,
-      );
-  }
 }
 
 /**

@@ -131,8 +131,8 @@ tasks dep add wire-refresh token-schema
 
 Any unambiguous suffix of an id works on the command line; the full path is what gets
 stored. `dep add` refuses a task that does not exist, a task's own ancestor, and a
-reference that would close a cycle — so a dependency you can add is one that can
-eventually resolve.
+reference that would close a cycle. A cancelled target is accepted and shows at once as
+`blocked by … (cancelled)`: a dependency a person has to redirect or drop.
 
 </Step>
 

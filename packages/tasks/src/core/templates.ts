@@ -50,7 +50,7 @@ export function configTemplate(options: ConfigTemplateOptions = {}): string {
   return `# .tasks convention v2. See \`tasks --help\` or .tasks/README.md.
 version: 2
 
-# Default scope for \`list\`, \`ready\` and \`tree\`: a group or task path.
+# Default scope for \`list\`, \`ready\`, \`tree\` and \`claim --next\`: a group or task path.
 # scope: auth-rework
 
 # Minutes without a heartbeat after which a claim counts as orphaned.
@@ -96,7 +96,7 @@ make changes through the CLI, which enforces the rules below.
 
 \`\`\`txt
 .tasks/
-  config.yml        version: 2, plus optional scope, session timeout, actors, docs, projects
+  config.yml        version: 2, plus optional scope, session timeout, archive threshold, actors, docs, projects
   README.md         this file
   .gitignore        keeps .locks/ out of version control
   index.md          optional generated overview; refresh with \`tasks reindex\`
@@ -141,7 +141,8 @@ Use one session token for every command of a session (\`--session\`, or
   for a claim that produced none.
 - **Claims.** A claim is protected while its session is live; an orphaned one
   can be taken over. \`--force\` overrides authorization, holds and the start
-  gate, never the finish gate, and the log records it.
+  gate, never the finish gate; the log records every forced transition (a
+  forced \`state\` write is not logged).
 
 Exit codes: 0 success, 1 internal, 2 usage, 3 not found, 4 conflict. Every
 command accepts \`--json\`; errors then arrive as JSON on stderr. Branch on the

@@ -19,14 +19,16 @@ them to any invocation:
 | Option              | Effect                                                                                                                                      |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-C`, `--dir <dir>` | Start the search for `.tasks/` in `<dir>` instead of the current directory. For `init`, the directory to scaffold in.                        |
-| `--as <actor>`      | Act as this actor. The identity that would have acted is recorded as the operator: `alice via agent`. Must be listed when `config.yml` lists [actors](/docs/reference/configuration#actors). See [the actor](/docs/reference/configuration#the-actor). |
+| `--as <actor>`      | Act as this actor. The identity that would have acted is recorded as the operator: `alice via agent`. On a command that opens the tree, it must be listed when `config.yml` lists [actors](/docs/reference/configuration#actors). See [the actor](/docs/reference/configuration#the-actor). |
 | `--session <token>` | The session token, else `TASKS_SESSION`. Recorded on claims and in every log heading. See [sessions](/docs/reference/configuration#the-session). |
 | `-v`, `--version`   | Print the CLI version and exit `0`.                                                                                                          |
 | `-h`, `--help`      | Print help for the program or a command and exit `0`.                                                                                        |
 
 Every command that produces output accepts **`--json`**: success is one JSON document on
-stdout, and an error is one JSON document on stderr. Without `--json` the output is for
-people and may change at any time. See the [JSON contract](/docs/reference/json-contract)
+stdout, and an error is one JSON document on stderr and nothing else — a warning a command
+would print for a person is dropped under `--json`. `validate` and `session-check` are the
+exceptions on failure: their result is the document on stdout, exit `4`, no envelope. Without
+`--json` the output is for people and may change at any time. See the [JSON contract](/docs/reference/json-contract)
 for every shape.
 
 ### Exit codes
@@ -35,7 +37,7 @@ for every shape.
 | ---- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `0`  | Success. An empty result is success.                                                                                            |
 | `1`  | Internal: an unexpected failure.                                                                                                |
-| `2`  | Usage: an unknown option, a malformed reference, an ambiguous suffix, a missing message, an invalid `config.yml`, a v1 tree, an actor or session that does not match its pattern, an actor the roster does not list. |
+| `2`  | Usage: an unknown option, a malformed reference, an ambiguous suffix, a missing message, an invalid `config.yml`, a v1 tree for any command that opens it, an actor or session that does not match its pattern, an actor the roster does not list. |
 | `3`  | Not found: no tree discovered, no such task, a path that exists only in `.archive/`, nothing to take for `claim --next`.         |
 | `4`  | Conflict: the tree's state forbids the command — an illegal transition, an authorization failure, a gate, `state.md`, a live claim, a cycle, a reserved path, a failed session check, a busy lock. |
 
@@ -83,11 +85,14 @@ directory, and the [skill](/docs/guides/agent-protocol#the-skill) unless `--no-s
 run without a terminal — so the decision to create a tree belongs to whoever runs it; an
 agent asks the person first.
 
-**Fails** with exit `4` when `.tasks/` already exists and `--force` was not given, and
-with exit `2` when the existing tree is a v1 tree, `--force` or not: upgrade it with
-[`migrate`](#tasks-migrate). Exit `2` too when `--actors` names an actor that fails the
-pattern, names nobody, is given bare by `agent` itself, or is given while a `config.yml`
-already exists: the names go into that file by hand.
+**Fails** with exit `4` when `.tasks/` already exists and `--force` was not given
+(`exists`), or when something that is not a directory sits at `.tasks` (`path-blocked`),
+`--force` or not; with exit `3` when `-C` names no directory; and with exit `2` when the
+existing tree is a v1 tree or of a version this CLI does not support, `--force` or not:
+upgrade a v1 tree with [`migrate`](#tasks-migrate). Exit `2` too when `--actors` names an
+actor that fails the pattern, names nobody, is given bare by `agent` itself, or is given with
+`--force` while a `config.yml` already exists: the names go into that file by hand (without
+`--force`, the existing tree is refused first, with exit `4`).
 
 ### `tasks skill install`
 
@@ -145,8 +150,8 @@ None of these write anything except the session heartbeat when a session is know
 tasks show <task> [--json]
 ```
 
-The task: its fields, its derived conditions (situation, blocked by, ready, held by,
-liveness, last log entry, …), the workspace files present, the live tasks that
+The task: its fields, its derived conditions (situation, blocked by, held by, liveness, …;
+the JSON carries every one, `ready` and `last_entry` included), the workspace files present, the live tasks that
 reference it through `depends_on` or `finishes_after` — here and in listed projects —
 and its body. **Fails** with exit `3` for an unknown or archived task, and with exit `4`
 when its `task.md` is malformed.
@@ -159,10 +164,11 @@ tasks resume <task> [--json]
 
 Everything the next session reads to continue a task, in reading order: the task's
 fields and conditions; one line per ancestor, outermost first, with its title, status
-and workspace files; the children with their situations; the workspace file list;
-`state.md` in full; the last log entry; and, when `config.yml` lists
-[`docs`](/docs/reference/configuration#docs), where the project's documentation lives, each
-location with whether it exists here. It is the second command of the
+and workspace files; the children with their situations; the workspace file list; when
+`config.yml` lists [`docs`](/docs/reference/configuration#docs), where the project's
+documentation lives, each location with whether it exists here; `state.md` in full; and the
+last log entry. A malformed ancestor or child is left out of these lists (the task's
+`children` count still includes it). It is the second command of the
 [agent protocol](/docs/guides/agent-protocol), after `mine`.
 
 ### `tasks ready`
@@ -300,27 +306,30 @@ takes the task as its first argument and these options:
 **Writes** the task's frontmatter (status, claim fields, assignee or priority, and
 `updated`) and one log entry whose first line names the command —
 `pause: IN_PROGRESS → PAUSED`, `handoff alice: IN_PROGRESS → PAUSED`, `assign: alice`,
-`unassign`, `priority: high` — followed by the message, ` (forced)` when forced, and a
-`supersedes …` line when it passed over an orphaned claim. A cascade writes every task it
+`unassign`, `priority: high` — with ` (forced)` appended to it when forced; then a
+`supersedes …` line when the command went past a claim that was not the caller's (an
+orphaned one, or a live or unknown one under `--force`); then, on the task a cascade was
+ordered on, a `reached: …` line; then the message. A cascade writes every task it
 reaches first, deepest first, each with an entry
-`defer with auth-rework: TODO → BACKLOG`, and the named task last, with a
-`reached: …` line.
+`defer with auth-rework: TODO → BACKLOG`, and the named task last. A message line that
+would read as a log heading or a conflict marker is refused (exit `2`), as for `tasks log`.
 
 **Authorization.** A claimed task whose claim is live or unknown is transitioned only by
-its claimant: the same actor and, when the claim has a session, the same session. An
-assigned task that nobody claims is transitioned only by its assignee or the assignee of
+its claimant: the same actor and, when the claim has a session, the same session (a claim
+without a session admits the same actor from any session). An assigned task that nobody
+claims, or whose claim is orphaned, is transitioned only by its assignee or the assignee of
 an ancestor. Anything else may be transitioned by anyone. A refusal is exit `4` with
 `details.kind` `authorization`. See [authorization and force](/docs/concepts#sessions-and-liveness).
 
 | Command               | From → to                                                               | Also requires                                                                 | `--force` overrides                                   |
 | --------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `schedule`            | `BACKLOG` → `PAUSED` with a `state.md`, else `TODO`                      | no `BACKLOG` ancestor                                                         | authorization                                         |
-| `defer`               | `TODO`, `PAUSED` → `BACKLOG`                                             | no live or unknown claim beneath                                              | authorization, claims beneath                         |
-| `claim`               | `BACKLOG`, `TODO`, `PAUSED` → `IN_PROGRESS`                              | start gate; parent open; no `BACKLOG` ancestor; no claimed or assigned ancestor | authorization, a live or unknown claim, start gate, hold |
+| `defer`               | `TODO`, `PAUSED` → `BACKLOG`                                             | no live or unknown claim beneath that is not yours                            | authorization, claims beneath                         |
+| `claim`               | `BACKLOG`, `TODO`, `PAUSED` → `IN_PROGRESS`                              | start gate; parent open; no `BACKLOG` ancestor; no claimed or assigned ancestor (a takeover skips these) | authorization, a live or unknown claim, start gate, hold |
 | `pause`               | `IN_PROGRESS` → `PAUSED`                                                 | `state.md` exists; message                                                    | authorization                                         |
 | `release`             | `IN_PROGRESS` → `TODO`                                                   | no `state.md`                                                                 | authorization                                         |
 | `done`                | any open → `DONE`                                                        | start gate; finish gate; message                                              | authorization, start gate                             |
-| `cancel`              | any open → `CANCELLED`                                                   | no live or unknown claim beneath; message                                     | authorization, claims beneath                         |
+| `cancel`              | any open → `CANCELLED`                                                   | no live or unknown claim beneath that is not yours; message                   | authorization, claims beneath                         |
 | `reopen`              | `DONE`, `CANCELLED` → `BACKLOG` under a `BACKLOG` ancestor, else `PAUSED` with a `state.md`, else `TODO` | parent open; message             | authorization                                         |
 | `handoff <actor>`     | `IN_PROGRESS` → `PAUSED`, assignee set                                   | `state.md` exists; message                                                    | authorization                                         |
 | `assign <actor>`      | any open, unchanged                                                      |                                                                               | authorization                                         |
@@ -349,9 +358,9 @@ tasks defer <task> [-m <text>] [--force] [--json]
 
 Take a `TODO` or `PAUSED` task off the plan. **Cascades**: every open descendant goes to
 `BACKLOG`; `state.md` and assignees are kept, so `schedule` later restores `PAUSED`
-where work had started. A descendant with a live or unknown claim refuses the whole
-command (`cascade-claim`, naming the claims); an orphaned claim is superseded and
-recorded.
+where work had started. A descendant with a live or unknown claim that is not yours
+refuses the whole command (`cascade-claim`, naming the claims); an orphaned claim is
+superseded and recorded.
 
 ### `tasks claim`
 
@@ -364,16 +373,18 @@ tasks claim --next [--scope <path>] [--all] [--local] [-m <text>] [--force] [--j
 | ---------------- | -------------------------------------------------------------------------------- |
 | `--next`         | Claim the first task of your ready set, in ready order, in the same operation.   |
 | `--scope <path>` | With `--next`: only local tasks within this path. Default: the configured scope. |
-| `--all`          | With `--next`: ignore the configured scope.                                      |
+| `--all`          | With `--next`: ignore the configured scope. Contradicts `--scope` (exit `2`).    |
 | `--local`        | With `--next`: the local tree only, even when `projects:` lists others.          |
 
 Start working on a task now. Records `claimed_by`, `claimed_at` and `claimed_session`.
 Claim **before** working: the claim is what stops a second agent starting the same task.
 
 On a task that is already `IN_PROGRESS`, `claim` is a **takeover**: it succeeds when the
-claim is orphaned (its session ended or went silent past `session_timeout_minutes`) and
-records the superseded session in the log; it is refused for a live or unknown claim
-(`authorization`), and for your own claim in this same session (`already-claimed`).
+claim is orphaned (its session ended or went silent past `session_timeout_minutes`) and the
+assignee rule admits you, skips the start gate and the other requirements a fresh claim
+has (the work already passed them), and records the superseded session in the log; it is
+refused for a live or unknown claim (`authorization`), and for your own claim in this same
+session (`already-claimed`).
 
 `--next` decides under the tree lock, so agents running it at once get different tasks.
 It fails with exit `3` when nothing is ready. When the claimed task has open
@@ -420,8 +431,8 @@ tasks cancel <task> -m <text> [--force] [--json]
 ```
 
 Decide not to do a task. **Cascades**: every open descendant is cancelled and its claim
-cleared; `finishes_after` is ignored. A live or unknown claim beneath refuses the command
-(`cascade-claim`). The result lists as `dependents` every open task whose `depends_on`
+cleared; `finishes_after` is ignored. A live or unknown claim beneath that is not yours
+refuses the command (`cascade-claim`). The result lists as `dependents` every open task whose `depends_on`
 names a task it cancelled — here and in listed projects — because those are now
 [stranded](/docs/reference/gates#cancelled-dependencies-are-stranded).
 
@@ -502,9 +513,11 @@ with an ordinary edit at the `path` in the result.
 
 **Fails** with exit `4` when a task already exists there (`exists`), the path is
 reserved by an archived task (`reserved`; purge or restore it), an ancestor is resolved
-(`resolved-ancestor`), or `--backlog` would put open, scheduled tasks under an
-unscheduled one (`backlog-invariant`); with exit `2` when `--assign` names an actor the
-tree's roster lacks.
+(`resolved-ancestor`) or has a malformed `task.md` (`malformed-ancestor`), a file or a
+symbolic link sits on the path (`path-blocked`), or `--backlog` would put open, scheduled
+tasks under an unscheduled one (`backlog-invariant`); with exit `2` for an empty or
+multi-line title, a `--priority` outside the four levels, a `--assign` that fails the actor
+pattern, or one that names an actor the tree's roster lacks.
 
 ### `tasks dep` and `tasks after`
 
@@ -630,8 +643,11 @@ MD
 ```
 
 **Fails** with exit `2` for empty content, or `--edit` with neither `VISUAL` nor `EDITOR`
-set; with exit `4` when the editor exits non-zero (nothing is written) or `state.md`
-changed while you edited (`state-changed`; your text is kept, and the error says where).
+set; with exit `4` when the write is not yours to make (`authorization`: a live claim is
+its claimant's, an unclaimed assigned task its assignee's; `--force` overrides it, and
+unlike a forced transition a forced `state` write leaves no log entry), when the editor
+exits non-zero (`editor`; nothing is written), or when `state.md` changed while you edited
+(`state-changed`; your text is kept, and the error says where).
 
 ### `tasks log`
 
@@ -651,7 +667,7 @@ conflict marker is refused (exit `2`). Listing entries is
 
 ```sh
 tasks archive <task> [--force] [--json]
-tasks archive --resolved-before <when> [--json]
+tasks archive --resolved-before [<when>] [--json]
 tasks archive --all-resolved [--json]
 ```
 
@@ -663,10 +679,13 @@ task first, so the history travels with it.
 Refused when the task is open (`not-resolved`), a descendant is open
 (`open-descendants`), or open tasks — here or in listed projects — reference anything in
 the subtree (`dependents`). `--force` overrides only the last; the result then lists the
-tasks it left blocked. A manifest that cannot be parsed, here or in a listed project, may
-hold references the command cannot see; it says so on stderr and goes ahead.
+tasks it left blocked. When the archive entry the subtree merges into already holds a copy
+of one of its tasks (`duplicate`), files at the same paths (`collision`), or something that
+is not a directory (`path-blocked`), nothing moves: resolve it by hand. A manifest that
+cannot be parsed, here or in a listed project, may hold references the command cannot
+see; it says so on stderr (not under `--json`) and goes ahead.
 
-**In one call.** `--resolved-before <when>` archives every resolved subtree of this tree
+**In one call.** `--resolved-before [<when>]` archives every resolved subtree of this tree
 whose root was resolved — by its `updated` stamp — before `<when>`: a timestamp, a date,
 or a duration back from now (`30d`, `2w`). Without a value it uses
 `archive_resolved_after_days` from `config.yml`, and is refused when that is not set.
@@ -747,8 +766,9 @@ tasks session-check [--json]
 The exit invariant: every `IN_PROGRESS` task claimed by the current session has a
 `state.md`. Without a session, it checks your claims that carry no session. Exits `4`
 listing the violations; a `state.md` older than the claim or than the task's last log
-entry is reported as a warning, which does not change the exit code. A `Stop` hook runs
-it at the end of every turn.
+entry is reported as a warning, which does not change the exit code. On exit `4` the
+result is still the document on stdout, not an error envelope. A `Stop` hook runs it at
+the end of every turn.
 
 ## Maintenance
 
@@ -759,7 +779,8 @@ tasks validate [--fix] [--json]
 ```
 
 Check the local tree against the convention and report every finding with its severity.
-Exits `4` when an error is found, `0` on warnings alone, so CI can gate on it. `--fix`
+Exits `4` when an error is found, `0` on warnings alone, so CI can gate on it; the findings
+are the document on stdout either way, never an error envelope. `--fix`
 regenerates `index.md` when it exists and is out of date — nothing else is ever repaired,
 because every other finding needs a person's intent. See
 [validation](/docs/reference/validation).
@@ -787,12 +808,14 @@ tasks migrate [<alias>] [--map <OLD=NEW>…] [--map-phase <OLD=NEW>…] [--json]
 | `--map <OLD=NEW>`       | The v2 status of a v1 status: needed for a status outside the v1 roles; may also override a role's. Repeatable. |
 | `--map-phase <OLD=NEW>` | The v2 directory name of a v1 phase: needed when its name has a `.` or `_`; may also rename a valid one. Repeatable. |
 
-The one-time upgrade of a v1 tree, and the only command a v1 tree accepts. Under the
+The one-time upgrade of a v1 tree, and the only command that opens a v1 tree (`skill install`
+and `hooks install` write beside one without reading it). Under the
 migrated tree's lock it reads everything and checks everything first; then every phase
 becomes a top-level group, every `<phase>/<id>.md` becomes `<phase>/<id>/task.md` (and
 `.archive/<id>.md` becomes `.archive/<phase>/<id>/task.md`), the frontmatter is
-rewritten canonically, `depends_on` ids become paths, `config.yml` becomes `version: 2`
-with `active_phase` as `scope`, `_index.md` is removed and `index.md` generated.
+rewritten canonically, `depends_on` ids that name a task become paths, `config.yml` becomes
+`version: 2` with `active_phase` as `scope` when it names a phase directory (otherwise it is
+dropped, and the output says so), `_index.md` is removed and `index.md` generated.
 `README.md` is replaced only when it is exactly v1's scaffold. Nothing is logged: a v1
 task's history is in its body, which is kept as it is.
 
@@ -800,7 +823,8 @@ References into the migrated tree are then repaired in the tree the command runs
 in every tree that tree lists, one tree at a time under each tree's lock; those it finds
 in trees it can read but not write are reported. The output names the consequences a
 person must know about: `IN_PROGRESS` tasks whose claims now have no session, `PAUSED`
-tasks without a `state.md`, references kept as written, an edited `README.md` kept.
+tasks without a `state.md`, references kept as written, an edited `README.md` kept, an
+`active_phase` that named no phase directory and became no scope.
 
 ```txt
 ✓ Migrated /Users/you/acme-api/.tasks to .tasks v2: 3 tasks

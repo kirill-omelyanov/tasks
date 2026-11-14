@@ -25,7 +25,7 @@ projects:                        # aliases for sibling trees
 | Key | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `version` | `2` | — | Convention version; REQUIRED. |
-| `scope` | path | none | Default scope for `list`, `ready` and `tree` when the caller gives none; never restricts addressing by id, gate resolution or validation. |
+| `scope` | path | none | Default scope for `list`, `ready`, `tree` and `claim --next` when the caller gives none; never restricts addressing by id, gate resolution or validation. |
 | `session_timeout_minutes` | integer ≥ 1 | 30 | Liveness threshold for claims. |
 | `archive_resolved_after_days` | integer ≥ 1 | none | Resolved subtrees whose root's `updated` is older than this are reported by validation as not yet archived; `archive --resolved-before` without a value uses it. |
 | `actors` | map actor → one-line description or `null` | `{}` | The roster: who tasks may be assigned to, each with a line on who they are. See [Actors](/docs/spec/sessions#actors). |

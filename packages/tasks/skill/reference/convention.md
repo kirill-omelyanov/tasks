@@ -9,10 +9,10 @@ enough. The normative text is at https://agenttasks.dev/docs/spec.
 
 ```
 .tasks/
-  config.yml          REQUIRED: version: 2, plus optional scope, session timeout, actors, docs, projects
+  config.yml          REQUIRED: version: 2, plus optional scope, session timeout, archive threshold, actors, docs, projects
   README.md           describes the convention to a cold reader
   .gitignore          ignores .locks/
-  index.md            optional generated overview; never read by any command
+  index.md            optional generated overview; never a source of truth (validate only checks it is current)
   <segment>/          a group (no task.md) or a task (task.md), at any depth
     task.md           present => this directory is a task; its id is its path
     state.md          the resume point
@@ -35,7 +35,8 @@ enough. The normative text is at https://agenttasks.dev/docs/spec.
 - `.tasks/` is discovered by walking up from the current directory (or `-C`):
   nearest wins, no merging with a tree further up.
 - Every mutation runs under one lock per tree, `.locks/tree.lock`; writes are
-  atomic (temp file + rename) and canonical.
+  atomic (temp file + rename) and canonical, except `log.md`, which is appended
+  in place because its bytes are never rewritten.
 
 ## Task file
 
@@ -64,18 +65,18 @@ updated: "2026-09-21T16:40:12Z"
 ## Notes
 ```
 
-| Field             | Type                              | Notes                                                                    |
-| ----------------- | --------------------------------- | ------------------------------------------------------------------------ |
-| `status`          | one of the six statuses           | Changed only by the transition commands.                                 |
-| `priority`        | `urgent`, `high`, `normal`, `low` | Default `normal`; effective priority is the highest among the ancestors. |
-| `depends_on`      | reference list                    | Start gate: each must be `DONE` before `claim` or `done`.                |
-| `finishes_after`  | reference list                    | Finish gate beyond the children: each must be `DONE` or `CANCELLED`.     |
-| `assignee`        | actor or `null`                   | Who must act next; alone may transition the task while it is unclaimed.  |
-| `claimed_by`      | actor or `null`                   | Who is working on it now; set by `claim`.                                |
-| `claimed_at`      | timestamp or `null`               | When that claim was taken.                                               |
-| `claimed_session` | session token or `null`           | The claimant's session; `null` for a claim without one.                  |
-| `created`         | timestamp                         | Never modified.                                                          |
-| `updated`         | timestamp                         | The last frontmatter change by the CLI.                                  |
+| Field             | Type                              | Notes                                                                                                               |
+| ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `status`          | one of the six statuses           | Changed only by the transition commands.                                                                            |
+| `priority`        | `urgent`, `high`, `normal`, `low` | Default `normal`; effective priority is the highest among the ancestors.                                            |
+| `depends_on`      | reference list                    | Start gate: each must be `DONE` before `claim` or `done`.                                                           |
+| `finishes_after`  | reference list                    | Finish gate beyond the children: each must be `DONE` or `CANCELLED`.                                                |
+| `assignee`        | actor or `null`                   | Who must act next; with the assignees of its ancestors, alone may transition the task while no live claim holds it. |
+| `claimed_by`      | actor or `null`                   | Who is working on it now; set by `claim`.                                                                           |
+| `claimed_at`      | timestamp or `null`               | When that claim was taken.                                                                                          |
+| `claimed_session` | session token or `null`           | The claimant's session; `null` for a claim without one.                                                             |
+| `created`         | timestamp                         | Never modified.                                                                                                     |
+| `updated`         | timestamp                         | The last frontmatter change by the CLI.                                                                             |
 
 - The claim fields are set and cleared together: non-null exactly while
   `IN_PROGRESS` (`claimed_session` may stay `null`), `null` otherwise.
@@ -105,8 +106,10 @@ Overviews show one **situation** per task, the first that holds: `done`,
 `backlog`, `held by X` (an ancestor is claimed or assigned), `waiting for X`
 (`PAUSED` with an assignee), `assigned X`, `blocked by X`, `closable` (children
 and joins all resolved), `open N/M` (a parent with open children),
-`ready`. Secondary labels follow: `started`, `active`, a priority other than
-`normal`, liveness, the assignee.
+`ready`. Secondary labels follow, in this order: `started` (the task's own
+`state.md`), `blocked by X`, `active`, a priority other than `normal`, liveness,
+the assignee, `held by X` and `closable` — the last three only when they are not
+the situation itself.
 
 A task is **ready** for an actor when it is `TODO` or `PAUSED`, every
 `depends_on` reference is `DONE`, it is assigned to nobody or to that actor, it
@@ -135,7 +138,8 @@ is effective priority, then `PAUSED` before `TODO`, then `created`.
 - **Hold:** a claimed or assigned task holds its subtree: nothing beneath it is
   ready, and `claim` beneath it is refused.
 - **Authorization:** a live or unknown claim admits only its claimant (same
-  actor, same session when one is recorded); an orphaned claim admits anyone the
+  actor, same session when one is recorded; a claim without a session admits
+  the same actor from any session); an orphaned claim admits anyone the
   other rules allow; an unclaimed assigned task admits its assignee and the
   assignees of its ancestors.
 - **Liveness:** `live` (session heartbeat within `session_timeout_minutes`, not
@@ -144,7 +148,7 @@ is effective priority, then `PAUSED` before `TODO`, then `created`.
 - **`--force`** overrides authorization, the start gate, a live or unknown
   claim, a hold — never the finish gate, the `state.md` rules, a resolved
   parent, a `BACKLOG` ancestor, a cycle, a reserved path or a message. The log
-  records it.
+  records every forced transition; a forced `state` write is not logged.
 
 ## Workspace files
 
@@ -168,9 +172,12 @@ Kernel tests green (623/0); awaiting review of the CLI rendering.
 first line names the command (`claim: TODO → IN_PROGRESS`,
 `handoff alice: IN_PROGRESS → PAUSED`, `assign: alice`, `unassign`,
 `priority: high`, `new: TODO`, `dep add: …`, `move: old → new`); a task a
-cascade reached gets `<command> with <parent>: <from> → <to>`; a forced entry is
-marked `(forced)`; a takeover adds `supersedes <actor> s:<session>, last seen
-<time>`; a gate edit or a move past a claim adds `over the claim of <actor>
+cascade reached gets `<command> with <parent>: <from> → <to>`; a forced entry
+carries `(forced)` at the end of that first line; a transition past a claim that
+is not the caller's — a takeover, a cascade over an orphaned claim, a forced
+transition over a live one — adds `supersedes <actor> s:<session>, last seen
+<time>`; the task a cascade was ordered on adds `reached: <ids>`; the message
+comes last; a gate edit or a move past a claim adds `over the claim of <actor>
 s:<session> (<liveness>, last seen <time>)`. Entries are never edited; merge conflicts are resolved by keeping both
 entries in time order.
 
@@ -194,13 +201,14 @@ projects: # sibling trees by alias, relative to the project root
 `version` is required; every other key is optional. Unknown keys are rejected
 (exit `2`): v1's `active_phase` is `scope` now, and `statuses`, `roles` and
 `transitions` are gone. A tree without `version: 2` is a v1 tree, refused by
-every command except `tasks migrate`.
+every command that opens it; `tasks migrate` upgrades it, and `skill install` and
+`hooks install` only write beside it.
 
-Once `actors` lists anyone, `assign`, `handoff`, `new --assign` and `--as`
-refuse other names (exit `2`; `details.actors` lists the roster, `details.file`
-the `config.yml` to extend — the one of the tree that holds the task, the
-local one for `--as`), an
-unlisted acting identity is reported on stderr but not refused, and `validate`
+Once `actors` lists anyone, `assign`, `handoff`, `new --assign` and `--as` (on a
+command that opens the tree) refuse other names (exit `2`; `details.actors` lists
+the roster, `details.file` the `config.yml` to extend — the one of the tree that
+holds the task, the local one for `--as`), an unlisted acting identity is reported
+on stderr (not under `--json`) but not refused, and `validate`
 warns `unknown-actor` for an open task whose assignee or claimant is unlisted.
 `tasks actors` shows the roster with each actor's open tasks, and
 `tasks init --actors [<names>]` writes the key from the start.
@@ -262,7 +270,7 @@ intent. Exit `0` with `{"ok": true, "findings": []}` means the tree is clean.
 
 ## Error shape
 
-Under `--json`, errors go to stderr:
+Under `--json`, errors go to stderr, and nothing else does:
 
 ```json
 {
@@ -281,5 +289,7 @@ Under `--json`, errors go to stderr:
 `details.kind`: `illegal-transition`, `authorization`, `already-claimed`,
 `start-gate`, `finish-gate`, `held`, `backlog-ancestor`, `resolved-ancestor`,
 `cascade-claim`, `missing-state`, `present-state`, `not-assigned`, `cycle`,
-`ancestor`, `exists`, `reserved`, `dependents`, and others. Prefer `details`
-over parsing `message`, which is written for people and may change.
+`ancestor`, `exists`, `reserved`, `path-blocked`, `dependents`, `locked` (a busy
+tree lock), `editor`, and others; an option the parser refuses carries `parser`.
+Prefer `details` over parsing `message`, which is written for people and may
+change.

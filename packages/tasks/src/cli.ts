@@ -186,7 +186,13 @@ export async function run(argv: string[]): Promise<number> {
         // Usage errors from the parser go to stderr like every other error.
         writeErr(
           JSON.stringify(
-            { error: { code: "USAGE", message: error.message.trim() } },
+            {
+              error: {
+                code: "USAGE",
+                message: error.message.trim(),
+                details: { kind: "parser" },
+              },
+            },
             null,
             2,
           ),

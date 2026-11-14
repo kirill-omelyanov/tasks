@@ -21,7 +21,8 @@ usually with a `kind` — so a script can tell them apart without reading the me
 <Accordion title="… is a .tasks v1 tree. Run `tasks migrate` once (exit 2)">
 
 The tree predates v2: its `config.yml` is missing, has no `version`, or says
-`version: 1`. Every command but `migrate` refuses it. Upgrade it once — see
+`version: 1`. Every command that opens it refuses it (`skill install` and `hooks install` only
+write beside it); `migrate` upgrades it. Upgrade it once — see
 [migrating from v1](/docs/guides/migration):
 
 ```sh
@@ -109,8 +110,9 @@ of overwriting the new claimant's work.
 
 The claim's liveness is **unknown**: it was taken without a session — by a person at a
 terminal, or migrated from v1 — or its session's heartbeat never reached this machine.
-Nobody can take it over without `--force`. Ask the person. The claimant, acting as the
-same actor, can still `state`, `pause`, `release` or `done` it.
+Nobody can take it over without `--force`. Ask the person. The claimant can still `state`,
+`pause`, `release` or `done` it: the same actor and, for a claim that has a session, in
+that session.
 
 </Accordion>
 
@@ -249,7 +251,8 @@ input.
 - archived — excluded from every query.
 
 `tasks list --all` shows every open task with its situation, which says which of these
-applies. `--done`, `--cancelled` and `--resolved` add closed tasks.
+applies. `--done`, `--cancelled` and `--resolved` select closed tasks instead of the open
+set; situation flags combine with OR.
 
 </Accordion>
 
@@ -268,8 +271,9 @@ how to fix it is on the [validation](/docs/reference/validation) page.
 
 **An interrupted cascade.** `defer`, `schedule` and `cancel` write the descendants first
 and the named task last, so repeating the command completes it: what is already in place
-is skipped. Until then, `validate` may report `backlog-invariant` or
-`resolved-with-open-descendant`.
+is skipped. Until then, `validate` may report `backlog-invariant` after an interrupted
+`schedule`; the other cascades leave no invariant broken, since the descendants are written
+first.
 
 **An interrupted move across filesystems.** The move copies first and removes the
 source last, leaving a `.moving` marker in the destination meanwhile. `validate` reports

@@ -184,7 +184,7 @@ function assigneeRefusal(facts: AuthorizationFacts): TaskError {
   const { task, shown, command, claimed } = facts;
   const assignee = task.frontmatter.assignee;
   return TaskError.conflict(
-    `${shown} is assigned to ${assignee}: while it is not claimed, only ${assignee} or the assignee of an ancestor may ${command} it. Pass --force to override.`,
+    `${shown} is assigned to ${assignee}: while no live session claims it, only ${assignee} or the assignee of an ancestor may ${command} it. Pass --force to override.`,
     {
       ...authorizationDetailsOf(shown, task.frontmatter, claimed),
       kind: "authorization",

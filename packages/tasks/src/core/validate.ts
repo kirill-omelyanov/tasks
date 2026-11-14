@@ -5,6 +5,7 @@ import type { CommandContext } from "../context.js";
 import { hasRoster, isListed, listedActors } from "./actors.js";
 import { resolvedRoots } from "./archive.js";
 import type { DerivedTask } from "./derive.js";
+import { docsDir, docsLocations } from "./docs.js";
 import { errnoCode, isDirectory } from "./fs-utils.js";
 import { GATE_FIELDS, UNSATISFIABLE_REASONS } from "./gates.js";
 import {
@@ -95,6 +96,7 @@ const SEVERITY: Record<FindingKind, FindingSeverity> = {
   "unknown-actor": "warning",
   "project-unavailable": "warning",
   "duplicate-project": "warning",
+  "docs-missing": "warning",
   "resolved-unarchived": "warning",
   "index-stale": "warning",
 };
@@ -155,6 +157,7 @@ export async function validateTree(
     ...actorFindings(tree),
     ...archiveFindings(tree),
     ...(await projectFindings(context)),
+    ...(await docsFindings(tree)),
     ...(await indexFindings(context, load)),
   ];
 
@@ -820,6 +823,25 @@ function unavailableText(load: UnavailableTree): string {
         ? `${name} is a .tasks v1 tree, so references into it are unsatisfied (unsupported-version); \`tasks migrate ${load.alias ?? load.relPath}\` upgrades it from here`
         : `${name} declares version ${load.version}, which this implementation does not support, so references into it are unsatisfied (unsupported-version)`;
   }
+}
+
+/**
+ * A documentation location `config.yml` lists that does not exist on this
+ * machine: beside the repository it may not be checked out, inside it the
+ * entry is stale. Reported because the agent protocol sends agents there
+ * before `done`; nothing is written.
+ */
+async function docsFindings(tree: Tree): Promise<FindingJson[]> {
+  const locations = await docsLocations(tree);
+  return locations
+    .filter((location) => !location.present)
+    .map((location) =>
+      finding(
+        "docs-missing",
+        null,
+        `docs ${location.name} (${location.path}) does not exist here: ${docsDir(tree, location.path)} is absent, so it is not checked out on this machine or the entry is stale`,
+      ),
+    );
 }
 
 /**

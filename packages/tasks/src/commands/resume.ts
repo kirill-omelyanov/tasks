@@ -2,8 +2,13 @@ import { Command } from "commander";
 
 import { deriveWithin, openContext, resolveTaskArgument } from "../context.js";
 import type { DerivedTask } from "../core/derive.js";
+import { docsLocations } from "../core/docs.js";
 import { ancestorsOf, childrenOf } from "../core/tree.js";
-import type { TaskWithDerivedJson, WorkspaceFilename } from "../core/types.js";
+import type {
+  DocsLocationJson,
+  TaskWithDerivedJson,
+  WorkspaceFilename,
+} from "../core/types.js";
 import { readState, workspaceFiles } from "../core/workspace.js";
 import type { ResumeAncestor } from "../output.js";
 import { emitJson, renderResume, writeOut } from "../output.js";
@@ -19,13 +24,18 @@ export interface ResumeJson extends TaskWithDerivedJson {
   /** `state.md` in full, or `null` when there is none. */
   state: string | null;
   referenced_by: string[];
+  /**
+   * The documentation locations the holding tree's `config.yml` lists, in
+   * configured order, each with whether it is present on this machine.
+   */
+  docs: DocsLocationJson[];
   body: string;
 }
 
 export function resumeCommand(): Command {
   return new Command("resume")
     .description(
-      "everything the next session reads to continue a task: its ancestors, children, workspace files, state.md in full and the last log entry",
+      "everything the next session reads to continue a task: its ancestors, children, workspace files, state.md in full, the last log entry and where the project's documentation lives",
     )
     .argument("<task>", TASK_ARGUMENT_HELP)
     .option("--json", "emit machine-readable JSON")
@@ -58,6 +68,7 @@ export function resumeCommand(): Command {
       const workspace = workspaceFiles(task);
       const state = await readState(task.dir);
       const referenced_by = await context.gates.referencedBy(load, task.id);
+      const docs = await docsLocations(load.tree);
 
       if (context.json) {
         const result: ResumeJson = {
@@ -68,6 +79,7 @@ export function resumeCommand(): Command {
           workspace,
           state,
           referenced_by,
+          docs,
           body: task.body,
         };
         emitJson(result);
@@ -80,6 +92,7 @@ export function resumeCommand(): Command {
           workspace,
           state,
           referenced_by,
+          docs,
         }),
       );
     });

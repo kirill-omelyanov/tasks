@@ -37,6 +37,12 @@ version: 2
 #   alice:
 #   agent: the coding agent
 
+# Where the project's documentation lives, by name, as paths relative to this
+# project's root (a path may leave the repository: ../api-docs); an agent
+# brings the listed documentation up to date before done.
+# docs:
+#   engineering: docs/engineering
+
 # Sibling trees by alias, as paths relative to this project's root.
 # projects:
 #   backend: ../backend
@@ -71,6 +77,12 @@ version: 2
       description:
         "The roster: who tasks may be assigned to, each with a line on who they are. Once any is listed, assign, handoff, new --assign and --as refuse other names.",
       type: "map of actor → line or null",
+      default: "{}",
+    },
+    docs: {
+      description:
+        "Where the project's documentation lives, by name, as paths relative to the project root: what an agent brings up to date before done. resume reports the locations, validate warns about an absent one.",
+      type: "map of name → relative path",
       default: "{}",
     },
     projects: {
@@ -165,6 +177,33 @@ open tasks, and the names in use that it lacks. Without the key, any name may be
 and `agent`, or the names given (run as `agent`, the bare form is refused: name the
 person); without the flag the scaffold carries those two names commented out, ready to
 switch on.
+
+### `docs`
+
+```yaml
+docs:
+  engineering: docs/engineering
+  readme: README.md
+  api: ../api-docs
+```
+
+Where the project's documentation lives, by name: a directory or a file, as a path relative
+to the project root, inside the repository or beside it. Names match `^[a-z0-9][a-z0-9-]*$`;
+an absolute path is rejected like a project path, because it would not resolve in another
+clone. The key changes what an agent owes before `done`, not what the CLI allows:
+
+- `tasks resume` lists the locations under `docs`, each with `present` — whether the path
+  exists on this machine — so an agent knows from the start where its documentation work
+  goes. The locations are those of the tree that holds the task.
+- Before `done`, the [agent protocol](/docs/guides/agent-protocol#exit) has the agent bring
+  the listed documentation that describes what the task changed up to date, within the
+  task's scope only, and say in the `done` message what changed or that nothing needed to.
+- `tasks validate` warns `docs-missing` for a location that does not exist here: a sibling
+  repository that is not checked out, or an entry that went stale when the documentation
+  moved. Nothing is blocked.
+
+Without the key, the protocol's general rule still applies: knowledge that must outlive the
+task goes into the project's documentation, wherever that is.
 
 ### `projects`
 

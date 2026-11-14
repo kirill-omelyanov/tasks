@@ -90,7 +90,11 @@ in the shape of [log entries](/docs/spec/cli#log-entries) without `task`, or `nu
 qualified by alias where foreign, whose `depends_on` names a task it cancelled (see
 [Cancellation and deletion interaction](/docs/spec/dependencies#cancellation-and-deletion-interaction)). `show` and `resume` SHOULD add `referenced_by`: the live tasks, in
 the local tree and in the trees reachable through `projects:`, whose `depends_on` or
-`finishes_after` name this task — how a task learns which epic holds it.
+`finishes_after` name this task — how a task learns which epic holds it. `resume` MUST add `docs`:
+the documentation locations the holding tree's `config.yml` lists
+([Configuration](/docs/spec/configuration#documentation)), in configured order, each as
+`{ "name", "path", "present" }` — the path as configured and whether it exists on this machine —
+and an empty list when none is listed.
 
 ## Collection object
 
@@ -142,7 +146,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 | `init` | Scaffold a tree: `config.yml` with `version: 2`, `README.md`, `.gitignore`. Ask before creating; print the resolved actor; MAY write the roster on request (`--actors`). |
 | `new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group at the path becomes the task; refuse an existing task, a resolved parent, a reserved path; `--assign` names a listed actor when the tree lists actors. |
 | `show <task>` | The task object with derived conditions and the body. |
-| `resume <task>` | The task object; one line per ancestor (id, title, status, workspace files); children with statuses and conditions; the workspace file list; `state.md` in full; the last log entry. |
+| `resume <task>` | The task object; one line per ancestor (id, title, status, workspace files); children with statuses and conditions; the workspace file list; `state.md` in full; the last log entry; the documentation locations `config.yml` lists, each with whether it exists here. |
 | `ready [--scope <path>] [--all] [--local]` | The ready set for the calling actor in ready order: effective priority, `PAUSED` first, oldest first. |
 | `mine [--as <actor>] [--local]` | Open tasks whose assignee or claimant is the actor, each with its situation, liveness and last log entry. |
 | `actors [--local]` | OPTIONAL, RECOMMENDED: the actors `config.yml` lists, each with its description and its open tasks, then every other actor an open task names, and the caller: the [actors object](/docs/spec/cli#actors-object). |

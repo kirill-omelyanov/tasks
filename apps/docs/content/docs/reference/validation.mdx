@@ -59,6 +59,7 @@ status survives in a `task.md` is a person's decision.
 | `unknown-actor`        | An open task's `assignee` or `claimed_by` is not under `actors:` in `config.yml`: a misspelt name, or a roster that is behind. `tasks assign` a listed actor, or add the name. Only with a roster. |
 | `project-unavailable`  | A project listed in `config.yml` is not checked out, leads to no tree, or is a v1 or unsupported-version tree. |
 | `duplicate-project`    | Two aliases in `config.yml` lead to the same tree, which is then listed once under each. Drop one alias. |
+| `docs-missing`         | A documentation location under `docs:` in `config.yml` does not exist on this machine: a sibling repository not checked out here, or an entry that went stale when the documentation moved. Check it out, or fix the path. |
 | `resolved-unarchived`  | Resolved subtrees older than `archive_resolved_after_days` are still live; one finding with the count and the roots. `tasks archive --resolved-before` archives them. |
 | `index-stale`          | `index.md` no longer matches the tree. Regenerate it with `tasks reindex` or `--fix`.                     |
 

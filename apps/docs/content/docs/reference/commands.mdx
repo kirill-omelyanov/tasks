@@ -160,7 +160,9 @@ tasks resume <task> [--json]
 Everything the next session reads to continue a task, in reading order: the task's
 fields and conditions; one line per ancestor, outermost first, with its title, status
 and workspace files; the children with their situations; the workspace file list;
-`state.md` in full; and the last log entry. It is the second command of the
+`state.md` in full; the last log entry; and, when `config.yml` lists
+[`docs`](/docs/reference/configuration#docs), where the project's documentation lives, each
+location with whether it exists here. It is the second command of the
 [agent protocol](/docs/guides/agent-protocol), after `mine`.
 
 ### `tasks ready`

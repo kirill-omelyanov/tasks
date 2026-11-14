@@ -211,7 +211,8 @@ unquoted timestamp, a stray tab, an unclosed `---`, or a v1 field left behind â€
 
 <Accordion title="config.yml: unknown key â€¦ (exit 2)">
 
-`config.yml` accepts `version`, `scope`, `session_timeout_minutes` and `projects` only.
+`config.yml` accepts `version`, `scope`, `session_timeout_minutes`,
+`archive_resolved_after_days`, `actors`, `docs` and `projects` only.
 `active_phase` is `scope` in v2; `statuses`, `roles` and `transitions` are gone because
 the lifecycle is fixed. A key from a newer revision of the convention means this CLI is
 older than the tree: upgrade it.

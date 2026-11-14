@@ -63,7 +63,14 @@ its work from theirs.
   `IN_PROGRESS`.
 - `state.md` names, under *Open*, every uncommitted file and branch the work leaves behind.
 - Knowledge that must outlive the task is promoted to the project's documentation before `done`;
-  the task directory is working memory, not documentation.
+  the task directory is working memory, not documentation. When `config.yml` lists `docs`
+  ([Configuration](/docs/spec/configuration#documentation); `resume` reports the locations), the
+  agent MUST, before `done`, bring the listed documentation that describes what the task changed
+  up to date — within the task's scope only: never a general revision, never task-level detail —
+  and the `done` message MUST say what changed in it, or that nothing needed to. A listed
+  location absent on this machine is named in the message and never blocks `done`; a change in
+  another repository that has not landed is named too, and stays under *Open* in `state.md`,
+  with its branch, while the task is open.
 - Project state lives only in the tree. An agent's private memory keeps preferences and reference
   facts, never the state of a task.
 

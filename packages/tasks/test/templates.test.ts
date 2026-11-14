@@ -33,6 +33,9 @@ describe("configTemplate", () => {
       alice: "maintainer; approves plans and does releases",
       agent: "the coding agent",
     });
+    expect({ ...detected.config.docs }).toEqual({
+      engineering: "docs/engineering",
+    });
     expect({ ...detected.config.projects }).toEqual({ backend: "../backend" });
   });
 

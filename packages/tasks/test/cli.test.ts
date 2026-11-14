@@ -972,6 +972,7 @@ describe("resume", () => {
       ancestors: [],
       child_tasks: [],
       workspace: [],
+      docs: [],
       last_entry: null,
     });
     expect(plain((await sandbox.run("resume", "a")).stdout)).toContain(
@@ -979,9 +980,35 @@ describe("resume", () => {
     );
   });
 
-  it("qualifies the ancestors of a task in a listed project", async () => {
-    sandbox = await treeSandbox({});
+  it("names where the documentation lives, with whether each location exists here", async () => {
+    sandbox = await treeSandbox({
+      docs: {
+        engineering: "docs/engineering",
+        readme: "README.md",
+        api: "../api-docs",
+      },
+      tasks: { a: {} },
+    });
+    await sandbox.write("docs/engineering/index.md", "# Engineering\n");
+    await sandbox.write("README.md", "# Project\n");
+
+    const json = (await sandbox.run("resume", "a", "--json")).json<ResumeJson>();
+    expect(json.docs).toEqual([
+      { name: "engineering", path: "docs/engineering", present: true },
+      { name: "readme", path: "README.md", present: true },
+      { name: "api", path: "../api-docs", present: false },
+    ]);
+
+    const out = plain((await sandbox.run("resume", "a")).stdout);
+    expect(out).toMatch(
+      /Docs\n {2}engineering {2}docs\/engineering\n {2}readme\s+README\.md\n {2}api\s+\.\.\/api-docs\s+absent here/,
+    );
+  });
+
+  it("qualifies the ancestors of a task in a listed project, and reports that tree's docs", async () => {
+    sandbox = await treeSandbox({ docs: { local: "docs" } });
     await sandbox.project("backend", "../backend", {
+      docs: { api: "docs/api" },
       tasks: { epic: {}, "epic/part": {} },
     });
     const result = await sandbox.run("resume", "backend:part", "--json");
@@ -989,6 +1016,10 @@ describe("resume", () => {
     expect(json.id).toBe("backend:epic/part");
     expect(json.ancestors.map((ancestor) => ancestor.id)).toEqual([
       "backend:epic",
+    ]);
+    // The locations of the tree that holds the task, from its own root.
+    expect(json.docs).toEqual([
+      { name: "api", path: "docs/api", present: false },
     ]);
   });
 });

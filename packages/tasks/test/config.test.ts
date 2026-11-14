@@ -60,6 +60,7 @@ describe("parsing a v2 config.yml", () => {
       sessionTimeoutMinutes: 30,
       archiveResolvedAfterDays: null,
       actors: {},
+      docs: {},
       projects: {},
     });
   });
@@ -121,16 +122,37 @@ actors:
     const config = v2(`version: 2
 scope: auth-rework/tokens
 session_timeout_minutes: 45
+docs:
+  engineering: docs/engineering
 projects:
   backend: ../backend
   cli: ../arkveil-cli
 `);
     expect(config.scope).toBe("auth-rework/tokens");
     expect(config.sessionTimeoutMinutes).toBe(45);
+    expect(Object.entries(config.docs)).toEqual([
+      ["engineering", "docs/engineering"],
+    ]);
     expect(Object.entries(config.projects)).toEqual([
       ["backend", "../backend"],
       ["cli", "../arkveil-cli"],
     ]);
+  });
+
+  it("reads the docs locations: a directory or a file, inside or beside the repository", () => {
+    const config = v2(`version: 2
+docs:
+  engineering: docs/engineering
+  readme: README.md
+  api: ../api-docs
+`);
+    expect(Object.entries(config.docs)).toEqual([
+      ["engineering", "docs/engineering"],
+      ["readme", "README.md"],
+      ["api", "../api-docs"],
+    ]);
+    expect(Object.hasOwn(config.docs, "constructor")).toBe(false);
+    expect(v2("version: 2\n").docs).toEqual({});
   });
 
   it("reads archive_resolved_after_days, absent by default, and writes it back", () => {
@@ -146,7 +168,7 @@ projects:
 
   it("reads an optional key set to null as absent", () => {
     const config = v2(
-      "version: 2\nscope:\nsession_timeout_minutes:\nprojects:\n  # backend: ../backend\n",
+      "version: 2\nscope:\nsession_timeout_minutes:\ndocs:\n  # engineering: docs\nprojects:\n  # backend: ../backend\n",
     );
     expect(config).toEqual(defaultConfig());
   });
@@ -189,6 +211,13 @@ projects:
     ["archive_resolved_after_days: 0", "archive_resolved_after_days"],
     ["archive_resolved_after_days: 2.5", "archive_resolved_after_days"],
     ['archive_resolved_after_days: "30"', "archive_resolved_after_days"],
+    ["docs: [a, b]", "docs"],
+    ["docs:\n  Engineering: docs/engineering", "docs"],
+    ["docs:\n  eng_docs: docs", "docs"],
+    ["docs:\n  engineering: ''", "docs"],
+    ["docs:\n  engineering: 3", "docs"],
+    ["docs:\n  engineering: /abs/docs", "docs"],
+    ["docs:\n  engineering: 'C:/docs'", "docs"],
     ["projects: [a, b]", "projects"],
     ["projects:\n  Backend: ../backend", "projects"],
     ["projects:\n  my_repo: ../x", "projects"],
@@ -384,17 +413,22 @@ projects:
 `);
   });
 
-  it("writes the actors before the projects, a bare name without a value", () => {
+  it("writes the actors, then the docs, then the projects, a bare name without a value", () => {
     const config = defaultConfig();
     config.actors.alice = "maintainer; approves plans and does releases";
     config.actors.bob = null;
     config.actors.agent = "the coding agent: Claude";
+    config.docs.engineering = "docs/engineering";
+    config.docs.api = "../api docs";
     config.projects.backend = "../backend";
     expect(renderConfig(config)).toBe(`version: 2
 actors:
   alice: "maintainer; approves plans and does releases"
   bob:
   agent: "the coding agent: Claude"
+docs:
+  engineering: docs/engineering
+  api: "../api docs"
 projects:
   backend: ../backend
 `);
@@ -404,6 +438,7 @@ projects:
   it("round-trips through the parser", () => {
     const config = defaultConfig();
     config.scope = "2026-q1";
+    config.docs.null = "../null-docs";
     config.projects.null = "../null";
     config.projects.backend = "../backend";
     expect(v2(renderConfig(config))).toEqual(config);

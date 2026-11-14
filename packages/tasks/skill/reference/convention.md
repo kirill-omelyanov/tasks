@@ -9,7 +9,7 @@ enough. The normative text is at https://agenttasks.dev/docs/spec.
 
 ```
 .tasks/
-  config.yml          REQUIRED: version: 2, plus optional scope, session timeout, actors, projects
+  config.yml          REQUIRED: version: 2, plus optional scope, session timeout, actors, docs, projects
   README.md           describes the convention to a cold reader
   .gitignore          ignores .locks/
   index.md            optional generated overview; never read by any command
@@ -184,6 +184,9 @@ archive_resolved_after_days: 30 # resolved this long ago and still live: reporte
 actors: # who tasks may be assigned to, each with a line on who they are
   alice: maintainer; approves plans and does releases
   agent: the coding agent
+docs: # where the project's documentation lives; brought up to date before done
+  engineering: docs/engineering
+  api: ../api-docs
 projects: # sibling trees by alias, relative to the project root
   backend: ../backend
 ```
@@ -201,6 +204,14 @@ unlisted acting identity is reported on stderr but not refused, and `validate`
 warns `unknown-actor` for an open task whose assignee or claimant is unlisted.
 `tasks actors` shows the roster with each actor's open tasks, and
 `tasks init --actors [<names>]` writes the key from the start.
+
+`docs` names where the project's documentation lives: name → path relative to
+the project root, a directory or a file, inside the repository or beside it
+(`../api-docs`); an absolute path is refused like a project path. `tasks resume`
+reports the locations of the tree that holds the task, each with whether it is
+present on this machine, `tasks validate` warns `docs-missing` for an absent
+one, and before `done` you bring the listed documentation that describes what
+the task changed up to date and say so in the message (see `SKILL.md`).
 
 ## References
 
@@ -243,7 +254,8 @@ Errors (exit `4`): `malformed`, `unknown-status`, `unknown-priority`,
 
 Warnings (exit `0`): `paused-without-state`, `todo-with-state`,
 `unsatisfiable-ref`, `claim-liveness`, `unknown-key`, `unknown-actor`,
-`project-unavailable`, `duplicate-project`, `resolved-unarchived`, `index-stale`.
+`project-unavailable`, `duplicate-project`, `docs-missing`,
+`resolved-unarchived`, `index-stale`.
 
 `--fix` only regenerates `index.md`; every other finding needs a person's
 intent. Exit `0` with `{"ok": true, "findings": []}` means the tree is clean.

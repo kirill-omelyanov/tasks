@@ -109,8 +109,15 @@ criteria` in place; an input received after the start goes to `## Notes`; a
 - `pause` and `handoff` are refused without a `state.md`; write it first.
   `release` is only for a claim that produced nothing.
 - `state.md` names, under _Open_, every uncommitted file and branch you leave.
-- Promote knowledge that must outlive the task into the project's documentation
-  before `done`; the task directory is working memory.
+- **Documentation before `done`.** `tasks resume --json` lists where the
+  project's documentation lives under `docs` (name, path, `present`). Bring
+  the listed documents that describe what you changed up to date, and promote
+  knowledge that must outlive the task there; the task directory is working
+  memory. Only within the task's scope: never a general revision, never
+  task-level detail. The `done` message says what changed in the docs, or that
+  nothing needed to. A location with `present: false` is named in the message
+  instead of updated; a change in another repository is listed under _Open_ in
+  `state.md` with its branch until it lands.
 - Project state lives only in the tree, never in your private memory.
 
 ```sh
@@ -126,7 +133,7 @@ tasks state <task> <<'MD'
 MD
 tasks pause <task> -m "Parser done and tested; the import command is next."
 tasks handoff <task> alice -m "Ready for review: design.md has both options."
-tasks done <task> -m "Merged as abc123; docs updated."
+tasks done <task> -m "Merged as abc123; docs: engineering/auth.md updated."
 ```
 
 ## Creating tasks
@@ -153,7 +160,7 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `tasks mine [--local]`                                            | Your claims (this session's first), then your inbox.                                                         |
 | `tasks actors`                                                    | Who tasks may be assigned to, with their open tasks.                                                         |
-| `tasks resume <task>`                                             | Ancestors, children, `state.md`, last log entry.                                                             |
+| `tasks resume <task>`                                             | Ancestors, children, `state.md`, last log entry, docs locations.                                             |
 | `tasks show <task>`                                               | Fields, derived conditions, references, body.                                                                |
 | `tasks ready [--scope <path>] [--all] [--local]`                  | What you may take now, best first.                                                                           |
 | `tasks list [--<situation>…] [--all]` / `tasks tree`              | Open tasks by situation; `--blocked`, `--waiting`, `--parked`, …                                             |
@@ -197,7 +204,7 @@ Use `--json` whenever you parse; the human output is not stable.
   the derived `situation`, `blocked_by`, `ready`, `held_by`, `children`,
   `waiting_for`, `liveness`, `last_seen`, `last_entry`. Overviews return
   `{scope, projects, count, tasks, malformed}`. `resume` adds `ancestors`,
-  `child_tasks`, `workspace`, `state`.
+  `child_tasks`, `workspace`, `state`, `docs`.
 - `session-check` exits `4` with `{"ok": false, "violations": [...]}` on stdout
   when a task of this session has no `state.md`.
 

@@ -156,13 +156,18 @@ next ready task. Never reach for `--force` to win a claim.
   ```sh
   tasks pause <task> -m "Parser done and tested; the CLI flag is next (see state.md)."
   tasks handoff <task> alice -m "Ready for review: design.md has the two options."
-  tasks done <task> -m "Merged as abc123; docs updated."
+  tasks done <task> -m "Merged as abc123; docs: engineering/auth.md updated."
   ```
 
 - **`state.md` names, under _Open_, every uncommitted file and branch** the work leaves
   behind.
 - **Promote knowledge before `done`.** What must outlive the task goes into the
   project's documentation; the task directory is working memory, not documentation.
+  When `config.yml` lists [`docs`](/docs/reference/configuration#docs), `tasks resume`
+  shows where that documentation lives, and before `done` the agent brings the listed
+  documents that describe what the task changed up to date — within the task's scope,
+  never a general revision — and says in the message what changed, or that nothing
+  needed to. A location absent on this machine is named in the message instead.
 - **Project state lives only in the tree.** An agent's private memory keeps preferences
   and reference facts, never the state of a task.
 

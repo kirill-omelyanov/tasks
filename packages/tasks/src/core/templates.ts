@@ -65,6 +65,12 @@ version: 2
 ${prefix}actors:
 ${roster}
 
+# Where the project's documentation lives, by name, as paths relative to this
+# project's root (a path may leave the repository: ../api-docs); an agent
+# brings the listed documentation up to date before done.
+# docs:
+#   engineering: docs/engineering
+
 # Sibling trees by alias, as paths relative to this project's root.
 # projects:
 #   backend: ../backend
@@ -90,7 +96,7 @@ make changes through the CLI, which enforces the rules below.
 
 \`\`\`txt
 .tasks/
-  config.yml        version: 2, plus optional scope, session timeout, actors, projects
+  config.yml        version: 2, plus optional scope, session timeout, actors, docs, projects
   README.md         this file
   .gitignore        keeps .locks/ out of version control
   index.md          optional generated overview; refresh with \`tasks reindex\`

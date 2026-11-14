@@ -10,6 +10,7 @@ import type {
   ActorsJson,
   BlockedByJson,
   CollectionJson,
+  DocsLocationJson,
   FindingJson,
   LastEntryJson,
   LogEntryJson,
@@ -459,12 +460,15 @@ export interface ResumeExtras {
   workspace: string[];
   state: string | null;
   referenced_by: string[];
+  /** The configured documentation locations; nothing is shown for none. */
+  docs: DocsLocationJson[];
 }
 
 /**
  * `resume`: everything the next session reads to continue, in reading
  * order: the task, its ancestors (in the order given), its children,
- * the workspace, `state.md` in full, and the last log entry.
+ * the workspace, where the project's documentation lives, `state.md` in
+ * full, and the last log entry.
  */
 export function renderResume(d: DerivedTask, extras: ResumeExtras): string {
   const { json } = d;
@@ -527,6 +531,21 @@ export function renderResume(d: DerivedTask, extras: ResumeExtras): string {
       `  ${listOrNull(extras.workspace) ?? pc.dim("task.md only")}`,
     ].join("\n"),
   );
+
+  if (extras.docs.length > 0) {
+    sections.push(
+      [
+        pc.bold("Docs"),
+        aligned(
+          extras.docs.map((location) => [
+            `  ${location.name}`,
+            location.path,
+            location.present ? "" : pc.dim("absent here"),
+          ]),
+        ),
+      ].join("\n"),
+    );
+  }
 
   sections.push(
     [

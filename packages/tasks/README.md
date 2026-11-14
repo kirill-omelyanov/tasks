@@ -60,7 +60,7 @@ path, an unambiguous suffix of one, or `alias:path` in a listed project.
 | `tasks skill install [--force]`                                                 | Install or refresh the agent skill in `.claude/skills/tasks/`.                                                             |
 | `tasks hooks install [--actor <name>] [--force]`                                | Write the Claude Code harness hooks into `.claude/settings.json`; they need `jq`.                                          |
 | `tasks show <task>`                                                             | The task: fields, derived conditions, workspace files, who references it, body.                                            |
-| `tasks resume <task>`                                                           | Everything the next session reads: ancestors, children, `state.md`, last log entry.                                        |
+| `tasks resume <task>`                                                           | Everything the next session reads: ancestors, children, `state.md`, last log entry, docs locations.                        |
 | `tasks ready [--scope <path>] [--all] [--local]`                                | What you may take now: effective priority, then paused before todo, then oldest.                                           |
 | `tasks mine [--local]`                                                          | Your claims, then the tasks assigned to you, each with its last log entry.                                                 |
 | `tasks actors [--local]`                                                        | Who is around: the listed actors with their open tasks, and the names in use the roster lacks.                             |
@@ -137,6 +137,9 @@ archive_resolved_after_days: 30 # resolved this long ago and still live: validat
 actors: # who tasks may be assigned to; once any is listed, other names are refused
   alice: maintainer; approves plans and does releases
   agent: the coding agent
+docs: # where the project's documentation lives; an agent brings it up to date before done
+  engineering: docs/engineering
+  api: ../api-docs
 projects: # sibling trees, by alias
   backend: ../backend
 ```
@@ -170,8 +173,8 @@ command.
 `.claude/skills/tasks/`. It is what makes an agent reach for this CLI on its own:
 it carries the agent protocol — the session token on every command, entry through
 `mine` and `resume`, claim before working, the freshness rule for `state.md`, exit
-through `pause`, `handoff` or `done` — together with the command table and the
-JSON contract.
+through `pause`, `handoff` or `done` with the listed documentation up to date —
+together with the command table and the JSON contract.
 
 Skip it with `tasks init --no-skill`. Add it to a project that predates it, or
 refresh it after upgrading the CLI, with `tasks skill install --force`. Commit

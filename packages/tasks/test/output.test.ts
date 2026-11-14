@@ -325,6 +325,10 @@ describe("renderResume", () => {
         workspace: ["state.md", "design.md"],
         state: "## Done\n\n- drafted\n\n## Next\n\n- decide rotation\n",
         referenced_by: ["deploy"],
+        docs: [
+          { name: "engineering", path: "docs/engineering", present: true },
+          { name: "api", path: "../api-docs", present: false },
+        ],
       }),
     );
     const order = [
@@ -335,12 +339,17 @@ describe("renderResume", () => {
       "auth-rework/audit  DONE  done  Audit the claims",
       "Workspace",
       "state.md, design.md",
+      "Docs",
+      "engineering  docs/engineering",
+      "../api-docs",
       "state.md\n## Done\n\n- drafted",
       "Last entry",
       "handoff alice: IN_PROGRESS → PAUSED",
     ].map((words) => text.indexOf(words));
     expect(order.every((index) => index >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(text).toMatch(/\.\.\/api-docs\s+absent here/);
+    expect(text).not.toMatch(/docs\/engineering\s+absent here/);
   });
 
   it("says when there is no state.md yet", async () => {
@@ -352,10 +361,12 @@ describe("renderResume", () => {
         workspace: [],
         state: null,
         referenced_by: [],
+        docs: [],
       }),
     );
     expect(text).toContain("No state.md yet");
     expect(text).not.toContain("Ancestors");
+    expect(text).not.toContain("Docs");
     expect(text).not.toContain("Last entry");
   });
 });

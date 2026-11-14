@@ -14,6 +14,9 @@ archive_resolved_after_days: 30  # resolved this long ago and still live: report
 actors:                          # who tasks may be assigned to
   alice: maintainer; approves plans and does releases
   agent: the coding agent
+docs:                            # where the project's documentation lives
+  engineering: docs/engineering
+  api: ../api-docs
 projects:                        # aliases for sibling trees
   backend: ../backend
   cli: ../arkveil-cli
@@ -26,6 +29,7 @@ projects:                        # aliases for sibling trees
 | `session_timeout_minutes` | integer ≥ 1 | 30 | Liveness threshold for claims. |
 | `archive_resolved_after_days` | integer ≥ 1 | none | Resolved subtrees whose root's `updated` is older than this are reported by validation as not yet archived; `archive --resolved-before` without a value uses it. |
 | `actors` | map actor → one-line description or `null` | `{}` | The roster: who tasks may be assigned to, each with a line on who they are. See [Actors](/docs/spec/sessions#actors). |
+| `docs` | map name → relative path | `{}` | Where the project's documentation lives, by name: the locations an agent brings up to date before `done`. See [Documentation](#documentation). |
 | `projects` | map alias → relative path | `{}` | See [Projects](/docs/spec/projects). |
 
 Unknown top-level keys MUST be rejected as a usage error. Invalid YAML, or a document that is not
@@ -41,3 +45,14 @@ SHOULD be diagnosed. Validation reports an open task whose `assignee` or `claime
 unlisted. Keys match the actor pattern and MUST be read as the names written (a name YAML would
 take for a number or a boolean, `007` or `True`, is refused unquoted); a bare name carries
 `null`. Empty or absent, the roster constrains nothing.
+
+## Documentation
+
+`docs` names where the project's documentation lives: each key matches `^[a-z0-9][a-z0-9-]*$`,
+like a project alias, and maps to a path relative to the project root — a directory or a file,
+inside the repository (`docs/engineering`) or beside it (`../api-docs`). An absolute path MUST be
+rejected as a usage error, as a project path is. The locations constrain no command: `resume`
+reports them with whether each exists on this machine ([CLI](/docs/spec/cli#commands)),
+validation reports an absent one as a warning, and the [agent protocol](/docs/spec/agent-protocol#exit)
+says what an agent owes them before `done`. The locations of the tree that holds the task apply.
+Empty or absent, the key asks nothing.

@@ -28,6 +28,12 @@ export interface Config {
    * roster of who tasks may be assigned to. Has no prototype.
    */
   actors: Record<string, string | null>;
+  /**
+   * Name → path relative to the project root, a directory or a file, inside
+   * the repository or beside it: where the project's documentation lives,
+   * which an agent brings up to date before `done`. Has no prototype.
+   */
+  docs: Record<string, string>;
   /** Alias → path relative to the project root. Has no prototype. */
   projects: Record<string, string>;
 }
@@ -53,6 +59,7 @@ export const CONFIG_KEYS = [
   "session_timeout_minutes",
   "archive_resolved_after_days",
   "actors",
+  "docs",
   "projects",
 ] as const;
 
@@ -70,6 +77,7 @@ export function defaultConfig(): Config {
     sessionTimeoutMinutes: DEFAULT_SESSION_TIMEOUT_MINUTES,
     archiveResolvedAfterDays: null,
     actors: Object.create(null) as Record<string, string | null>,
+    docs: Object.create(null) as Record<string, string>,
     projects: Object.create(null) as Record<string, string>,
   };
 }
@@ -105,6 +113,42 @@ function invalid(file: string, message: string, key?: string): TaskError {
     file,
     ...(key === undefined ? {} : { key }),
   });
+}
+
+/**
+ * One `name: path` entry of `docs` or `projects`: the name a segment, the
+ * path relative to the project root, so it resolves in every clone.
+ */
+function relativeEntry(
+  file: string,
+  key: "docs" | "projects",
+  nameNoun: string,
+  noun: string,
+  name: string,
+  target: unknown,
+): string {
+  if (!SEGMENT_PATTERN.test(name)) {
+    throw invalid(
+      file,
+      `${nameNoun} "${name}" must match ${SEGMENT_PATTERN.source}.`,
+      key,
+    );
+  }
+  if (typeof target !== "string" || target.length === 0) {
+    throw invalid(
+      file,
+      `${noun} "${name}" must map to a relative path, got ${describe(target)}.`,
+      key,
+    );
+  }
+  if (isMachineBoundPath(target)) {
+    throw invalid(
+      file,
+      `${noun} "${name}" maps to the absolute path "${target}"; use a path relative to the project root, so it resolves in every clone.`,
+      key,
+    );
+  }
+  return target;
 }
 
 /**
@@ -231,6 +275,27 @@ function parseV2(
     }
   }
 
+  const docs = doc.docs;
+  if (docs !== undefined && docs !== null) {
+    if (!isMapping(docs)) {
+      throw invalid(
+        file,
+        `docs must be a mapping of name to relative path (engineering: docs/engineering), got ${describe(docs)}.`,
+        "docs",
+      );
+    }
+    for (const [name, target] of Object.entries(docs)) {
+      config.docs[name] = relativeEntry(
+        file,
+        "docs",
+        "docs name",
+        "docs location",
+        name,
+        target,
+      );
+    }
+  }
+
   const projects = doc.projects;
   if (projects !== undefined && projects !== null) {
     if (!isMapping(projects)) {
@@ -241,28 +306,14 @@ function parseV2(
       );
     }
     for (const [alias, target] of Object.entries(projects)) {
-      if (!SEGMENT_PATTERN.test(alias)) {
-        throw invalid(
-          file,
-          `project alias "${alias}" must match ${SEGMENT_PATTERN.source}.`,
-          "projects",
-        );
-      }
-      if (typeof target !== "string" || target.length === 0) {
-        throw invalid(
-          file,
-          `project "${alias}" must map to a relative path, got ${describe(target)}.`,
-          "projects",
-        );
-      }
-      if (isMachineBoundPath(target)) {
-        throw invalid(
-          file,
-          `project "${alias}" maps to the absolute path "${target}"; use a path relative to the project root, so it resolves in every clone.`,
-          "projects",
-        );
-      }
-      config.projects[alias] = target;
+      config.projects[alias] = relativeEntry(
+        file,
+        "projects",
+        "project alias",
+        "project",
+        alias,
+        target,
+      );
     }
   }
 
@@ -404,7 +455,7 @@ export async function loadConfig(
 
 /**
  * Canonical `config.yml`: `version` first, then only the keys that differ
- * from their defaults, actors and aliases in their configured order.
+ * from their defaults, actors, docs and aliases in their configured order.
  */
 export function renderConfig(config: Config): string {
   const lines = [`version: ${CONVENTION_VERSION}`];
@@ -426,6 +477,13 @@ export function renderConfig(config: Config): string {
           ? `  ${yamlScalar(actor)}:`
           : `  ${yamlScalar(actor)}: ${yamlScalar(description)}`,
       );
+    }
+  }
+  const docs = Object.entries(config.docs);
+  if (docs.length > 0) {
+    lines.push("docs:");
+    for (const [name, target] of docs) {
+      lines.push(`  ${yamlScalar(name)}: ${yamlScalar(target)}`);
     }
   }
   const aliases = Object.entries(config.projects);

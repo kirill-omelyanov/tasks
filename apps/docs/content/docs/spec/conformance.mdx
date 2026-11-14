@@ -49,8 +49,8 @@ migrate v1 trees. A Manager that exposes a command line MUST satisfy the
 An Agent MUST follow the [agent protocol](/docs/spec/agent-protocol): a session token on every command;
 entry through `mine` and `resume` with the reading order; claim before work; the freshness rule,
 with `state.md` written through `state` where offered; `--as` only on instruction; exit through
-`pause`, `handoff` or `done` with a message; no frontmatter edits and no manual moves; project
-state only in the tree.
+`pause`, `handoff` or `done` with a message, the listed documentation up to date before `done`;
+no frontmatter edits and no manual moves; project state only in the tree.
 
 ## Self-checking
 

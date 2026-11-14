@@ -276,6 +276,7 @@ A task being worked carries its claim and its liveness:
 | `ancestors`   | Outermost first: `[{id, title, status, workspace}]`.                                   |
 | `child_tasks` | The children, as task objects with derived conditions. (`children` stays the count.)  |
 | `state`       | `state.md` in full, or `null`.                                                         |
+| `docs`        | The documentation locations `config.yml` lists, in order: `[{name, path, present}]`; `present` says whether the path exists here. |
 
 ```json
 {
@@ -291,6 +292,7 @@ A task being worked carries its claim and its liveness:
   "workspace": ["state.md", "log.md"],
   "state": "## Done\n\n- Drafted the claims table in design.md.\n\n## Next\n\n- Decide the refresh-token lifetime.\n",
   "referenced_by": ["auth-rework/wire-refresh"],
+  "docs": [{ "name": "engineering", "path": "docs/engineering", "present": true }],
   "body": "# Design the token schema\n\n## Description\n\n## Acceptance criteria\n\n- [ ]\n\n## Notes"
 }
 ```

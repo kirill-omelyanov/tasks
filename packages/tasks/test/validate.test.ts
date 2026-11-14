@@ -720,6 +720,26 @@ describe("warnings", () => {
     expect(messages[6]).toContain('unknown key "statuses"');
   });
 
+  it("warns docs-missing for a documentation location that does not exist here", async () => {
+    sandbox = await treeSandbox({
+      docs: {
+        engineering: "docs/engineering",
+        readme: "README.md",
+        api: "../api-docs",
+      },
+      tasks: { a: {} },
+    });
+    await sandbox.write("docs/engineering/index.md", "# Engineering\n");
+    await sandbox.write("README.md", "# Project\n");
+
+    const { code, result } = await validate();
+    expect(code).toBe(0);
+    expect(summary(result)).toEqual([warning("docs-missing", null)]);
+    expect(result.findings[0]?.message).toMatch(
+      /^docs api \(\.\.\/api-docs\) does not exist here: .*api-docs is absent/,
+    );
+  });
+
   it("reports an index.md that is out of date, and none once regenerated", async () => {
     sandbox = await treeSandbox({ tasks: { a: {} } });
     await sandbox.write(".tasks/index.md", "stale\n");

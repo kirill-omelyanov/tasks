@@ -71,6 +71,8 @@ export interface TreeSpec {
   session_timeout_minutes?: number;
   /** The roster: actor → description or `null`. */
   actors?: Record<string, string | null>;
+  /** Documentation locations: name → path relative to the project root. */
+  docs?: Record<string, string>;
   projects?: Record<string, string>;
   tasks?: Record<string, TaskSpec>;
   /** Archived tasks, ids relative to `.archive/`. */
@@ -158,6 +160,7 @@ export function specConfig(spec: TreeSpec): Config {
     config.sessionTimeoutMinutes = spec.session_timeout_minutes;
   }
   Object.assign(config.actors, spec.actors ?? {});
+  Object.assign(config.docs, spec.docs ?? {});
   Object.assign(config.projects, spec.projects ?? {});
   return config;
 }

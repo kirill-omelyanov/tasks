@@ -383,6 +383,15 @@ export interface CollectionJson<T = TaskWithDerivedJson> {
 }
 
 /** One row of `actors`: a listed actor, or one that an open task names. */
+/** A `docs` location of `config.yml`, as `resume` reports it. */
+export interface DocsLocationJson {
+  name: string;
+  /** As configured: relative to the project root. */
+  path: string;
+  /** Whether the path exists on this machine. */
+  present: boolean;
+}
+
 export interface ActorJson {
   actor: string;
   /** The line `config.yml` gives the actor; `null` without one, or unlisted. */
@@ -433,6 +442,7 @@ export const FINDING_KINDS = [
   "unknown-actor",
   "project-unavailable",
   "duplicate-project",
+  "docs-missing",
   "resolved-unarchived",
   "index-stale",
 ] as const;

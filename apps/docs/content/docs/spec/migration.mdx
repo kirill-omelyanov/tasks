@@ -58,7 +58,7 @@ validation until one is written.
 | Locking | per task | one lock per tree |
 | Cross-repository | relative-path references, read-only, cycles undetectable | `projects:` aliases, aggregation, writes into listed trees, cycles detectable when checked out |
 | Relocation | write-then-remove of a file; `phase` drift repaired | atomic directory rename with reference rewriting in this tree and in listed trees |
-| Configuration | statuses, roles, transitions, active phase | `version`, `scope`, `session_timeout_minutes`, `projects` |
+| Configuration | statuses, roles, transitions, active phase | `version`, `scope`, `session_timeout_minutes`, `archive_resolved_after_days`, `actors`, `docs`, `projects` |
 | Unknown frontmatter keys | tolerated on read, dropped on write | tolerated on read, preserved on write, reported by validation |
 | Overview file | `_index.md` | `index.md`, a plain reserved root name like `config.yml` |
 | Removal | archive only, ids reserved forever | archive with merge, `purge` releases a path, `delete` for never-worked tasks |

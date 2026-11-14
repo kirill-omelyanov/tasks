@@ -179,7 +179,10 @@ transition over a live one — adds `supersedes <actor> s:<session>, last seen
 <time>`; the task a cascade was ordered on adds `reached: <ids>`; the message
 comes last; a gate edit or a move past a claim adds `over the claim of <actor>
 s:<session> (<liveness>, last seen <time>)`. Entries are never edited; merge conflicts are resolved by keeping both
-entries in time order.
+entries in time order. A commit made for the task is named in an entry's text as
+`commit <hash> on <branch>` (with the repository when it is not this one), in
+the closing message or a `tasks log` entry, so `tasks log --since` and a grep
+find it.
 
 ## `config.yml`
 

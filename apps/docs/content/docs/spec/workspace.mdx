@@ -26,8 +26,9 @@ which writes exactly the content the caller supplies.
 `state.md` is the **resume point** of a task and the evidence that work has started.
 
 - Its content is free; the RECOMMENDED structure is four sections — **Done**, **Verified**,
-  **Open**, **Next** — where *Open* names uncommitted files, branches and anything else a reader
-  would otherwise find unexplained in the working tree.
+  **Open**, **Next** — where *Done* names what was delivered, with the commits that carry it, and
+  *Open* names uncommitted files, branches and anything else a reader would otherwise find
+  unexplained in the working tree.
 - `pause` and `handoff` MUST refuse when it is missing; `release` MUST refuse when it is present.
 - `schedule` and `reopen` return a task to `PAUSED` when it exists; `schedule` does so for every
   descendant its cascade reaches.
@@ -56,7 +57,7 @@ Kernel tests green (623/0); docs updated; awaiting review of the CLI rendering.
 
 ## 2026-09-22T08:02:41Z alice via agent
 done: PAUSED → DONE
-APPLY. Committed as abc123.
+Applied: commit abc123 on main.
 ```
 
 - The heading grammar is normative because implementations parse it for activity queries and for

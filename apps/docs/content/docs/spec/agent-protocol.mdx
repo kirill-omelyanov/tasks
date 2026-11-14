@@ -63,6 +63,13 @@ its work from theirs.
   message is the closing note. An agent MUST NOT end a session deliberately with a task
   `IN_PROGRESS`.
 - `state.md` names, under *Open*, every uncommitted file and branch the work leaves behind.
+- An agent MUST name every commit it made for the task in the task's log before the work ends —
+  in the `pause`, `handoff` or `done` message, or earlier through `log` when a turn produced one
+  — by hash and branch (`commit <hash> on <branch>`), with the repository when it is not the
+  project's own, so the task leads to its commits whatever session made them. A commit made for a
+  task SHOULD name the task's id in its message, in the form the project's commit convention
+  allows (a `Task: <id>` trailer where trailers are used, otherwise in the subject), so the link
+  holds in both directions; where the convention allows none, the log alone carries it.
 - Knowledge that must outlive the task is promoted to the project's documentation before `done`;
   the task directory is working memory, not documentation. When `config.yml` lists `docs`
   ([Configuration](/docs/spec/configuration#documentation); `resume` reports the locations), the

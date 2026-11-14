@@ -174,8 +174,9 @@ command.
 `.claude/skills/tasks/`. It is what makes an agent reach for this CLI on its own:
 it carries the agent protocol — the session token on every command, entry through
 `mine` and `resume`, claim before working, the freshness rule for `state.md`, exit
-through `pause`, `handoff` or `done` with the listed documentation up to date —
-together with the command table and the JSON contract.
+through `pause`, `handoff` or `done` with the commits named in the log and the
+listed documentation up to date — together with the command table and the JSON
+contract.
 
 Skip it with `tasks init --no-skill`. Add it to a project that predates it, or
 refresh it after upgrading the CLI, with `tasks skill install --force`. Commit

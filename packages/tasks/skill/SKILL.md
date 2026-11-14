@@ -79,8 +79,8 @@ Subagents use the same name and token.
 - **Never hand-edit frontmatter**; every field has a command. **Never `mv`** a
   task directory; use `tasks move`.
 - Write `state.md` through **`tasks state <task> < file`** (or a heredoc), so
-  the write is fenced like a transition. Recommended sections: **Done**,
-  **Verified**, **Open**, **Next**.
+  the write is fenced like a transition. Recommended sections: **Done** (with
+  the commits that carry it), **Verified**, **Open**, **Next**.
 - A clarification of the statement changes `Description` / `Acceptance
 criteria` in place; an input received after the start goes to `## Notes`; a
   decision goes to `design.md`; a change of plan goes to `plan.md`.
@@ -111,6 +111,12 @@ criteria` in place; an input received after the start goes to `## Notes`; a
 - `pause` and `handoff` are refused without a `state.md`; write it first.
   `release` is only for a claim that produced nothing.
 - `state.md` names, under _Open_, every uncommitted file and branch you leave.
+- **Commits in the log.** Name every commit you made for the task in its log
+  before you stop: in the `pause`, `handoff` or `done` message, or earlier with
+  `tasks log <task> "commit <hash> on <branch>: <what>"` when a turn produced
+  one; add the repository when it is not this one. Put the task's id in the
+  commit message where the project's commit convention allows it (a
+  `Task: <id>` trailer, or in the subject), so the link holds both ways.
 - **Documentation before `done`.** `tasks resume --json` lists where the
   project's documentation lives under `docs` (name, path, `present`). Bring
   the listed documents that describe what you changed up to date, and promote
@@ -129,7 +135,7 @@ and add `--session <token>` as above.
 ```sh
 tasks state <task> <<'MD'
 ## Done
-- Parser implemented; unit tests green (41/0).
+- Parser implemented; unit tests green (41/0); commit 4f1c2e on parser.
 ## Verified
 - Ran against the fixtures in test/data.
 ## Open
@@ -137,9 +143,9 @@ tasks state <task> <<'MD'
 ## Next
 - Wire the parser into the import command.
 MD
-tasks pause <task> -m "Parser done and tested; the import command is next."
+tasks pause <task> -m "Parser done and tested, commit 4f1c2e on parser; the import command is next."
 tasks handoff <task> alice -m "Ready for review: design.md has both options."
-tasks done <task> -m "Merged as abc123; docs: engineering/auth.md updated."
+tasks done <task> -m "Merged: commit abc123 on main; docs: engineering/auth.md updated."
 ```
 
 ## Creating tasks
@@ -184,7 +190,7 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | `tasks new <path> <title…>`                                       | Create a task.                                                                                               |
 | `tasks dep add\|rm\|list` / `tasks after add\|rm\|list`           | Edit and inspect the gates.                                                                                  |
 | `tasks move <source> <destination>`                               | Relocate a task or group, rewriting every reference.                                                         |
-| `tasks log <task> "<text>"` / `tasks log --since 1d`              | Narrative entry; recent history across trees.                                                                |
+| `tasks log <task> "<text>"` / `tasks log --since 1d`              | Narrative entry (a commit made, a decision); recent history across trees.                                    |
 | `tasks archive`, `restore`, `purge`, `delete`                     | Archive a resolved subtree (`--resolved-before 30d`: all older ones); undo; release a path; remove unworked. |
 | `tasks session-check` / `heartbeat` / `session-end`               | Exit invariant; liveness (run by the harness).                                                               |
 | `tasks validate [--fix]` / `tasks reindex`                        | Check the tree; regenerate `index.md`.                                                                       |

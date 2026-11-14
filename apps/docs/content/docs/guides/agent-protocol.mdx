@@ -156,15 +156,21 @@ next ready task. Never reach for `--force` to win a claim.
   a task `IN_PROGRESS`.
 
   ```sh
-  tasks pause <task> -m "Parser done and tested; the CLI flag is next (see state.md)."
+  tasks pause <task> -m "Parser done and tested, commit 4f1c2e on parser; the CLI flag is next (see state.md)."
   tasks handoff <task> alice -m "Ready for review: design.md has the two options."
-  tasks done <task> -m "Merged as abc123; docs: engineering/auth.md updated."
+  tasks done <task> -m "Merged: commit abc123 on main; docs: engineering/auth.md updated."
   ```
 
 - **`pause` and `handoff` are refused without a `state.md`**; `release` is only for a
   claim that produced nothing.
 - **`state.md` names, under _Open_, every uncommitted file and branch** the work leaves
   behind.
+- **Name your commits in the log.** Every commit made for the task goes into its log before
+  the work ends: in the `pause`, `handoff` or `done` message, or earlier with
+  `tasks log <task> "commit <hash> on <branch>: <what>"` when a turn produced one; add the
+  repository when it is not this one. Where the project's commit convention allows it, the
+  commit message names the task's id too (a `Task: <id>` trailer, or in the subject), so a
+  commit leads back to its task as the task leads to its commits.
 - **Promote knowledge before `done`.** What must outlive the task goes into the
   project's documentation; the task directory is working memory, not documentation.
   When `config.yml` lists [`docs`](/docs/reference/configuration#docs), `tasks resume`

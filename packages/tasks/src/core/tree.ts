@@ -8,7 +8,7 @@ import { loadConfig } from "./config.js";
 import type { Project } from "./discovery.js";
 import type { ManifestIssue, ParsedTaskFile } from "./frontmatter.js";
 import { renderTaskFile, safeParseTaskFile } from "./frontmatter.js";
-import { errnoCode, writeFileAtomic } from "./fs-utils.js";
+import { errnoCode, mapBatched, writeFileAtomic } from "./fs-utils.js";
 import {
   ancestorPaths,
   compareIds,
@@ -95,13 +95,6 @@ const WORKSPACE_KEYS: ReadonlyArray<[keyof WorkspacePresence, string]> = [
   ["plan", PLAN_FILENAME],
   ["log", LOG_FILENAME],
 ];
-
-/**
- * Manifests read at once. `readFile` holds a descriptor between its open and
- * its reads, so an unbounded fan-out over a wide group could exhaust the
- * process's descriptor limit (256 by default on macOS).
- */
-const READ_BATCH = 32;
 
 async function readEntries(dir: string): Promise<Dirent[] | null> {
   try {
@@ -234,39 +227,36 @@ async function scan(baseDir: string, archived: boolean): Promise<ScanResult> {
     });
   }
 
-  for (let start = 0; start < found.length; start += READ_BATCH) {
-    const batch = found.slice(start, start + READ_BATCH);
-    const reads = await Promise.all(
-      batch.map((entry) => readManifest(path.join(entry.dir, TASK_FILENAME))),
-    );
-    batch.forEach((entry, index) => {
-      const read = reads[index]!;
-      if (read.ok) {
-        out.tasks.push(
-          makeTask({
-            id: entry.id,
-            dir: entry.dir,
-            archived,
-            parent: entry.parent,
-            frontmatter: read.parsed.frontmatter,
-            extra: read.parsed.extra,
-            body: read.parsed.body,
-            workspace: entry.workspace,
-          }),
-        );
-      } else {
-        out.malformed.push({
+  const reads = await mapBatched(found, (entry) =>
+    readManifest(path.join(entry.dir, TASK_FILENAME)),
+  );
+  found.forEach((entry, index) => {
+    const read = reads[index]!;
+    if (read.ok) {
+      out.tasks.push(
+        makeTask({
           id: entry.id,
-          path: path.join(entry.dir, TASK_FILENAME),
           dir: entry.dir,
-          parent: entry.parent,
           archived,
-          message: read.message,
-          issues: read.issues,
-        });
-      }
-    });
-  }
+          parent: entry.parent,
+          frontmatter: read.parsed.frontmatter,
+          extra: read.parsed.extra,
+          body: read.parsed.body,
+          workspace: entry.workspace,
+        }),
+      );
+    } else {
+      out.malformed.push({
+        id: entry.id,
+        path: path.join(entry.dir, TASK_FILENAME),
+        dir: entry.dir,
+        parent: entry.parent,
+        archived,
+        message: read.message,
+        issues: read.issues,
+      });
+    }
+  });
 
   out.tasks.sort((a, b) => compareIds(a.id, b.id));
   out.malformed.sort((a, b) => compareIds(a.id, b.id));

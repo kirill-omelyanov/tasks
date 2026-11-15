@@ -6,7 +6,7 @@ import { hasRoster, isListed, listedActors } from "./actors.js";
 import { resolvedRoots } from "./archive.js";
 import type { DerivedTask } from "./derive.js";
 import { docsDir, docsLocations } from "./docs.js";
-import { errnoCode, isDirectory } from "./fs-utils.js";
+import { errnoCode, isDirectory, mapBatched } from "./fs-utils.js";
 import { GATE_FIELDS, UNSATISFIABLE_REASONS } from "./gates.js";
 import {
   ancestorPaths,
@@ -114,9 +114,6 @@ const VERBS: Record<GateField, string> = {
 
 /** Ids listed in one message before the rest is counted instead. */
 const LIST_LIMIT = 10;
-
-/** Files read at once, so a wide tree cannot exhaust the descriptor limit. */
-const IO_BATCH = 32;
 
 /** Hints for the keys a v1 manifest carried, the likeliest unknown ones. */
 const V1_KEY_HINTS = new Map<string, string>([
@@ -946,17 +943,4 @@ async function readRegularFile(file: string): Promise<string | null> {
     }
     throw err;
   }
-}
-
-async function mapBatched<T, R>(
-  items: readonly T[],
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const out: R[] = [];
-  for (let start = 0; start < items.length; start += IO_BATCH) {
-    out.push(
-      ...(await Promise.all(items.slice(start, start + IO_BATCH).map(fn))),
-    );
-  }
-  return out;
 }

@@ -64,6 +64,28 @@ export async function readFileIfExists(
   }
 }
 
+/**
+ * Files read at once. `readFile` holds a descriptor from its open to its
+ * close while the reads beside it proceed, so an unbounded fan-out over a
+ * wide tree exhausts the process's descriptor limit (256 by default on
+ * macOS). Every read that fans out over the tasks of a tree goes through
+ * `mapBatched`.
+ */
+export const IO_BATCH = 32;
+
+/** `fn` over `items`, at most `IO_BATCH` in flight at once; results in order. */
+export async function mapBatched<T, R>(
+  items: readonly T[],
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = [];
+  for (let start = 0; start < items.length; start += IO_BATCH) {
+    const batch = items.slice(start, start + IO_BATCH);
+    out.push(...(await Promise.all(batch.map((item) => fn(item)))));
+  }
+  return out;
+}
+
 /** The modification time, or `null` when the path does not exist. */
 export async function fileMtime(target: string): Promise<Date | null> {
   try {

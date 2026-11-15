@@ -1,6 +1,7 @@
 import type { CommandContext } from "../context.js";
 import type { DerivedTask, TreeSnapshot } from "./derive.js";
 import { deriveTree } from "./derive.js";
+import { mapBatched } from "./fs-utils.js";
 import { GateResolver } from "./gates.js";
 import { refreshIndex } from "./index-md.js";
 import type { LoadedTree } from "./projects.js";
@@ -34,23 +35,23 @@ export async function snapshotTree(
   const gates = await source.gates.gatesForTree(load);
   const liveness = await livenessForTree(load.tree, now);
 
-  const tasks = await Promise.all(
-    load.tree.tasks.map(async (task) => {
-      const resolved = gates.get(task.id);
-      return {
-        task,
-        project: load.alias,
-        start: resolved?.start ?? { satisfied: false, refs: [] },
-        finish: resolved?.finish ?? {
-          satisfied: false,
-          open_children: [],
-          refs: [],
-        },
-        liveness: liveness.get(task.id) ?? null,
-        lastEntry: task.workspace.log ? await lastLogEntry(task.dir) : null,
-      };
-    }),
-  );
+  // One log read per task, in batches: read all at once, a wide tree ran the
+  // process out of file descriptors.
+  const tasks = await mapBatched(load.tree.tasks, async (task) => {
+    const resolved = gates.get(task.id);
+    return {
+      task,
+      project: load.alias,
+      start: resolved?.start ?? { satisfied: false, refs: [] },
+      finish: resolved?.finish ?? {
+        satisfied: false,
+        open_children: [],
+        refs: [],
+      },
+      liveness: liveness.get(task.id) ?? null,
+      lastEntry: task.workspace.log ? await lastLogEntry(task.dir) : null,
+    };
+  });
 
   const snapshot: TreeSnapshot = {
     tree: load.tree,

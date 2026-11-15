@@ -670,9 +670,11 @@ export function renderDepList(refs: ResolvedRef[]): string {
 /** The line under an overview: the count, scope and projects; malformed. */
 export function renderCollectionFooter(
   collection: CollectionJson<unknown>,
+  depth: number | null = null,
 ): string {
   const parts = [plural(collection.count, "task")];
   if (collection.scope !== null) parts.push(`scope ${collection.scope}`);
+  if (depth !== null) parts.push(`depth ${depth}`);
   if (collection.projects.length > 0) {
     parts.push(`projects ${collection.projects.join(", ")}`);
   }

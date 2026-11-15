@@ -536,6 +536,10 @@ describe("renderCollectionFooter", () => {
     expect(plain(renderCollectionFooter(collection))).toBe(
       "3 tasks · scope auth · projects backend, cli\n! malformed /abs/.tasks/bad/task.md: no frontmatter",
     );
+    // The depth limit is the caller's, not the collection's: it follows the scope.
+    expect(plain(renderCollectionFooter(collection, 2))).toBe(
+      "3 tasks · scope auth · depth 2 · projects backend, cli\n! malformed /abs/.tasks/bad/task.md: no frontmatter",
+    );
     expect(
       plain(
         renderCollectionFooter({

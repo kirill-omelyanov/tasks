@@ -9,9 +9,11 @@ import { compareIds } from "../core/ids.js";
 import type { UnavailableTree } from "../core/projects.js";
 import type { TreeDerivation } from "../core/snapshot.js";
 import { snapshotAll, snapshotFromContext } from "../core/snapshot.js";
-import { toMalformedJson } from "../core/tree.js";
+import type { Tree } from "../core/tree.js";
+import { taskDepth, toMalformedJson } from "../core/tree.js";
 import type { CollectionJson, UnavailableProjectJson } from "../core/types.js";
 import { CONVENTION_VERSION } from "../core/types.js";
+import { TaskError } from "../errors.js";
 import { emitJson, renderCollectionFooter, ui, writeOut } from "../output.js";
 
 /**
@@ -27,11 +29,19 @@ export interface SpanOptions {
   local?: boolean;
 }
 
+/** The options of `list` and `tree` that limit the depth: `--depth`, `--top`. */
+export interface DepthOptions {
+  depth?: string;
+  top?: boolean;
+}
+
 /** The trees one overview spans, derived for the calling actor. */
 export interface Span {
   context: CommandContext;
   /** The resolved local scope, or `null`. */
   scope: string | null;
+  /** The deepest level of containment shown, or `null` for every level. */
+  depth: number | null;
   /** The local tree first, then every listed tree that loaded. */
   trees: TreeDerivation[];
   /** Listed projects left out because they could not be read. */
@@ -49,6 +59,40 @@ export function scopeOptions(command: Command): Command {
     .option("--local", "the local tree only, not the projects it lists");
 }
 
+/** Declare `--depth <n>` and `--top` on an overview that shows containment. */
+export function depthOptions(command: Command): Command {
+  return command
+    .option(
+      "--depth <n>",
+      "tasks at most n levels of containment deep, counted from the scope",
+    )
+    .option("--top", "the top level only: --depth 1");
+}
+
+/**
+ * The depth limit, or `null` for every level. `--top` is `--depth 1`; given
+ * together they are refused, like `--scope` with `--all`.
+ */
+export function resolveDepth(options: DepthOptions): number | null {
+  if (options.top === true) {
+    if (options.depth !== undefined) {
+      throw TaskError.usage(
+        "--top and --depth together: --top is --depth 1, so give one of them.",
+        { depth: options.depth },
+      );
+    }
+    return 1;
+  }
+  if (options.depth === undefined) return null;
+  if (!/^[1-9][0-9]*$/.test(options.depth)) {
+    throw TaskError.usage(
+      `Invalid --depth "${options.depth}": expected a positive integer; 1 is the top level.`,
+      { depth: options.depth },
+    );
+  }
+  return Number(options.depth);
+}
+
 /**
  * Open the context and derive every tree the overview spans: the local tree
  * and, unless `--local`, each tree listed under `projects:` that is checked
@@ -57,11 +101,12 @@ export function scopeOptions(command: Command): Command {
  */
 export async function openSpan(
   command: Command,
-  options: SpanOptions,
+  options: SpanOptions & DepthOptions,
   scoped: boolean,
 ): Promise<Span> {
   const context = await openContext(command);
   const scope = scoped ? resolveScope(context, options) : null;
+  const depth = resolveDepth(options);
   const local = options.local === true;
   const trees = await snapshotAll(
     snapshotFromContext(context),
@@ -73,7 +118,7 @@ export async function openSpan(
     : (await context.projects.listed()).filter(
         (load): load is UnavailableTree => load.kind !== "ok",
       );
-  return { context, scope, trees, unavailable };
+  return { context, scope, depth, trees, unavailable };
 }
 
 /** A scope applies to the local tree only; listed trees pass it whole. */
@@ -81,11 +126,21 @@ export function inSpan(span: Span, d: DerivedTask): boolean {
   return d.snapshot.project !== null || inScope(d.snapshot.task.id, span.scope);
 }
 
+/**
+ * The depth limit counts from the scope in the local tree and from the root
+ * of a listed tree, which the scope does not reach.
+ */
+function withinDepth(span: Span, tree: Tree, d: DerivedTask): boolean {
+  if (span.depth === null) return true;
+  const scope = d.snapshot.project === null ? span.scope : null;
+  return taskDepth(tree, d.snapshot.task.id, scope) <= span.depth;
+}
+
 /** Every task in the span: the local tree first, each tree in id order. */
 export function spanTasks(span: Span): DerivedTask[] {
-  return span.trees.flatMap(({ derived }) =>
+  return span.trees.flatMap(({ load, derived }) =>
     [...derived.values()]
-      .filter((d) => inSpan(span, d))
+      .filter((d) => inSpan(span, d) && withinDepth(span, load.tree, d))
       .sort((a, b) => compareIds(a.snapshot.task.id, b.snapshot.task.id)),
   );
 }
@@ -150,8 +205,8 @@ export function unavailableText(load: UnavailableTree): string {
 
 /**
  * Print the rows: the collection object under `--json`; otherwise the
- * rendering, then the footer (count, scope, projects, malformed manifests)
- * and a line for each listed project that could not be shown.
+ * rendering, then the footer (count, scope, depth, projects, malformed
+ * manifests) and a line for each listed project that could not be shown.
  */
 export function emitOverview(
   span: Span,
@@ -165,7 +220,7 @@ export function emitOverview(
   }
   writeOut(render([...rows]));
   writeOut("");
-  writeOut(renderCollectionFooter(collection));
+  writeOut(renderCollectionFooter(collection, span.depth));
   for (const load of span.unavailable) {
     writeOut(ui.warn(unavailableText(load)));
   }

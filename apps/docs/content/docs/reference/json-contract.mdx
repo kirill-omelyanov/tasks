@@ -335,7 +335,8 @@ A task being worked carries its claim and its liveness:
 | `unavailable` | Listed projects the query could not read: `{alias, reason}`, with `not-checked-out`, `unresolved-project` or `unsupported-version`. The human output prints a line for each; `--local` spans none. |
 
 `tree` emits the same flat list: every task carries `parent`, and nesting is only how the
-human output presents it.
+human output presents it. `--depth` and `--top` choose the rows and nothing else: the shape
+is the same, and `count` follows.
 
 ## Log entries
 

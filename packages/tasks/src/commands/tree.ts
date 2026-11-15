@@ -2,18 +2,26 @@ import { Command } from "commander";
 
 import { hasOpenStatus } from "../core/derive.js";
 import { renderTree } from "../output.js";
-import type { SpanOptions } from "./overview.js";
-import { emitOverview, openSpan, scopeOptions, spanTasks } from "./overview.js";
+import type { DepthOptions, SpanOptions } from "./overview.js";
+import {
+  depthOptions,
+  emitOverview,
+  openSpan,
+  scopeOptions,
+  spanTasks,
+} from "./overview.js";
 
-interface TreeOptions extends SpanOptions {
+interface TreeOptions extends SpanOptions, DepthOptions {
   resolved?: boolean;
   json?: boolean;
 }
 
 export function treeCommand(): Command {
-  return scopeOptions(
-    new Command("tree").description(
-      "open tasks nested by containment, with finishes_after joins under their task; JSON is the flat list; spans the listed projects",
+  return depthOptions(
+    scopeOptions(
+      new Command("tree").description(
+        "open tasks nested by containment, with finishes_after joins under their task; JSON is the flat list; spans the listed projects",
+      ),
     ),
   )
     .option("--resolved", "include done and cancelled tasks")

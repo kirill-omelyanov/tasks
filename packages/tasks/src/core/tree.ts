@@ -15,6 +15,7 @@ import {
   depthOf,
   idToNative,
   isBelow,
+  isWithin,
   resolveSuffix,
 } from "./ids.js";
 import type { Task, WorkspacePresence } from "./task.js";
@@ -558,6 +559,25 @@ export function malformedChildrenOf(
 ): Malformed[] {
   const list = options.archived ? tree.archivedMalformed : tree.malformed;
   return list.filter((entry) => entry.id !== "" && entry.parent === id);
+}
+
+/**
+ * How deep `id` sits in containment, counted in tasks: 1 with no task
+ * ancestor, one more for each live task (parsed or malformed) above it.
+ * Ancestors outside `scope` do not count, so the depth is relative to the
+ * scope a view shows: the scope's own task, when it is one, is at depth 1.
+ */
+export function taskDepth(
+  tree: Tree,
+  id: string,
+  scope: string | null,
+): number {
+  const counted = ancestorPaths(id).filter(
+    (ancestor) =>
+      (scope === null || isWithin(ancestor, scope)) &&
+      hasLiveTask(tree, ancestor),
+  );
+  return counted.length + 1;
 }
 
 export interface DescendantsOptions extends ContainmentOptions {

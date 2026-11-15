@@ -3,8 +3,14 @@ import { Command } from "commander";
 import type { DerivedTask, SituationFilterName } from "../core/derive.js";
 import { hasOpenStatus, situationFilter } from "../core/derive.js";
 import { renderOverview } from "../output.js";
-import type { SpanOptions } from "./overview.js";
-import { emitOverview, openSpan, scopeOptions, spanTasks } from "./overview.js";
+import type { DepthOptions, SpanOptions } from "./overview.js";
+import {
+  depthOptions,
+  emitOverview,
+  openSpan,
+  scopeOptions,
+  spanTasks,
+} from "./overview.js";
 
 /**
  * The situation filters of `list`, one flag per situation word plus
@@ -30,9 +36,10 @@ export const LIST_FILTERS: ReadonlyArray<
   ["resolved", "only done and cancelled tasks"],
 ];
 
-type ListOptions = SpanOptions & {
-  json?: boolean;
-} & Partial<Record<SituationFilterName, boolean>>;
+type ListOptions = SpanOptions &
+  DepthOptions & {
+    json?: boolean;
+  } & Partial<Record<SituationFilterName, boolean>>;
 
 /**
  * Without a flag, every task whose status is open; with flags, the tasks in
@@ -48,9 +55,11 @@ function listSelection(options: ListOptions): (d: DerivedTask) => boolean {
 }
 
 export function listCommand(): Command {
-  const command = scopeOptions(
-    new Command("list").description(
-      "open tasks by situation, in tree order; --<situation> flags filter and combine with OR; spans the listed projects",
+  const command = depthOptions(
+    scopeOptions(
+      new Command("list").description(
+        "open tasks by situation, in tree order; --<situation> flags filter and combine with OR; spans the listed projects",
+      ),
     ),
   );
   for (const [name, description] of LIST_FILTERS) {

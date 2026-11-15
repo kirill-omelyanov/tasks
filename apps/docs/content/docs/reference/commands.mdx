@@ -221,7 +221,7 @@ here as not listed. Without a roster the footer says so: any name may be assigne
 ### `tasks list`
 
 ```sh
-tasks list [--scope <path>] [--all] [--local] [--<situation>…] [--json]
+tasks list [--scope <path>] [--all] [--local] [--depth <n> | --top] [--<situation>…] [--json]
 ```
 
 Every open task, in tree order, with its situation and secondary labels. Situation
@@ -249,16 +249,26 @@ the ready set for you also holds tasks assigned to you — `assigned alice`,
 `waiting for alice` — and tasks whose finish gate is satisfied (`closable`).
 `--scope`, `--all` and `--local` work as for `ready`.
 
+`--depth <n>` keeps the tasks at most *n* levels of containment deep, and `--top` is
+`--depth 1`: the top level alone — the epics, each with its `open 2/5` progress, and the
+tasks that stand on their own. The depth counts task ancestors within the scope, so
+`--scope auth-rework --depth 2` is the epic with its direct children; a group is not a task
+and adds no level; a listed project counts from its own root. Situation filters apply
+within the depth, and the footer names the limit (`12 tasks · depth 1`). `--top` with
+`--depth` is refused, like `--scope` with `--all`.
+
 ### `tasks tree`
 
 ```sh
-tasks tree [--scope <path>] [--all] [--local] [--resolved] [--json]
+tasks tree [--scope <path>] [--all] [--local] [--depth <n> | --top] [--resolved] [--json]
 ```
 
 Open tasks nested by containment, with each task's `finishes_after` joins listed under
 it (`↳ after search (not-done)`), tagged with their project. `--resolved` includes done
-and cancelled tasks, so an open parent keeps its finished children beneath it. The JSON
-is the same flat collection as `list`: every task carries `parent`.
+and cancelled tasks, so an open parent keeps its finished children beneath it. `--depth <n>`
+and `--top` work as for `list`: `tasks tree --top` is the top level alone, and
+`tasks tree --scope auth-rework --depth 2` the epic with its direct children. The JSON is
+the same flat collection as `list`: every task carries `parent`.
 
 ```txt
 TASK               SITUATION          LABELS                   TITLE

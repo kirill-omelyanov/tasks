@@ -996,7 +996,9 @@ describe("resume", () => {
     await sandbox.write("docs/engineering/index.md", "# Engineering\n");
     await sandbox.write("README.md", "# Project\n");
 
-    const json = (await sandbox.run("resume", "a", "--json")).json<ResumeJson>();
+    const json = (
+      await sandbox.run("resume", "a", "--json")
+    ).json<ResumeJson>();
     expect(json.docs).toEqual([
       { name: "engineering", path: "docs/engineering", present: true },
       { name: "readme", path: "README.md", present: true },
@@ -1420,6 +1422,100 @@ describe("list", () => {
   });
 });
 
+describe("depth", () => {
+  it("limits list to a depth, --top being --depth 1, counted from the scope", async () => {
+    sandbox = await treeSandbox({
+      tasks: {
+        epic: {},
+        "epic/a": {},
+        "epic/a/deep": {},
+        solo: {},
+        "area/t": {},
+        "area/t/sub": {},
+        "bad/under": {},
+      },
+    });
+    // A malformed manifest anchors parenthood: the task beneath it is deeper.
+    await sandbox.write(".tasks/bad/task.md", "nonsense\n");
+    await sandbox.project("backend", "../backend", {
+      tasks: { k: {}, "k/sub": {}, "k/sub/leaf": {} },
+    });
+
+    expect(ids(await sandbox.run("list", "--top", "--json"))).toEqual([
+      "area/t",
+      "epic",
+      "solo",
+      "backend:k",
+    ]);
+    expect(ids(await sandbox.run("list", "--depth", "2", "--json"))).toEqual([
+      "area/t",
+      "area/t/sub",
+      "bad/under",
+      "epic",
+      "epic/a",
+      "solo",
+      "backend:k",
+      "backend:k/sub",
+    ]);
+    // The depth counts from the scope; a listed tree counts from its root.
+    expect(
+      ids(await sandbox.run("list", "--scope", "epic", "--top", "--json")),
+    ).toEqual(["epic", "backend:k"]);
+    expect(
+      ids(
+        await sandbox.run(
+          "list",
+          "--scope",
+          "epic",
+          "--depth",
+          "2",
+          "--local",
+          "--json",
+        ),
+      ),
+    ).toEqual(["epic", "epic/a"]);
+    // A group is no task: beneath it the depth starts at its tasks.
+    expect(
+      ids(
+        await sandbox.run(
+          "list",
+          "--scope",
+          "area",
+          "--top",
+          "--local",
+          "--json",
+        ),
+      ),
+    ).toEqual(["area/t"]);
+    // Situation filters apply within the depth.
+    expect(
+      ids(await sandbox.run("list", "--top", "--ready", "--json")),
+    ).toEqual(["solo"]);
+
+    const out = plain(
+      (await sandbox.run("list", "--scope", "epic", "--depth", "2")).stdout,
+    );
+    expect(out).toContain("4 tasks · scope epic · depth 2 · projects backend");
+  });
+
+  it("refuses --depth below one or not a number, and --top with --depth", async () => {
+    sandbox = await treeSandbox({ tasks: { a: {} } });
+    for (const argv of [
+      ["list", "--depth", "0"],
+      ["list", "--depth", "two"],
+      ["tree", "--depth", "1.5"],
+      ["tree", "--top", "--depth", "2"],
+      ["list", "--top", "--depth", "1"],
+    ]) {
+      const result = await sandbox.run(...argv, "--json");
+      expect(result.code, argv.join(" ")).toBe(ExitCode.Usage);
+      expect(envelope(result).error.details, argv.join(" ")).toEqual({
+        depth: argv[argv.indexOf("--depth") + 1],
+      });
+    }
+  });
+});
+
 describe("tree", () => {
   const NESTED: TreeSpec = {
     tasks: {
@@ -1447,6 +1543,36 @@ describe("tree", () => {
 
     const resolved = plain((await sandbox.run("tree", "--resolved")).stdout);
     expect(resolved).toMatch(/^ {2}b\s+done/m);
+  });
+
+  it("keeps the roots with --top, their children too with --depth 2, from the scope", async () => {
+    sandbox = await treeSandbox(NESTED);
+    const top = plain((await sandbox.run("tree", "--top")).stdout).split("\n");
+    expect(top).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^epic\s+open 1\/2/),
+        expect.stringMatching(/^ {2}↳ after solo/),
+        expect.stringMatching(/^solo\s+ready/),
+        "2 tasks · depth 1",
+      ]),
+    );
+    expect(top.some((line) => /^ {2}a\b/.test(line))).toBe(false);
+
+    const result = await sandbox.run("tree", "--scope", "epic", "--depth", "2");
+    const two = plain(result.stdout).split("\n");
+    expect(two).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^epic\s+open 1\/2/),
+        expect.stringMatching(/^ {2}a\s+open 0\/1/),
+        "2 tasks · scope epic · depth 2",
+      ]),
+    );
+    expect(two.some((line) => line.includes("deep"))).toBe(false);
+    expect(
+      ids(
+        await sandbox.run("tree", "--scope", "epic", "--depth", "2", "--json"),
+      ),
+    ).toEqual(["epic", "epic/a"]);
   });
 
   it("emits the flat collection, every task carrying its parent", async () => {

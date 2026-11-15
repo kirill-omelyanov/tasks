@@ -149,10 +149,11 @@ first row that holds.
 | `open N/M`      | a parent with open children: `N` of `M` resolved           |
 | `ready`         | free and unblocked                                         |
 
-Overviews — `ready`, `mine`, `list`, `tree` — show the situation and, after it, any
-other condition that holds as a secondary label: `started`, `blocked by A (cancelled)`,
-`active` for a parent with a task in progress beneath it, a priority other than
-`normal`, the claim's liveness, the assignee. They never show the stored status; `show`,
+Overviews — `ready`, `mine`, `list`, `tree` — show the situation, then the effective
+priority in a column of its own (blank for `normal`), then any other condition that holds
+as a secondary label: `started`, `blocked by A (cancelled)`, `active` for a parent with a
+task in progress beneath it, the claim's liveness, the assignee. They never show the
+stored status; `show`,
 `resume`, the JSON `status` field and the file do. So an epic whose child is being
 worked reads `open 2/5 · active`, not `TODO`, and a task paused for review reads
 `waiting for alice`, not `PAUSED`.
@@ -167,8 +168,9 @@ successful query, not an error.
 
 `priority` is one of `urgent`, `high`, `normal` (the default) or `low`. A task's
 **effective priority** is the highest of its own and its ancestors': an urgent epic makes
-its parts urgent without a write to each of them, and overviews label them
-`urgent (inherited)`. Nobody sets a priority by default, so the queue runs on the
+its parts urgent without a write to each of them; overviews show them as
+`urgent (inherited)` in the priority column, and `index.md` the same way. Nobody sets a
+priority by default, so the queue runs on the
 started-first rule alone; a level set by a person is a deliberate jump of the queue.
 
 ## The start and finish gates

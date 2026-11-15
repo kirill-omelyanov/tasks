@@ -4,7 +4,12 @@ import Table from "cli-table3";
 import pc from "picocolors";
 
 import type { DerivedTask } from "./core/derive.js";
-import { labels, referenceText, situationText } from "./core/derive.js";
+import {
+  labels,
+  priorityLabel,
+  referenceText,
+  situationText,
+} from "./core/derive.js";
 import { ancestorPaths, compareIds, qualifyId } from "./core/ids.js";
 import type {
   ActorsJson,
@@ -174,17 +179,23 @@ export interface OverviewOptions {
   empty?: string;
 }
 
+/** The PRIORITY column: a level other than `normal`, marked when inherited. */
+function priorityCell(d: DerivedTask): string {
+  return priorityLabel(d) ?? "";
+}
+
 /** The overview of `ready` and `list`: one row per task, by situation. */
 export function renderOverview(
   rows: DerivedTask[],
   options: OverviewOptions = {},
 ): string {
   if (rows.length === 0) return ui.dim(options.empty ?? "No tasks.");
-  const out = table(["ID", "SITUATION", "LABELS", "TITLE"]);
+  const out = table(["ID", "SITUATION", "PRIORITY", "LABELS", "TITLE"]);
   for (const d of rows) {
     out.push([
       shownId(d, options.project),
       situationCell(d),
+      priorityCell(d),
       labels(d).join(" · "),
       d.snapshot.task.title,
     ]);
@@ -265,7 +276,9 @@ export function renderTree(
   roots.sort((a, b) => projectRank(a) - projectRank(b) || byId(a, b));
 
   const lines: Array<string[] | string> = [
-    ["TASK", "SITUATION", "LABELS", "TITLE"].map((head) => pc.bold(head)),
+    ["TASK", "SITUATION", "PRIORITY", "LABELS", "TITLE"].map((head) =>
+      pc.bold(head),
+    ),
   ];
   const walk = (list: TreeNode[], depth: number) => {
     const indent = "  ".repeat(depth);
@@ -273,6 +286,7 @@ export function renderTree(
       lines.push([
         `${indent}${node.name}`,
         situationCell(node.d),
+        priorityCell(node.d),
         labels(node.d).join(" · "),
         node.d.snapshot.task.title,
       ]);
@@ -296,12 +310,15 @@ export function renderMine(
     return ui.dim(options.empty ?? "Nothing claimed by or assigned to you.");
   }
   const lines: Array<string[] | string> = [
-    ["ID", "SITUATION", "LABELS", "TITLE"].map((head) => pc.bold(head)),
+    ["ID", "SITUATION", "PRIORITY", "LABELS", "TITLE"].map((head) =>
+      pc.bold(head),
+    ),
   ];
   for (const d of rows) {
     lines.push([
       shownId(d, options.project),
       situationCell(d),
+      priorityCell(d),
       labels(d).join(" · "),
       d.snapshot.task.title,
     ]);

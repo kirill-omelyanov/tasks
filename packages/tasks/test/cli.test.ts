@@ -129,6 +129,7 @@ const SITUATION_ROWS: Record<string, string[]> = {
   assigned: ["hold"],
   held: ["hold/part"],
   working: ["w1"],
+  active: [],
   parked: ["p1"],
   backlog: ["b1"],
   closable: ["cl"],
@@ -1310,10 +1311,39 @@ describe("mine", () => {
 /* ------------------------------------------------------------------------ */
 
 describe("list", () => {
-  it("offers a flag for every situation, and --resolved", () => {
+  it("offers a flag for every situation, --resolved and --active", () => {
     expect(LIST_FILTERS.map(([name]) => name).sort()).toEqual(
-      [...SITUATIONS, "resolved"].sort(),
+      [...SITUATIONS, "resolved", "active"].sort(),
     );
+  });
+
+  it("selects with --active every task with a claimed task beneath it, resolved too", async () => {
+    sandbox = await treeSandbox({
+      tasks: {
+        epic: {},
+        "epic/mid": {},
+        "epic/mid/w": { status: "IN_PROGRESS" },
+        quiet: {},
+        "quiet/t": {},
+        // A resolved parent over a claimed task breaks an invariant; the flag shows it.
+        gone: { status: "DONE" },
+        "gone/w": { status: "IN_PROGRESS" },
+      },
+    });
+    expect(ids(await sandbox.run("list", "--active", "--json"))).toEqual([
+      "epic",
+      "epic/mid",
+      "gone",
+    ]);
+    expect(
+      ids(await sandbox.run("list", "--active", "--top", "--json")),
+    ).toEqual(["epic", "gone"]);
+    // The flags combine with OR: the epics with work going on, at any level.
+    expect(
+      ids(
+        await sandbox.run("list", "--active", "--working", "--top", "--json"),
+      ),
+    ).toEqual(["epic", "gone"]);
   });
 
   it("shows the open tasks by default, in tree order", async () => {

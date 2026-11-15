@@ -71,7 +71,7 @@ An overview says exactly one word about a task, its **situation**, chosen as the
 whose condition holds; every other condition that holds is shown after it as a secondary label
 (`started` for the task's own `state.md`, `blocked by X` — with the reason when the reference can
 never be satisfied, as in `blocked by A (cancelled)` — `active` for a parent with an `IN_PROGRESS`
-descendant, a [priority](/docs/spec/lifecycle#priority) other than `normal`, liveness, the assignee, and `held by X` or
+descendant, liveness, the assignee, and `held by X` or
 `closable` when they are not the situation itself). Implementations MUST compute the
 situation by this table, so that two of them agree on what a tree looks like.
 
@@ -90,9 +90,11 @@ situation by this table, so that two of them agree on what a tree looks like.
 | `ready` | free and unblocked, as defined above | `TODO`, `PAUSED` |
 
 `N/M` is the parent's progress: live children resolved out of live children. Overview commands
-(`ready`, `mine`, `list`, `tree`) MUST show the situation and the secondary labels and SHOULD NOT
-show the stored status, which `show`, `resume`, the JSON `status` field and the file itself carry.
-`list` MUST accept a filter by situation (`--parked`, `--blocked`, `--waiting`, …).
+(`ready`, `mine`, `list`, `tree`) MUST show the situation, the effective
+[priority](/docs/spec/lifecycle#priority) when it is not `normal`, and the secondary labels, and
+SHOULD NOT show the stored status, which `show`, `resume`, the JSON `status` field and the file
+itself carry. `list` MUST accept a filter by situation (`--parked`, `--blocked`, `--waiting`, …)
+and by the `active` label (`--active`).
 
 <Callout type="info" title="Non-normative">
   The status is what a task says about itself; the situation is what the tree
@@ -109,7 +111,8 @@ show the stored status, which `show`, `resume`, the JSON `status` field and the 
 `normal`. A task's **effective priority** is the highest level among its own and its ancestors':
 an urgent epic makes its parts urgent without a write to each of them. Effective priority is the
 first key of the ready order (see [Derived conditions](/docs/spec/lifecycle#derived-conditions)); among equals,
-finishing beats starting. Overviews show a level other than `normal` as a secondary label.
+finishing beats starting. Overviews show a level other than `normal` in a column of its own,
+marked `(inherited)` when it is an ancestor's.
 
 <Callout type="info" title="Non-normative">
   Nobody sets a priority by default, so the queue runs on the started-first rule

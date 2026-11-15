@@ -419,19 +419,21 @@ export function readySet(
 /* Filters                                                                  */
 /* ------------------------------------------------------------------------ */
 
-export type SituationFilterName = Situation | "resolved";
+export type ListFilterName = Situation | "resolved" | "active";
 
 /**
- * The `list --<situation>` filters: each situation word selects its own
+ * The `list --<filter>` filters: each situation word selects its own
  * situation (`open` is the word for a parent with open children, not "every
- * open task"), and `resolved` selects done and cancelled tasks together.
+ * open task"), `resolved` selects done and cancelled tasks together, and
+ * `active` selects the tasks the label marks: an `IN_PROGRESS` task beneath.
  */
 export function situationFilter(
-  name: SituationFilterName,
+  name: ListFilterName,
 ): (d: DerivedTask) => boolean {
   if (name === "resolved") {
     return (d) => isResolved(d.snapshot.task.frontmatter.status);
   }
+  if (name === "active") return (d) => d.derived.active;
   return (d) => d.derived.situation === name;
 }
 
@@ -555,7 +557,8 @@ const IMPLIES_STARTED: ReadonlySet<Situation> = new Set([
 
 /**
  * The secondary labels, in a fixed order: started, blocked by (when not the
- * situation), active, priority, liveness, the assignee, held by, closable.
+ * situation), active, liveness, the assignee, held by, closable. The
+ * priority is not one: overviews give it a column (`priorityLabel`).
  * `started` marks the task's own resume point, where the word does not
  * already imply one: below a parent, progress and `active` say more. A
  * resolved task carries only `active`, which there flags a broken invariant;
@@ -576,8 +579,6 @@ export function labels(d: DerivedTask): string[] {
     out.push(blockedText(d));
   }
   if (derived.active) out.push("active");
-  const priority = priorityLabel(d);
-  if (priority !== null) out.push(priority);
   const liveness = livenessLabel(d);
   if (liveness !== null) out.push(liveness);
   const assignee = assigneeLabel(d);

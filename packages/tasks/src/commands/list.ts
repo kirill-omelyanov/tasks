@@ -1,6 +1,6 @@
 import { Command } from "commander";
 
-import type { DerivedTask, SituationFilterName } from "../core/derive.js";
+import type { DerivedTask, ListFilterName } from "../core/derive.js";
 import { hasOpenStatus, situationFilter } from "../core/derive.js";
 import { renderOverview } from "../output.js";
 import type { DepthOptions, SpanOptions } from "./overview.js";
@@ -13,20 +13,20 @@ import {
 } from "./overview.js";
 
 /**
- * The situation filters of `list`, one flag per situation word plus
- * `--resolved` for done and cancelled together. The word `open` is the
- * situation of a parent with open children, not "every open task", which is
- * what `list` shows without a filter.
+ * The filters of `list`: one flag per situation word, `--resolved` for done
+ * and cancelled together, and `--active` for the label (work in progress
+ * beneath the task). The word `open` is the situation of a parent with open
+ * children, not "every open task", which is what `list` shows without a
+ * filter.
  */
-export const LIST_FILTERS: ReadonlyArray<
-  readonly [SituationFilterName, string]
-> = [
+export const LIST_FILTERS: ReadonlyArray<readonly [ListFilterName, string]> = [
   ["ready", "only tasks free to take"],
   ["blocked", "only tasks blocked by a dependency"],
   ["waiting", "only paused tasks waiting for their assignee"],
   ["assigned", "only tasks assigned to someone and not paused"],
   ["held", "only tasks held by a claimed or assigned ancestor"],
   ["working", "only claimed tasks"],
+  ["active", "only tasks with a claimed task beneath them"],
   ["parked", "only backlog tasks with started work"],
   ["backlog", "only backlog tasks without started work"],
   ["closable", "only parents whose children are all resolved"],
@@ -39,7 +39,7 @@ export const LIST_FILTERS: ReadonlyArray<
 type ListOptions = SpanOptions &
   DepthOptions & {
     json?: boolean;
-  } & Partial<Record<SituationFilterName, boolean>>;
+  } & Partial<Record<ListFilterName, boolean>>;
 
 /**
  * Without a flag, every task whose status is open; with flags, the tasks in

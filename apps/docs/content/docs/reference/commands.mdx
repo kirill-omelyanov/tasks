@@ -221,12 +221,12 @@ here as not listed. Without a roster the footer says so: any name may be assigne
 ### `tasks list`
 
 ```sh
-tasks list [--scope <path>] [--all] [--local] [--depth <n> | --top] [--<situation>…] [--json]
+tasks list [--scope <path>] [--all] [--local] [--depth <n> | --top] [--<situation>…] [--active] [--json]
 ```
 
-Every open task, in tree order, with its situation and secondary labels. Situation
-filters select by the [situation](/docs/concepts#situations-not-statuses) word and
-combine with OR:
+Every open task, in tree order, with its situation, its effective priority and its
+secondary labels. Filters select by the [situation](/docs/concepts#situations-not-statuses)
+word, or by the `active` label, and combine with OR:
 
 | Filter        | Selects                                         |
 | ------------- | ----------------------------------------------- |
@@ -236,6 +236,7 @@ combine with OR:
 | `--assigned`  | assigned to someone and not paused              |
 | `--held`      | held by a claimed or assigned ancestor          |
 | `--working`   | claimed                                         |
+| `--active`    | a claimed task beneath them (the label, not a situation) |
 | `--parked`    | `BACKLOG` with started work                     |
 | `--backlog`   | `BACKLOG` without started work                  |
 | `--closable`  | finish gate satisfied: children and joins resolved |
@@ -271,13 +272,13 @@ and `--top` work as for `list`: `tasks tree --top` is the top level alone, and
 the same flat collection as `list`: every task carries `parent`.
 
 ```txt
-TASK               SITUATION          LABELS                   TITLE
-auth-rework        open 1/2           active                   Rework authentication
-  wire-refresh     working by agent   live                     Wire the refresh endpoint
-release            backlog            urgent · assigned alice  Release 2.0
+TASK               SITUATION          PRIORITY          LABELS          TITLE
+auth-rework        open 1/2                             active          Rework authentication
+  wire-refresh     working by agent                     live            Wire the refresh endpoint
+release            backlog            urgent            assigned alice  Release 2.0
   ↳ after search (not-done)
-search             open 0/3           high                     Full-text search
-  index-docs       ready              high (inherited)         Index documents
+search             open 0/3           high                              Full-text search
+  index-docs       ready              high (inherited)                  Index documents
 ```
 
 ### `tasks log --since`

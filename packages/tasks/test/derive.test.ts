@@ -1006,7 +1006,7 @@ describe("labels", () => {
       "held by epic · started · blocked by x (cancelled) · active · waiting for bob",
     );
     expect(shown(get(derived, "epic/worked"))).toBe(
-      "working by tester · blocked by y · high · live · assigned bob · held by epic · closable",
+      "working by tester · blocked by y · live · assigned bob · held by epic · closable",
     );
   });
 

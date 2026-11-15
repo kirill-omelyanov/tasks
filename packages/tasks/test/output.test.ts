@@ -162,7 +162,7 @@ function get(map: Map<string, DerivedTask>, id: string): DerivedTask {
 /* ------------------------------------------------------------------------ */
 
 describe("renderOverview", () => {
-  it("shows id, situation, labels and title, never the stored status", async () => {
+  it("shows id, situation, priority, labels and title, never the stored status", async () => {
     const { local, foreign } = await fixture();
     const text = plain(
       renderOverview([...local.values(), ...foreign.values()], {
@@ -172,12 +172,13 @@ describe("renderOverview", () => {
     for (const words of [
       "ID",
       "SITUATION",
+      "PRIORITY",
       "LABELS",
       "TITLE",
       "open 1/3",
-      "active · high",
       "waiting for alice",
-      "high (inherited) · live",
+      "high (inherited)",
+      "live",
       "assigned alice",
       "blocked by auth-rework",
       "backend:api/tokens/tests",

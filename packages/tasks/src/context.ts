@@ -258,9 +258,10 @@ function namesTreePath(tree: Tree, id: string): boolean {
 }
 
 /**
- * The local scope of `ready`, `list` and `tree`: `--scope` when given, none
- * under `--all`, else the configured `scope`. A scope is a path of the local
- * tree and applies to it alone; listed projects are never scoped.
+ * The local scope of `ready`, `list`, `tree` and `claim --next`: `--scope`
+ * when given, none under `--all`, else the configured `scope`. A scope is a
+ * path of the local tree and applies to it alone; listed projects are never
+ * scoped.
  *
  * An explicit `--scope` must name a task or group of the local tree, so a
  * typo fails instead of answering with a silent empty set. A configured

@@ -1,4 +1,5 @@
 import type { CommandContext } from "../context.js";
+import { resolveScope } from "../context.js";
 import { TaskError } from "../errors.js";
 import { assertListedActor } from "./actors.js";
 import type { SupersededClaim } from "./authorization.js";
@@ -11,7 +12,7 @@ import {
 import type { DerivedTask } from "./derive.js";
 import { holdsSubtree, readySet } from "./derive.js";
 import { requireAvailable, toBlockedBy } from "./gates.js";
-import { assertTaskPath, compareIds } from "./ids.js";
+import { compareIds } from "./ids.js";
 import type { Fresh } from "./mutate.js";
 import { withMutation } from "./mutate.js";
 import type { LoadedTree } from "./projects.js";
@@ -370,7 +371,10 @@ export function priority(
 /**
  * `claim --next`: claim the first task of the caller's ready set. The set
  * spans the local tree and every listed tree that is available (only the
- * local one with `local`); a scope narrows the local tree only.
+ * local one with `local`); a scope narrows the local tree only, and is
+ * checked as `ready` checks it before any candidate is read: a mistyped one
+ * is not found, where unchecked it emptied the local set and the first ready
+ * task of a listed project was claimed in its place.
  *
  * There is no lock over several trees, so the candidates come from an
  * unlocked read in ready order, and each is re-checked under its own tree's
@@ -383,7 +387,10 @@ export async function claimNext(
   options: ClaimNextOptions = {},
 ): Promise<TransitionResult> {
   const prepared = prepare("claim", options, undefined);
-  const scope = nextScope(context, options);
+  const scope = resolveScope(context, {
+    scope: options.scope ?? undefined,
+    all: options.all,
+  });
   const source = snapshotFromContext(context);
   const actor = context.identity.actor;
   const local = options.local === true;
@@ -506,22 +513,6 @@ async function locate(
   }
   const load = context.projects.latest(available);
   return { load, id: resolveTaskId(load.tree, path) };
-}
-
-function nextScope(
-  context: CommandContext,
-  options: ClaimNextOptions,
-): string | null {
-  if (typeof options.scope === "string") {
-    if (options.all === true) {
-      throw TaskError.usage(
-        "--scope and --all contradict each other: --all lifts the scope that --scope sets.",
-        { scope: options.scope },
-      );
-    }
-    return assertTaskPath(options.scope, "scope");
-  }
-  return options.all === true ? null : context.tree.config.scope;
 }
 
 /** Re-read every tree a `claim --next` round spans. */

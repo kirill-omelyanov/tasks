@@ -398,8 +398,9 @@ refused for a live or unknown claim (`authorization`), and for your own claim in
 session (`already-claimed`).
 
 `--next` decides under the tree lock, so agents running it at once get different tasks.
-It fails with exit `3` when nothing is ready. When the claimed task has open
-descendants, the result reports how many it now holds (`holds`).
+It fails with exit `3` when nothing is ready, and, as `ready` does, when `--scope` names no
+task or group of the local tree: a mistyped scope claims nothing, in no tree. When the
+claimed task has open descendants, the result reports how many it now holds (`holds`).
 
 **Fails** with exit `4` for an unsatisfied start gate (`start-gate`, with `blocked_by`),
 a claimed or assigned ancestor (`held`), a `BACKLOG` ancestor (`backlog-ancestor`), a

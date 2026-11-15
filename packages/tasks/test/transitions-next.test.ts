@@ -120,6 +120,44 @@ describe("claim --next", () => {
     expect(errorOf(result).details).toEqual({ scope: "auth" });
   });
 
+  it("refuses a scope that names nothing before any claim, like ready", async () => {
+    sandbox = await treeSandbox({ tasks: { epic: {} } });
+    const backend = await sandbox.project("backend", "../backend", {
+      tasks: { urgent: { priority: "urgent" } },
+    });
+    const result = await sandbox.run(
+      "claim",
+      "--next",
+      "--scope",
+      "typo",
+      "--json",
+    );
+    expect(result.code).toBe(3);
+    const error = errorOf(result);
+    expect(error.code).toBe("NOT_FOUND");
+    expect(error.details).toEqual({ scope: "typo" });
+    expect(error.message).toContain('"typo"');
+    // A scope that names nothing emptied the local set; the first ready task
+    // of the listed project must not have been claimed in its place.
+    expect((await frontmatterOf(sandbox, "urgent", backend)).status).toBe(
+      "TODO",
+    );
+    expect(await logTexts(sandbox, "urgent", backend)).toEqual([]);
+    expect((await frontmatterOf(sandbox, "epic")).status).toBe("TODO");
+  });
+
+  it("applies a configured scope that names nothing, with a warning", async () => {
+    sandbox = await treeSandbox({ scope: "gone", tasks: { a: {} } });
+    const result = await sandbox.run("claim", "--next");
+    expect(result.code).toBe(3);
+    expect(result.stderr).toContain('scope "gone"');
+    // Under --json stderr is the envelope's alone.
+    const json = await sandbox.run("claim", "--next", "--json");
+    expect(json.code).toBe(3);
+    expect(errorOf(json).details).toEqual({ scope: "gone" });
+    expect((await frontmatterOf(sandbox, "a")).status).toBe("TODO");
+  });
+
   it("uses the configured scope by default; --all lifts it", async () => {
     sandbox = await treeSandbox({
       scope: "auth",

@@ -525,22 +525,28 @@ describe("renderDepList", () => {
 describe("renderCollectionFooter", () => {
   it("counts the tasks and flags malformed manifests", () => {
     const collection: CollectionJson<unknown> = {
-      scope: "auth",
+      scope: null,
       projects: ["backend", "cli"],
       count: 3,
-      tasks: [],
+      tasks: [{ project: "backend" }, { project: "cli" }, { project: null }],
       malformed: [
         { path: "/abs/.tasks/bad/task.md", message: "no frontmatter" },
       ],
       unavailable: [],
     };
+    // Projects spanned: the footer says how many rows came from them.
     expect(plain(renderCollectionFooter(collection))).toBe(
-      "3 tasks · scope auth · projects backend, cli\n! malformed /abs/.tasks/bad/task.md: no frontmatter",
+      "3 tasks · 2 from projects backend, cli\n! malformed /abs/.tasks/bad/task.md: no frontmatter",
     );
     // The depth limit is the caller's, not the collection's: it follows the scope.
-    expect(plain(renderCollectionFooter(collection, 2))).toBe(
-      "3 tasks · scope auth · depth 2 · projects backend, cli\n! malformed /abs/.tasks/bad/task.md: no frontmatter",
-    );
+    expect(
+      plain(
+        renderCollectionFooter(
+          { ...collection, scope: "auth", projects: [], malformed: [] },
+          2,
+        ),
+      ),
+    ).toBe("3 tasks · scope auth · depth 2");
     expect(
       plain(
         renderCollectionFooter({

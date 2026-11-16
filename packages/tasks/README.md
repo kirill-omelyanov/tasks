@@ -132,7 +132,7 @@ Every shape is documented at
 
 ```yaml
 version: 2
-scope: auth-rework # default scope for list, ready, tree and claim --next
+scope: auth-rework # default scope for list, ready, tree and claim --next; keeps them to this tree
 session_timeout_minutes: 30 # silence after which a claim is orphaned
 archive_resolved_after_days: 30 # resolved this long ago and still live: validate reports them
 actors: # who tasks may be assigned to; once any is listed, other names are refused

@@ -21,7 +21,7 @@ block live:
 # .tasks convention v2. See `tasks --help` or .tasks/README.md.
 version: 2
 
-# Default scope for `list`, `ready`, `tree` and `claim --next`: a group or task path.
+# Default scope for `list`, `ready`, `tree` and `claim --next`: a group or task path; keeps them to this tree.
 # scope: auth-rework
 
 # Minutes without a heartbeat after which a claim counts as orphaned.
@@ -57,7 +57,7 @@ version: 2
     },
     scope: {
       description:
-        "Default scope for list, ready, tree and claim --next when the caller gives none: a group or task path of this tree. Never restricts addressing by id, gates, or validation.",
+        "Default scope for list, ready, tree and claim --next when the caller gives none: a group or task path of this tree; while it applies, these keep to this tree. Never restricts addressing by id, gates, or validation.",
       type: "path",
       default: "none",
     },
@@ -107,8 +107,9 @@ scope: auth-rework
 ```
 
 Sets the default scope of `tasks ready`, `tasks list`, `tasks tree` and `claim --next`.
-`--scope <path>` overrides it, and `--all` ignores it. A scope applies to the local tree
-only: listed projects are never scoped. `mine` is not scoped — what is yours does not
+`--scope <path>` overrides it, and `--all` ignores it. A scope is a path of the local tree,
+and while one is in force these commands keep to that tree: the listed projects are spanned
+only without a scope, so `--all` spans again. `mine` is not scoped — what is yours does not
 depend on what you work on next. A configured scope that names no task or group is
 applied as written, with a warning on stderr, so the file gets fixed instead of every
 overview failing.

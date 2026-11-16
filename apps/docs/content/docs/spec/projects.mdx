@@ -27,7 +27,9 @@ projects:
 - **Aggregation.** When `projects:` is non-empty, overview queries (`ready`, `mine`, `list`,
   `tree`, and log queries by time) MUST span the local tree and every listed project by default,
   MUST qualify every foreign id with its alias, and MUST offer a way to restrict to the local
-  tree. A `scope` applies to the local tree only.
+  tree. A `scope` is a path of the local tree: while one is in force, given or configured, the
+  scoped queries (`ready`, `list`, `tree`, `claim --next`) MUST keep to the local tree; `mine`
+  and the log queries, which no scope restricts, span as before.
 - **Not checked out.** A listed project whose directory is absent on this machine is a validation
   warning; references into it are unsatisfied with reason `not-checked-out`.
 - Any tree MAY list projects; a product repository that lists nothing stays local, so a reviewer

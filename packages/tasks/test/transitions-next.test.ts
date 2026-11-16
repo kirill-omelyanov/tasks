@@ -169,10 +169,7 @@ describe("claim --next", () => {
   });
 
   it("spans listed projects in ready order; --local keeps to the local tree", async () => {
-    sandbox = await treeSandbox({
-      scope: "auth",
-      tasks: { "auth/a": { created: at(3) } },
-    });
+    sandbox = await treeSandbox({ tasks: { "auth/a": { created: at(3) } } });
     const backend = await sandbox.project("backend", "../backend", {
       tasks: { x: { created: at(1) }, "far/y": { created: at(2) } },
     });
@@ -180,7 +177,6 @@ describe("claim --next", () => {
 
     const result = await sandbox.run("claim", "--next", "--json");
     expect(result.code).toBe(0);
-    // The local scope never narrows another tree.
     expect(result.json<TransitionJson>()).toMatchObject({
       id: "backend:x",
       project: "backend",
@@ -193,6 +189,27 @@ describe("claim --next", () => {
       "claim: TODO → IN_PROGRESS",
     ]);
     expect(await next()).toBe("backend:far/y");
+  });
+
+  it("keeps to the local tree while a scope is in force, configured or given", async () => {
+    sandbox = await treeSandbox({
+      scope: "auth",
+      tasks: {
+        "auth/a": { created: at(3) },
+        "auth/b": { created: at(4) },
+        "other/c": { created: at(5) },
+      },
+    });
+    await sandbox.project("backend", "../backend", {
+      tasks: { x: { created: at(1) } },
+    });
+    // backend:x is the oldest, and the configured scope leaves it out.
+    expect(await next()).toBe("auth/a");
+    expect(await next("--scope", "auth")).toBe("auth/b");
+    expect(await next("--scope", "other")).toBe("other/c");
+    expect(await next("--scope", "auth")).toBe(3);
+    // Without a scope the projects are spanned again.
+    expect(await next("--all")).toBe("backend:x");
   });
 
   it("fails as not found when nothing is ready", async () => {

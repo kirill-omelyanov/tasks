@@ -53,10 +53,13 @@ export function scopeOptions(command: Command): Command {
   return command
     .option(
       "--scope <path>",
-      "restrict the local tree to this group or task path (default: scope in config.yml)",
+      "restrict the local tree to this group or task path and keep to that tree (default: scope in config.yml)",
     )
     .option("--all", "ignore the configured scope")
-    .option("--local", "the local tree only, not the projects it lists");
+    .option(
+      "--local",
+      "the local tree only, not the projects it lists (implied by a scope)",
+    );
 }
 
 /** Declare `--depth <n>` and `--top` on an overview that shows containment. */
@@ -95,8 +98,10 @@ export function resolveDepth(options: DepthOptions): number | null {
 
 /**
  * Open the context and derive every tree the overview spans: the local tree
- * and, unless `--local`, each tree listed under `projects:` that is checked
- * out and readable. `scoped` is false for `mine`, which the configuration's
+ * and, unless `--local` or a scope is in force, each tree listed under
+ * `projects:` that is checked out and readable. A scope is a path of the
+ * local tree, so while one applies, given or configured, the overview keeps
+ * to that tree. `scoped` is false for `mine`, which the configuration's
  * scope does not restrict.
  */
 export async function openSpan(
@@ -107,7 +112,7 @@ export async function openSpan(
   const context = await openContext(command);
   const scope = scoped ? resolveScope(context, options) : null;
   const depth = resolveDepth(options);
-  const local = options.local === true;
+  const local = options.local === true || scope !== null;
   const trees = await snapshotAll(
     snapshotFromContext(context),
     context.identity.actor,
@@ -121,7 +126,10 @@ export async function openSpan(
   return { context, scope, depth, trees, unavailable };
 }
 
-/** A scope applies to the local tree only; listed trees pass it whole. */
+/**
+ * A scope is a path of the local tree; a listed tree, present only when no
+ * scope is in force, passes whole.
+ */
 export function inSpan(span: Span, d: DerivedTask): boolean {
   return d.snapshot.project !== null || inScope(d.snapshot.task.id, span.scope);
 }

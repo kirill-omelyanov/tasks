@@ -684,7 +684,20 @@ export function renderDepList(refs: ResolvedRef[]): string {
   return out.toString();
 }
 
-/** The line under an overview: the count, scope and projects; malformed. */
+/** The rows that came from listed projects: those whose `project` is an alias. */
+function foreignRows(tasks: readonly unknown[]): number {
+  return tasks.filter(
+    (task) =>
+      typeof task === "object" &&
+      task !== null &&
+      typeof (task as { project?: unknown }).project === "string",
+  ).length;
+}
+
+/**
+ * The line under an overview: the count, the scope, the depth and, when
+ * projects were spanned, how many rows came from them; then malformed.
+ */
 export function renderCollectionFooter(
   collection: CollectionJson<unknown>,
   depth: number | null = null,
@@ -693,7 +706,9 @@ export function renderCollectionFooter(
   if (collection.scope !== null) parts.push(`scope ${collection.scope}`);
   if (depth !== null) parts.push(`depth ${depth}`);
   if (collection.projects.length > 0) {
-    parts.push(`projects ${collection.projects.join(", ")}`);
+    parts.push(
+      `${foreignRows(collection.tasks)} from projects ${collection.projects.join(", ")}`,
+    );
   }
   return [
     ui.dim(parts.join(" · ")),

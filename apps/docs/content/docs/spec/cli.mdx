@@ -125,7 +125,7 @@ descendants the task now holds) where they apply.
 { "scope": "auth-rework", "projects": ["backend", "cli"], "count": 2, "tasks": [ … ], "malformed": [], "unavailable": [] }
 ```
 
-`scope` is the resolved local scope or `null`; `projects` lists the aliases spanned; `count`
+`scope` is the resolved local scope or `null`; `projects` lists the aliases spanned (none while a scope is in force); `count`
 equals `tasks.length`; `malformed` lists `{ "path", "message" }` for every task directory whose
 manifest could not be parsed (see [Structure](/docs/spec/task-file#structure)); `unavailable` lists
 `{ "alias", "reason" }` for every listed project the query could not read — `not-checked-out`,

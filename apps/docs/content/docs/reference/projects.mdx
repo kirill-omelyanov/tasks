@@ -43,7 +43,8 @@ tree that configured it.
 ## Aggregated overviews
 
 When `projects:` is non-empty, `ready`, `mine`, `list`, `tree` and `log --since` span the
-local tree and every listed project, and every foreign id carries its alias:
+local tree and every listed project, every foreign id carries its alias, and the footer says
+how many rows the projects contributed:
 
 ```txt
  ID                      SITUATION   PRIORITY           LABELS   TITLE
@@ -51,7 +52,7 @@ local tree and every listed project, and every foreign id carries its alias:
  api:scratch/try-it      ready                                   Try it
  launch                  ready                                   Launch the public API
 
-3 tasks · projects api
+3 tasks · 2 from projects api
 ```
 
 The ready set interleaves the trees by the same keys as within one: effective priority,
@@ -62,7 +63,7 @@ the aliases spanned.
 | Option    | Effect                                                                    |
 | --------- | ------------------------------------------------------------------------- |
 | `--local` | Restrict the overview to the local tree.                                  |
-| `--scope` | Applies to the local tree only; listed trees are never scoped.            |
+| `--scope` | A path of the local tree. While a scope is in force, given or configured, `ready`, `list`, `tree` and `claim --next` keep to the local tree; `--all` lifts a configured scope and spans again. `mine` and `log --since` are not scoped. |
 
 A listed project that is not checked out, or is a v1 tree, is left out of the overview
 with a line saying so — under `--json`, the collection's `unavailable` names it with the

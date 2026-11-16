@@ -370,11 +370,12 @@ export function priority(
 
 /**
  * `claim --next`: claim the first task of the caller's ready set. The set
- * spans the local tree and every listed tree that is available (only the
- * local one with `local`); a scope narrows the local tree only, and is
- * checked as `ready` checks it before any candidate is read: a mistyped one
- * is not found, where unchecked it emptied the local set and the first ready
- * task of a listed project was claimed in its place.
+ * spans the local tree and every listed tree that is available, or the
+ * local tree alone with `local` or while a scope is in force; a scope is a
+ * path of the local tree, and is checked as `ready` checks it before any
+ * candidate is read: a mistyped one is not found, where unchecked it emptied
+ * the local set and the first ready task of a listed project was claimed in
+ * its place.
  *
  * There is no lock over several trees, so the candidates come from an
  * unlocked read in ready order, and each is re-checked under its own tree's
@@ -393,7 +394,7 @@ export async function claimNext(
   });
   const source = snapshotFromContext(context);
   const actor = context.identity.actor;
-  const local = options.local === true;
+  const local = options.local === true || scope !== null;
 
   for (let round = 0; round < NEXT_ROUNDS; round += 1) {
     if (round > 0) await reloadAll(context, local);

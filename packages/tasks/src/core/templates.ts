@@ -50,7 +50,7 @@ export function configTemplate(options: ConfigTemplateOptions = {}): string {
   return `# .tasks convention v2. See \`tasks --help\` or .tasks/README.md.
 version: 2
 
-# Default scope for \`list\`, \`ready\`, \`tree\` and \`claim --next\`: a group or task path.
+# Default scope for \`list\`, \`ready\`, \`tree\` and \`claim --next\`: a group or task path; keeps them to this tree.
 # scope: auth-rework
 
 # Minutes without a heartbeat after which a claim counts as orphaned.

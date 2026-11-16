@@ -214,12 +214,12 @@ function claimCommand(): Command {
     .option("--next", "claim the first task of your ready set, in ready order")
     .option(
       "--scope <path>",
-      "with --next: only local tasks within this path (default: the configured scope)",
+      "with --next: only local tasks within this path, never a listed project's (default: the configured scope)",
     )
     .option("--all", "with --next: ignore the configured scope")
     .option(
       "--local",
-      "with --next: the local tree only, even when projects: lists others",
+      "with --next: the local tree only, even when projects: lists others (implied by a scope)",
     );
   return withCommonOptions(
     command,

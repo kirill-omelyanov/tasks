@@ -1143,7 +1143,7 @@ describe("ready", () => {
     expect((await sandbox.run("ready")).stderr).toContain('scope "gone"');
   });
 
-  it("spans the listed projects, qualifies their ids and interleaves them by the ready order", async () => {
+  it("spans the listed projects without a scope, qualifies their ids and interleaves them by the ready order", async () => {
     sandbox = await treeSandbox({
       scope: "epic",
       tasks: {
@@ -1161,40 +1161,52 @@ describe("ready", () => {
       },
     });
 
+    // The configured scope is in force: the local tree alone.
     const json = collection(await sandbox.run("ready", "--json"));
     expect(json.scope).toBe("epic");
-    expect(json.projects).toEqual(["backend"]);
-    expect(json.tasks.map((task) => task.id)).toEqual([
-      "backend:z",
-      "backend:k",
-      "epic/x",
-    ]);
-    expect(json.tasks[0]).toMatchObject({
-      project: "backend",
-      path: path.join(backend, ".tasks", "z"),
-    });
+    expect(json.projects).toEqual([]);
+    expect(json.tasks.map((task) => task.id)).toEqual(["epic/x"]);
 
+    // --all lifts it, and the projects are spanned, interleaved by ready order.
     const all = collection(await sandbox.run("ready", "--all", "--json"));
+    expect(all.scope).toBeNull();
+    expect(all.projects).toEqual(["backend"]);
     expect(all.tasks.map((task) => task.id)).toEqual([
       "backend:z",
       "backend:k",
       "epic/x",
       "a",
     ]);
+    expect(all.tasks[0]).toMatchObject({
+      project: "backend",
+      path: path.join(backend, ".tasks", "z"),
+    });
 
-    const local = collection(await sandbox.run("ready", "--local", "--json"));
+    const local = collection(
+      await sandbox.run("ready", "--all", "--local", "--json"),
+    );
     expect(local.projects).toEqual([]);
-    expect(local.tasks.map((task) => task.id)).toEqual(["epic/x"]);
+    expect(local.tasks.map((task) => task.id)).toEqual(["epic/x", "a"]);
+
+    // A scope given on the command line keeps to the local tree too.
+    const scoped = collection(
+      await sandbox.run("ready", "--scope", "epic", "--json"),
+    );
+    expect(scoped.projects).toEqual([]);
+    expect(scoped.tasks.map((task) => task.id)).toEqual(["epic/x"]);
   });
 
   it("prints situations, qualified ids and a footer", async () => {
     sandbox = await treeSandbox({ scope: "epic", tasks: { "epic/x": {} } });
     await sandbox.project("backend", "../backend", { tasks: { k: {} } });
-    const out = plain((await sandbox.run("ready")).stdout);
+    const out = plain((await sandbox.run("ready", "--all")).stdout);
     expect(out).toMatch(/epic\/x\s+ready/);
     expect(out).toMatch(/backend:k\s+ready/);
-    expect(out).toContain("2 tasks · scope epic · projects backend");
+    expect(out).toContain("2 tasks · 1 from projects backend");
     expect(out).not.toMatch(STATUS_WORD);
+    const scoped = plain((await sandbox.run("ready")).stdout);
+    expect(scoped).not.toContain("backend:k");
+    expect(scoped).toContain("1 task · scope epic");
 
     await sandbox.cleanup();
     sandbox = await treeSandbox({ tasks: { a: { status: "BACKLOG" } } });
@@ -1414,20 +1426,28 @@ describe("list", () => {
     );
   });
 
-  it("spans the listed projects; the scope applies to the local tree only", async () => {
+  it("spans the listed projects without a scope; a scope keeps to the local tree", async () => {
     sandbox = await treeSandbox({ scope: "epic", tasks: { a: {}, epic: {} } });
     await sandbox.project("backend", "../backend", {
       tasks: { k: {}, "k/sub": { status: "DONE" } },
     });
-    const json = collection(await sandbox.run("list", "--json"));
+    const scoped = collection(await sandbox.run("list", "--json"));
+    expect(scoped.projects).toEqual([]);
+    expect(scoped.tasks.map((task) => task.id)).toEqual(["epic"]);
+
+    const json = collection(await sandbox.run("list", "--all", "--json"));
     expect(json.projects).toEqual(["backend"]);
-    expect(json.tasks.map((task) => task.id)).toEqual(["epic", "backend:k"]);
-    expect(ids(await sandbox.run("list", "--done", "--json"))).toEqual([
-      "backend:k/sub",
-    ]);
-    expect(ids(await sandbox.run("list", "--local", "--json"))).toEqual([
+    expect(json.tasks.map((task) => task.id)).toEqual([
+      "a",
       "epic",
+      "backend:k",
     ]);
+    expect(ids(await sandbox.run("list", "--all", "--done", "--json"))).toEqual(
+      ["backend:k/sub"],
+    );
+    expect(
+      ids(await sandbox.run("list", "--all", "--local", "--json")),
+    ).toEqual(["a", "epic"]);
   });
 
   it("notes a listed project it could not show", async () => {
@@ -1487,10 +1507,10 @@ describe("depth", () => {
       "backend:k",
       "backend:k/sub",
     ]);
-    // The depth counts from the scope; a listed tree counts from its root.
+    // The depth counts from the scope, which keeps to the local tree.
     expect(
       ids(await sandbox.run("list", "--scope", "epic", "--top", "--json")),
-    ).toEqual(["epic", "backend:k"]);
+    ).toEqual(["epic"]);
     expect(
       ids(
         await sandbox.run(
@@ -1525,7 +1545,10 @@ describe("depth", () => {
     const out = plain(
       (await sandbox.run("list", "--scope", "epic", "--depth", "2")).stdout,
     );
-    expect(out).toContain("4 tasks · scope epic · depth 2 · projects backend");
+    expect(out).toContain("2 tasks · scope epic · depth 2");
+    expect(out).not.toContain("projects");
+    const spanned = plain((await sandbox.run("list", "--top")).stdout);
+    expect(spanned).toContain("4 tasks · depth 1 · 1 from projects backend");
   });
 
   it("refuses --depth below one or not a number, and --top with --depth", async () => {

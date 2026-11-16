@@ -179,15 +179,17 @@ tasks ready [--scope <path>] [--all] [--local] [--json]
 
 | Option           | Effect                                                                   |
 | ---------------- | ------------------------------------------------------------------------ |
-| `--scope <path>` | Restrict the local tree to this group or task path. Default: `scope` in `config.yml`. |
+| `--scope <path>` | Restrict the local tree to this group or task path, and keep to the local tree. Default: `scope` in `config.yml`. |
 | `--all`          | Ignore the configured scope.                                             |
-| `--local`        | The local tree only, not the projects it lists.                          |
+| `--local`        | The local tree only, not the projects it lists; implied by a scope.      |
 
 The tasks free for you — the calling actor — to take, best first: effective priority,
 then `PAUSED` before `TODO`, then oldest. A task is ready when it is `TODO` or `PAUSED`,
 its start gate is satisfied, it is assigned to nobody or to you, it has no open child,
-and no ancestor is claimed or assigned. With `projects:` configured, listed trees are
-included and their ids carry the alias. A scope applies to the local tree only.
+and no ancestor is claimed or assigned. With `projects:` configured and no scope in force,
+listed trees are included, their ids carry the alias and the footer says how many rows came
+from them (`41 tasks · 38 from projects api`). A scope, given or configured, is a path of the
+local tree and keeps the set to it; `--all` lifts a configured scope and spans again.
 
 An empty set is success: exit `0` with `"count": 0`. **Fails** with exit `3` when
 `--scope` names no task or group, and exit `2` when `--scope` and `--all` are combined.
@@ -383,9 +385,9 @@ tasks claim --next [--scope <path>] [--all] [--local] [-m <text>] [--force] [--j
 | Option           | Effect                                                                           |
 | ---------------- | -------------------------------------------------------------------------------- |
 | `--next`         | Claim the first task of your ready set, in ready order, in the same operation.   |
-| `--scope <path>` | With `--next`: only local tasks within this path. Default: the configured scope. |
+| `--scope <path>` | With `--next`: only local tasks within this path, never a listed project's. Default: the configured scope. |
 | `--all`          | With `--next`: ignore the configured scope. Contradicts `--scope` (exit `2`).    |
-| `--local`        | With `--next`: the local tree only, even when `projects:` lists others.          |
+| `--local`        | With `--next`: the local tree only, even when `projects:` lists others; implied by a scope. |
 
 Start working on a task now. Records `claimed_by`, `claimed_at` and `claimed_session`.
 Claim **before** working: the claim is what stops a second agent starting the same task.

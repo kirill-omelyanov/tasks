@@ -2,6 +2,7 @@ import { Command } from "commander";
 
 import type { CommandContext } from "../context.js";
 import {
+  discoveryOptions,
   globalOptions,
   openContext,
   resolveCommandIdentity,
@@ -177,7 +178,10 @@ export function migrateCommand(): Command {
           // identity are done here, the identity before anything is written,
           // so an invalid --as, TASKS_ACTOR or --session fails as anywhere.
           const global = globalOptions(command);
-          const project = await requireProject(startDirectory(global));
+          const project = await requireProject(
+            startDirectory(global),
+            discoveryOptions(global),
+          );
           await resolveCommandIdentity(global, project.root);
           migration = await migrateTree(project, {
             ...mappings,

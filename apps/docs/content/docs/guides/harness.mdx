@@ -41,6 +41,10 @@ Or paste it yourself, merged the same way. Either way, commit the file. It needs
 on `PATH` and [`jq`](https://jqlang.org) to read the hook input and, in the `Stop` hook, to
 turn `session-check` warnings into a message.
 
+The hooks work from a secondary git worktree as they are: a `tasks` command run there
+reaches the main checkout's tree by discovery, so the heartbeat, the end-of-turn check and
+`session-end` land where the claim is, not in the worktree's committed copy of the tree.
+
 ```json title=".claude/settings.json"
 {
   "hooks": {

@@ -33,7 +33,9 @@ enough. The normative text is at https://agenttasks.dev/docs/spec.
   between do not break parenthood. Children are parts of the parent's
   deliverable, never phases of its lifecycle.
 - `.tasks/` is discovered by walking up from the current directory (or `-C`):
-  nearest wins, no merging with a tree further up.
+  nearest wins, no merging with a tree further up. In a linked git worktree the
+  search starts at the same place in the main checkout, so the live tree is
+  found, not the branch's snapshot; `-C` is literal.
 - Every mutation runs under one lock per tree, `.locks/tree.lock`; writes are
   atomic (temp file + rename) and canonical, except `log.md`, which is appended
   in place because its bytes are never rewritten.

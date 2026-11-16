@@ -36,9 +36,9 @@ with `unsupported-version`; `tasks migrate <alias>` upgrades it from here.
 
 <Accordion title="No .tasks/ directory found (exit 3)">
 
-Nothing in this directory or any parent has a `.tasks/`. Either you are in the wrong
-place — a secondary worktree, a sibling repository — or the project is not set up. Point
-the CLI at the right checkout with `-C <dir>`, or create a tree:
+Nothing in this directory or any parent has a `.tasks/` — nor, from a git worktree, in the
+main checkout. Either you are in the wrong place — a sibling repository — or the project is
+not set up. Point the CLI at the right checkout with `-C <dir>`, or create a tree:
 
 ```sh
 tasks init

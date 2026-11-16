@@ -280,9 +280,12 @@ every command. See the [agent protocol](/docs/guides/agent-protocol#the-session-
 ## `-C <dir>`
 
 `-C, --dir <dir>` starts the search for `.tasks/` in `<dir>` instead of the current
-directory, before or after the command name. A session working in a secondary git
-worktree runs its `tasks` commands with `-C` pointing at the main checkout, so task state
-stays in one working copy on the integration branch:
+directory, before or after the command name, and takes the directory literally. Without it,
+a command run inside a linked git worktree starts the search at the same place in the main
+checkout — the CLI reads the worktree's `.git` file — so task state stays in one working copy
+on the integration branch, and the worktree's own `.tasks/`, a snapshot committed on its
+branch, is passed over (it is used only when the main checkout has no tree). `-C` is for a
+tree somewhere else:
 
 ```sh
 tasks -C ~/src/acme-api ready

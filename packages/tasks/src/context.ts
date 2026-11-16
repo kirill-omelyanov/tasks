@@ -6,6 +6,7 @@ import { assertListedActor, unlistedActorWarning } from "./core/actors.js";
 import { detectTreeVersion } from "./core/config.js";
 import type { DerivedTask } from "./core/derive.js";
 import type { Project } from "./core/discovery.js";
+import type { DiscoveryOptions } from "./core/discovery.js";
 import { requireProject } from "./core/discovery.js";
 import { GateResolver, requireAvailable } from "./core/gates.js";
 import { assertTaskPath } from "./core/ids.js";
@@ -77,6 +78,15 @@ export function startDirectory(options: GlobalOptions): string {
   return path.resolve(options.dir ?? process.cwd());
 }
 
+/**
+ * How discovery treats the start directory: the current directory may lie in
+ * a linked git worktree and is mirrored into the main checkout; a directory
+ * named with `-C` is taken literally.
+ */
+export function discoveryOptions(options: GlobalOptions): DiscoveryOptions {
+  return { worktree: options.dir === undefined };
+}
+
 /** Identity without a tree: what `init` needs before anything exists. */
 export async function resolveCommandIdentity(
   options: GlobalOptions,
@@ -121,7 +131,7 @@ export async function assertV2Tree(project: Project): Promise<void> {
 export async function openContext(command: Command): Promise<CommandContext> {
   const options = globalOptions(command);
   const startDir = startDirectory(options);
-  const project = await requireProject(startDir);
+  const project = await requireProject(startDir, discoveryOptions(options));
   await assertV2Tree(project);
 
   const identity = await resolveCommandIdentity(options, project.root);

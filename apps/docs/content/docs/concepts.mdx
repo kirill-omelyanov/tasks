@@ -12,8 +12,9 @@ for each lives in the [specification](/docs/spec); this page explains them.
 
 `.tasks/` is discovered by walking up from the current directory, git-style: **nearest
 wins, no merging** with a tree further up. Each package in a monorepo that has its own
-`.tasks/` is its own tree. `-C <dir>` starts the search somewhere else, which is how a
-session working in a secondary worktree addresses the tree of the main checkout.
+`.tasks/` is its own tree. In a linked git worktree the search starts at the same place in the
+main checkout, so a session there works the live tree, not the copy committed on its branch;
+`-C <dir>` starts the search somewhere else, literally.
 
 Everything the CLI knows is read from files on disk on every invocation. There is no
 cache and no daemon, so editing a task body by hand, or pulling someone else's branch,

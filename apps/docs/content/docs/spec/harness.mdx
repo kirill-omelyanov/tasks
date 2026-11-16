@@ -31,6 +31,10 @@ as the example:
   a turn cannot end with a claimed task that has no resume point. Warnings about an ageing
   `state.md` are shown, not enforced, so turns without progress are not forced to touch the file.
 - **PreCompact** may warn; a hook cannot write the content of a state.
+- **Worktrees.** A session in a linked git worktree needs nothing of the hooks: discovery starts at
+  the same place in the main checkout ([Discovery](/docs/spec/layout)), so the hooks' `heartbeat`,
+  `session-check` and `session-end` reach the tree where the claim is, not the copy committed on
+  the worktree's branch.
 - **Sibling repositories.** A session rooted in a tracker repository edits files in the product
   repositories it lists; the tracker's own instructions should require reading each repository's
   rules before editing its files, since a harness loads instructions from the working directory

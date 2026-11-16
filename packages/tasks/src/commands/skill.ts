@@ -3,6 +3,7 @@ import path from "node:path";
 import { Command } from "commander";
 
 import {
+  discoveryOptions,
   globalOptions,
   heartbeatAt,
   resolveCommandIdentity,
@@ -51,7 +52,7 @@ export function skillCommand(): Command {
         // The skill belongs to the repository: at the root of the tree when
         // one is discovered, wherever below it this runs; where the command
         // runs when there is no tree yet (`init` creates it there).
-        const project = await findProject(start);
+        const project = await findProject(start, discoveryOptions(global));
         const root = project?.root ?? start;
         // Like every command: a bad --as or --session is a usage error before
         // anything is written, and a known session leaves its heartbeat in

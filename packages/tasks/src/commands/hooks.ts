@@ -3,6 +3,7 @@ import path from "node:path";
 import { Command } from "commander";
 
 import {
+  discoveryOptions,
   globalOptions,
   heartbeatAt,
   resolveCommandIdentity,
@@ -84,7 +85,10 @@ export function hooksCommand(): Command {
       const global = globalOptions(command);
       // The settings belong to the repository the tree is in: they sit at
       // the root of the discovered tree, wherever below it this runs.
-      const project = await requireProject(startDirectory(global));
+      const project = await requireProject(
+        startDirectory(global),
+        discoveryOptions(global),
+      );
 
       // The hooks will write under this name: a v2 tree with a roster must
       // list it, like any actor named for someone else.

@@ -34,6 +34,8 @@ tasks mine --json
 - Exit `2` with `details.version` `1`, a v1 tree: tell the person; the one-time
   `tasks migrate` is theirs to run.
 - If `tasks` is not on PATH, use `npx @speekl/tasks` in its place everywhere.
+- In a git worktree your commands reach the main checkout's tree by themselves;
+  `-C <dir>` only when a person points you at a tree elsewhere.
 
 ## Your name and session token
 

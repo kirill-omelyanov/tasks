@@ -54,6 +54,119 @@ describe("discovery", () => {
     expect(await findProject(elsewhere)).toBeNull();
   });
 
+  describe("in a linked git worktree", () => {
+    /** Lay out `main` as a checkout with `.git/` and `wt` as its worktree. */
+    async function link(main: string, wt: string, name = "wt"): Promise<void> {
+      const gitdir = path.join(main, ".git", "worktrees", name);
+      await fs.mkdir(gitdir, { recursive: true });
+      await fs.writeFile(path.join(gitdir, "commondir"), "../..\n");
+      await fs.mkdir(wt, { recursive: true });
+      await fs.writeFile(path.join(wt, ".git"), `gitdir: ${gitdir}\n`);
+    }
+
+    it("finds the main checkout's tree at the same place, not the worktree's copy", async () => {
+      await sandbox.initV2();
+      const wt = path.join(sandbox.root, "wt");
+      await link(sandbox.dir, wt);
+      await fs.mkdir(path.join(wt, ".tasks"), { recursive: true });
+      await fs.writeFile(path.join(wt, ".tasks", "config.yml"), "version: 2\n");
+      await fs.mkdir(path.join(wt, "src", "deep"), { recursive: true });
+      await fs.mkdir(path.join(sandbox.dir, "src"), { recursive: true });
+
+      for (const start of [
+        wt,
+        path.join(wt, "src"),
+        path.join(wt, "src", "deep"),
+      ]) {
+        expect((await findProject(start, { worktree: true }))?.root).toBe(
+          sandbox.dir,
+        );
+      }
+      // A directory the caller named is taken literally.
+      expect((await findProject(wt))?.root).toBe(wt);
+      expect((await findProject(wt, { worktree: false }))?.root).toBe(wt);
+    });
+
+    it("keeps a nested package its own tree across the mirror", async () => {
+      await sandbox.initV2();
+      await sandbox.write("packages/web/.tasks/config.yml", "version: 2\n");
+      const wt = path.join(sandbox.root, "wt");
+      await link(sandbox.dir, wt);
+      const nested = path.join(wt, "packages", "web", "src");
+      await fs.mkdir(nested, { recursive: true });
+      expect((await findProject(nested, { worktree: true }))?.root).toBe(
+        path.join(sandbox.dir, "packages", "web"),
+      );
+    });
+
+    it("falls back to the worktree's own tree when the main checkout has none", async () => {
+      const wt = path.join(sandbox.root, "wt");
+      await link(sandbox.dir, wt);
+      await fs.mkdir(path.join(wt, ".tasks"), { recursive: true });
+      await fs.writeFile(path.join(wt, ".tasks", "config.yml"), "version: 2\n");
+      expect((await findProject(wt, { worktree: true }))?.root).toBe(wt);
+    });
+
+    it("leaves a submodule and a bare repository alone", async () => {
+      // A submodule's .git file points into modules/ and has no commondir.
+      const sub = path.join(sandbox.root, "sub");
+      await fs.mkdir(path.join(sub, ".tasks"), { recursive: true });
+      await fs.writeFile(
+        path.join(sub, ".tasks", "config.yml"),
+        "version: 2\n",
+      );
+      await fs.writeFile(
+        path.join(sub, ".git"),
+        "gitdir: ../.git/modules/sub\n",
+      );
+      expect((await findProject(sub, { worktree: true }))?.root).toBe(sub);
+
+      // A worktree of a bare repository: the common dir is not a `.git`.
+      const bare = path.join(sandbox.root, "repo.git");
+      const gitdir = path.join(bare, "worktrees", "wt");
+      await fs.mkdir(gitdir, { recursive: true });
+      await fs.writeFile(path.join(gitdir, "commondir"), "../..\n");
+      const wt = path.join(sandbox.root, "bare-wt");
+      await fs.mkdir(path.join(wt, ".tasks"), { recursive: true });
+      await fs.writeFile(path.join(wt, ".tasks", "config.yml"), "version: 2\n");
+      await fs.writeFile(path.join(wt, ".git"), `gitdir: ${gitdir}\n`);
+      expect((await findProject(wt, { worktree: true }))?.root).toBe(wt);
+    });
+
+    it("sends every command run in the worktree to the main checkout; -C is literal", async () => {
+      await sandbox.tree({ tasks: { live: {} } });
+      const wt = path.join(sandbox.root, "wt");
+      await link(sandbox.dir, wt);
+      await fs.mkdir(path.join(wt, ".tasks", "stale"), { recursive: true });
+      await fs.writeFile(path.join(wt, ".tasks", "config.yml"), "version: 2\n");
+      await fs.writeFile(
+        path.join(wt, ".tasks", "stale", "task.md"),
+        await sandbox.read(".tasks/live/task.md"),
+      );
+
+      const ids = (out: string): string[] =>
+        (JSON.parse(out) as { tasks: Array<{ id: string }> }).tasks.map(
+          (task) => task.id,
+        );
+      const fromWorktree = await sandbox.runWith(
+        { cwd: "../wt" },
+        "list",
+        "--json",
+      );
+      expect(fromWorktree.code).toBe(0);
+      expect(ids(fromWorktree.stdout)).toEqual(["live"]);
+
+      const literal = await sandbox.runWith(
+        { cwd: "../wt" },
+        "list",
+        "-C",
+        ".",
+        "--json",
+      );
+      expect(ids(literal.stdout)).toEqual(["stale"]);
+    });
+  });
+
   it("finds nothing from a directory that does not exist", async () => {
     await sandbox.initV2();
     expect(

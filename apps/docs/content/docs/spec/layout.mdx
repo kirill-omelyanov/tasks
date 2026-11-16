@@ -10,8 +10,13 @@ An implementation MUST locate the tree by walking from a starting directory towa
 root, testing each ancestor for a directory named `.tasks`. The first match is the tree; the
 search MUST stop there. An implementation MUST NOT merge a discovered tree with any tree found
 further up. If no ancestor contains `.tasks/`, the operation MUST fail as *not found*. An
-implementation SHOULD let the caller name the starting directory (`-C <dir>`), so a session
-working in a secondary worktree can address the tree of the main checkout.
+implementation SHOULD let the caller name the starting directory (`-C <dir>`), and take it
+literally. Run without one inside a linked git worktree — a checkout whose `.git` is a file
+pointing into the repository's `.git/worktrees/` — discovery SHOULD start at the same place in
+the main checkout (or the nearest place that exists there), so the tree of the main checkout is
+found and the worktree's own copy, a snapshot committed on its branch, is passed over; the
+worktree's own tree is taken only when the main checkout has none. Code lives in worktrees, the
+tasks about it do not.
 
 ## Contents
 
@@ -165,9 +170,9 @@ after any merge that touched the tree.
 
 <Callout type="info" title="Non-normative">
   Code may live on branches and in worktrees; the tasks about it should not.
-  A session working in a secondary worktree runs its `tasks` commands against the main checkout
-  (`-C`), records the branch under *Open* in `state.md`, and the transitions land on the
-  integration branch as the work does. A tree carried along in a pull request still works, but its
+  A session working in a secondary worktree reaches the main checkout's tree by discovery, records
+  the branch under *Open* in `state.md`, and the transitions land on the integration branch as the
+  work does. A tree carried along in a pull request still works, but its
   reviewer sees every `state.md` rewrite and log entry in the diff.
 </Callout>
 
@@ -179,6 +184,6 @@ after any merge that touched the tree.
   filesystem authoritative is to make the integration branch the arbiter: a claim is a commit
   pushed to it, a rejected push is the conflict, and liveness is the age of the last pushed
   heartbeat. That is a possible later revision, not part of this one; until then a swarm runs on
-  one machine against one checkout per repository, each agent in its own worktree addressing the
-  trees with `-C`.
+  one machine against one checkout per repository, each agent in its own worktree, whose
+  commands reach the main checkout's trees by discovery.
 </Callout>

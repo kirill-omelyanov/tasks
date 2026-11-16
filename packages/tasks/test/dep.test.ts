@@ -213,6 +213,21 @@ describe("dep add", () => {
     expect(await logOf(s, "epic/child")).toEqual([]);
   });
 
+  it("says that a dependency on a cancelled task strands the task", async () => {
+    const s = await box({
+      tasks: { a: {}, dropped: { status: "CANCELLED" } },
+    });
+    const dep = await s.run("dep", "add", "a", "dropped");
+    expect(dep.code).toBe(0);
+    expect(stripVTControlCharacters(dep.stdout)).toContain(
+      "! stranded: dropped is CANCELLED, and cancelled work never satisfies a dependency",
+    );
+    // A cancelled target satisfies a finish gate: nothing to say.
+    const after = await s.run("after", "add", "a", "dropped");
+    expect(after.code).toBe(0);
+    expect(after.stdout).not.toContain("stranded");
+  });
+
   it("refuses an ambiguous suffix and an archived target", async () => {
     const s = await box({
       tasks: { a: {}, "p/z": {}, "q/z": {} },

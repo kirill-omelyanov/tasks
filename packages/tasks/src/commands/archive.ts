@@ -263,9 +263,17 @@ export function purgeCommand(): Command {
       }
       const removed =
         result.removed.length === 0
-          ? "no archived task"
+          ? "a directory without a task"
           : result.removed.join(", ");
-      const lines = [ui.success(`purge ${result.id}: removed ${removed}`)];
+      const lines = [
+        ui.success(`purge ${result.id}: ${removed} removed from the archive`),
+      ];
+      // The path may be live again: the archive entry was the conflict.
+      if (load.tree.byId.has(archivePath)) {
+        lines.push(
+          `  ${ui.dim(`the live task at ${result.id} stays; only the archived copy is gone`)}`,
+        );
+      }
       if (result.referenced_by.length > 0) {
         lines.push(
           `  ${ui.warn(`still referenced by ${result.referenced_by.join(", ")}; a task created at the path satisfies them`)}`,

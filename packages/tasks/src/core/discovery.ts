@@ -44,7 +44,7 @@ export async function requireProject(startDir: string): Promise<Project> {
       ? `in "${cwd}" or any parent`
       : `because "${cwd}" is not a directory`;
     throw TaskError.notFound(
-      `No ${TASKS_DIRNAME}/ directory found ${where}. Run \`tasks init\` to create one.`,
+      `No ${TASKS_DIRNAME}/ directory found ${where}; \`tasks init\` creates one.`,
       { cwd },
     );
   }

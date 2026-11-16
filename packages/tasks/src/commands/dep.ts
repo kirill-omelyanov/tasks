@@ -289,6 +289,22 @@ async function editGate(
   lines.push(
     `  ${ui.dim(`${spec.verb}: ${outcome.refs.length === 0 ? "nothing" : outcome.refs.join(", ")}`)}`,
   );
+  // A dependency on cancelled work strands the task: a legal edit, never a
+  // silent one. A finish gate is satisfied by a cancelled target.
+  const stranded =
+    action === "add" && spec.field === "depends_on"
+      ? json.blocked_by
+          .filter(
+            (ref) =>
+              ref.reason === "cancelled" && outcome.changed.includes(ref.ref),
+          )
+          .map((ref) => ref.ref)
+      : [];
+  if (stranded.length > 0) {
+    lines.push(
+      `  ${ui.warn(`stranded: ${stranded.join(", ")} ${stranded.length === 1 ? "is" : "are"} CANCELLED, and cancelled work never satisfies a dependency; remove the reference, point it elsewhere, or reopen the target`)}`,
+    );
+  }
   writeOut(lines.join("\n"));
 }
 

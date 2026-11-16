@@ -259,6 +259,19 @@ describe("claims across sessions", () => {
     expect(fm.claimed_at).toBe(entry.time);
   });
 
+  it("prints a takeover as one, not as a transition", async () => {
+    sandbox = await treeSandbox({ tasks: { a: {} } });
+    await sandbox.session("s1")("claim", "a");
+    await sandbox.age(".tasks/.locks/sessions/s1", STALE);
+
+    const result = await sandbox.session("s2")("claim", "a");
+    expect(result.code).toBe(0);
+    const out = plain(result.stdout);
+    expect(out).toContain("✓ claim a: took over the claim (IN_PROGRESS)");
+    expect(out).not.toContain("IN_PROGRESS → IN_PROGRESS");
+    expect(out).toContain("superseded tester s:s1 on a (orphaned, last seen");
+  });
+
   it("answers the superseded session's next transition with a conflict", async () => {
     sandbox = await treeSandbox({ tasks: { a: { state: true } } });
     await sandbox.session("s1")("claim", "a");

@@ -20,7 +20,10 @@ import {
  * filter.
  */
 export const LIST_FILTERS: ReadonlyArray<readonly [ListFilterName, string]> = [
-  ["ready", "only tasks free to take"],
+  [
+    "ready",
+    "only tasks in the ready situation; tasks ready also lists yours and the closable ones",
+  ],
   ["blocked", "only tasks blocked by a dependency"],
   ["waiting", "only paused tasks waiting for their assignee"],
   ["assigned", "only tasks assigned to someone and not paused"],

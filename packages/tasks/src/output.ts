@@ -714,11 +714,16 @@ export interface TransitionInfo {
   dependents?: string[];
   /** How many tasks beneath the task it now holds. */
   holds?: number;
+  /** The status stayed and the claimant changed: an orphaned claim taken. */
+  takeover?: boolean;
 }
 
 function transitionHead(json: TaskWithDerivedJson, info: TransitionInfo) {
   const subject = `${info.command} ${json.id}`;
   if (info.from !== undefined && info.to !== undefined) {
+    if (info.takeover === true) {
+      return `${subject}: took over the claim (${info.to})`;
+    }
     const target =
       info.command === "handoff" && json.assignee !== null
         ? ` to ${json.assignee}`

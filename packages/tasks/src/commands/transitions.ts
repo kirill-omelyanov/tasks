@@ -298,6 +298,8 @@ function report(context: CommandContext, result: TransitionResult): void {
       cascaded: result.cascaded ?? undefined,
       dependents: result.dependents ?? undefined,
       holds: result.holds ?? undefined,
+      takeover:
+        !field && result.from === result.to && result.superseded.length > 0,
     }),
   ];
   for (const claim of result.superseded) {

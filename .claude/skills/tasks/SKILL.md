@@ -194,7 +194,7 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | `tasks archive`, `restore`, `purge`, `delete`                                   | Archive a resolved subtree (`--resolved-before 30d`: all older ones); undo; release a path; remove unworked.                                                  |
 | `tasks session-check` / `heartbeat` / `session-end`                             | Exit invariant; liveness (run by the harness).                                                                                                                |
 | `tasks validate [--fix]` / `tasks reindex`                                      | Check the tree; regenerate `index.md`.                                                                                                                        |
-| `tasks init [--actors [<names>]]` / `tasks skill install --force`               | Scaffold a tree (ask first; `--actors` lists who tasks go to); refresh this skill.                                                                            |
+| `tasks init [--actors [<names>]]` / `tasks skill install --force`               | Scaffold a tree and install this skill (ask first; `--actors` lists who tasks go to); refresh this skill.                                                     |
 | `tasks hooks install [--actor <name>]`                                          | Write the harness hooks into `.claude/settings.json` (ask first).                                                                                             |
 
 `--force` overrides authorization and, per command, the start gate, a live

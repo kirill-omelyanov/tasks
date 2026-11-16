@@ -427,8 +427,22 @@ describe("purge", () => {
     const result = await s.run("purge", "g");
     expect(result.code).toBe(0);
     expect(stripVTControlCharacters(result.stdout)).toContain(
-      "✓ purge g: removed g/t",
+      "✓ purge g: g/t removed from the archive",
     );
+    expect(await s.exists(".tasks/.archive")).toBe(false);
+  });
+
+  it("says that the live task at the path stays", async () => {
+    const s = await box({
+      tasks: { a: {} },
+      archived: { a: { status: "DONE" } },
+    });
+    const result = await s.run("purge", "a");
+    expect(result.code).toBe(0);
+    expect(stripVTControlCharacters(result.stdout)).toContain(
+      "the live task at a stays; only the archived copy is gone",
+    );
+    expect(await s.exists(".tasks/a/task.md")).toBe(true);
     expect(await s.exists(".tasks/.archive")).toBe(false);
   });
 

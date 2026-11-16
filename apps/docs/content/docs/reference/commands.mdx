@@ -230,7 +230,7 @@ word, or by the `active` label, and combine with OR:
 
 | Filter        | Selects                                         |
 | ------------- | ----------------------------------------------- |
-| `--ready`     | free to take                                    |
+| `--ready`     | in the ready situation: unassigned, unblocked, not held |
 | `--blocked`   | blocked by a dependency                         |
 | `--waiting`   | paused, waiting for their assignee              |
 | `--assigned`  | assigned to someone and not paused              |
@@ -551,9 +551,11 @@ stored in full; see [gates](/docs/reference/gates).
 `add` refuses a self-reference (exit `2`), a task that does not exist or is archived
 (exit `3`), the task's own ancestor (exit `4`, `ancestor`), and a reference that would
 close a cycle (exit `4`, `cycle`, with the cycle). Adding a reference already present
-changes nothing. `rm` accepts a reference as stored or as `add` would resolve it, and
-fails with exit `3` when the task does not hold it. `--force` overrides authorization
-only.
+changes nothing. A `CANCELLED` target is accepted and said so: `dep add` prints that the task
+is now [stranded](/docs/reference/gates#cancelled-dependencies-are-stranded), since cancelled
+work never satisfies a dependency (an `after add` on one is satisfied and says nothing).
+`rm` accepts a reference as stored or as `add` would resolve it, and fails with exit `3`
+when the task does not hold it. `--force` overrides authorization only.
 
 **Writes** the field, `updated`, and a log entry such as
 `dep add: auth-rework/token-schema`.
@@ -727,7 +729,9 @@ tasks purge <path> [--json]
 
 Delete an archive entry and everything beneath it for good, releasing the path it
 reserves. Never refused for references: the result names the live tasks whose
-references would reach a task recreated there — purging is that decision.
+references would reach a task recreated there — purging is that decision. The human
+output names the archived tasks removed and, when a live task sits at the path
+(`archived-path-conflict`), says that it stays: only the archived copy is gone.
 
 ### `tasks delete`
 

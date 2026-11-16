@@ -145,7 +145,9 @@ is effective priority, then `PAUSED` before `TODO`, then `created`.
   assignees of its ancestors.
 - **Liveness:** `live` (session heartbeat within `session_timeout_minutes`, not
   ended), `orphaned` (older, or ended by `session-end`), `unknown` (no session,
-  or no heartbeat file here).
+  or no heartbeat file here). Every command run with a session, reads included,
+  touches its heartbeat file in each tree it spans and removes stale or ended
+  files no claim names from the local registry; `.locks/` is git-ignored.
 - **`--force`** overrides authorization, the start gate, a live or unknown
   claim, a hold — never the finish gate, the `state.md` rules, a resolved
   parent, a `BACKLOG` ancestor, a cycle, a reserved path or a message. The log

@@ -4,6 +4,7 @@ import { TaskError } from "../errors.js";
 import type { Config } from "./config.js";
 import { defaultActorType } from "./config.js";
 import type { Project } from "./discovery.js";
+import { ACTOR_GIT_KEY } from "./sessions.js";
 import type { ActorType } from "./types.js";
 import { ACTOR_ENV, CONFIG_FILENAME } from "./types.js";
 
@@ -48,17 +49,31 @@ function configFileOf(project: Project): string {
   return path.join(project.tasksDir, CONFIG_FILENAME);
 }
 
-/** A listed actor that differs from `actor` in case alone, if there is one. */
+/**
+ * A listed actor that differs from `actor` in case alone, or that is the
+ * local part of an e-mail address `actor` fell back to, if there is one.
+ */
 function nearMatch(config: Config, actor: string): string | null {
   const folded = actor.toLowerCase();
+  const local = folded.includes("@")
+    ? folded.slice(0, folded.indexOf("@"))
+    : null;
   return (
-    listedActors(config).find((name) => name.toLowerCase() === folded) ?? null
+    listedActors(config).find(
+      (name) => name.toLowerCase() === folded || name.toLowerCase() === local,
+    ) ?? null
   );
 }
 
 function hint(config: Config, actor: string): string {
   const near = nearMatch(config, actor);
   return near === null ? "" : ` Did you mean ${near}?`;
+}
+
+/** How a person names themselves once, with the near match when there is one. */
+function nameOnce(config: Config, actor: string): string {
+  const near = nearMatch(config, actor) ?? "<name>";
+  return `set your name once to a listed one — git config --global ${ACTOR_GIT_KEY} ${near}, or ${ACTOR_ENV} — or add ${actor} there`;
 }
 
 /**
@@ -96,5 +111,32 @@ export function unlistedActorWarning(
 ): string | null {
   if (!hasRoster(config) || isListed(config, actor)) return null;
   const file = configFileOf(project);
-  return `${role} ${actor} is not listed under actors: in ${file} (${listedActors(config).join(", ")}); set ${ACTOR_ENV} to a listed name or add ${actor} there.${hint(config, actor)}`;
+  const listed = listedActors(config).join(", ");
+  return role === "actor"
+    ? `actor ${actor} is not listed under actors: in ${file} (${listed}); reads go on, writes are refused. ${capitalize(nameOnce(config, actor))}.${hint(config, actor)}`
+    : `operator ${actor} is not listed under actors: in ${file} (${listed}); ${nameOnce(config, actor)}.${hint(config, actor)}`;
+}
+
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * Refuse a write under an acting identity the roster lacks: a usage error
+ * with the listed actors, the file and the remedy, like a typed name the
+ * roster lacks. Reads are only diagnosed, so a newcomer can look around
+ * before naming themselves; a write would record a name nobody finds.
+ */
+export function assertActingActorListed(
+  config: Config,
+  project: Project,
+  actor: string,
+): void {
+  if (!hasRoster(config) || isListed(config, actor)) return;
+  const file = configFileOf(project);
+  const actors = listedActors(config);
+  throw TaskError.usage(
+    `You act as ${actor}, which ${file} does not list under actors: (${actors.join(", ")}); a write under a name the roster lacks is refused. ${capitalize(nameOnce(config, actor))}.${hint(config, actor)}`,
+    { field: "actor", value: actor, actors, file },
+  );
 }

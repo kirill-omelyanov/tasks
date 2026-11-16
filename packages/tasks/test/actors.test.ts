@@ -205,7 +205,7 @@ describe("a typed actor against the roster", () => {
     const done = await sandbox.run("assign", "a", "agent", "--as", "alice");
     expect(done.code).toBe(0);
     expect(plain(done.stderr)).toContain(
-      `operator tester is not listed under actors: in ${configFile(sandbox)} (alice, agent); set ${ACTOR_ENV} to a listed name or add tester there.`,
+      `operator tester is not listed under actors: in ${configFile(sandbox)} (alice, agent); set your name once to a listed one`,
     );
     expect((await frontmatterOf(sandbox, "a")).assignee).toBe("agent");
 
@@ -221,7 +221,7 @@ describe("a typed actor against the roster", () => {
     expect(quiet.stderr).toBe("");
   });
 
-  it("diagnoses an identity the roster lacks on stderr and goes on, silently under --json", async () => {
+  it("diagnoses an identity the roster lacks on reads, silently under --json, and refuses its writes", async () => {
     sandbox = await treeSandbox({
       actors: { alice: ROSTER.alice, agent: null },
       tasks: { a: {} },
@@ -229,28 +229,60 @@ describe("a typed actor against the roster", () => {
     const result = await sandbox.run("ready");
     expect(result.code).toBe(0);
     expect(plain(result.stderr)).toBe(
-      `! actor tester is not listed under actors: in ${configFile(sandbox)} (alice, agent); set ${ACTOR_ENV} to a listed name or add tester there.\n`,
+      `! actor tester is not listed under actors: in ${configFile(sandbox)} (alice, agent); reads go on, writes are refused. Set your name once to a listed one — git config --global tasks.actor <name>, or ${ACTOR_ENV} — or add tester there.\n`,
     );
     // Under --json stderr is reserved for the error envelope.
     const json = await sandbox.run("ready", "--json");
     expect(json.stderr).toBe("");
     expect(json.json<{ count: number }>().count).toBe(1);
 
+    // A write under the unlisted name is refused before anything is touched.
+    const before = await sandbox.read(".tasks/a/task.md");
+    const refused = await sandbox.run("claim", "a", "--json");
+    expect(refused.code).toBe(ExitCode.Usage);
+    expect(errorOf(refused).details).toEqual({
+      field: "actor",
+      value: "tester",
+      actors: ["alice", "agent"],
+      file: configFile(sandbox),
+    });
+    expect(errorOf(refused).message).toContain(
+      "a write under a name the roster lacks is refused",
+    );
+    expect(await sandbox.read(".tasks/a/task.md")).toBe(before);
+    expect(await sandbox.exists(".tasks/a/log.md")).toBe(false);
+
+    // A name off by case alone is refused with the near match suggested.
     const near = await sandbox.runWith(
       { env: { [ACTOR_ENV]: "Agent" } },
       "claim",
       "a",
+      "--json",
     );
-    expect(near.code).toBe(0);
-    expect(plain(near.stderr)).toContain("Did you mean agent?");
-    expect((await frontmatterOf(sandbox, "a")).claimed_by).toBe("Agent");
+    expect(near.code).toBe(ExitCode.Usage);
+    expect(errorOf(near).message).toContain("Did you mean agent?");
+    // An e-mail address a git name fell back to suggests its local part.
+    const mail = await sandbox.runWith(
+      { env: { [ACTOR_ENV]: "alice@example.com" } },
+      "claim",
+      "a",
+      "--json",
+    );
+    expect(errorOf(mail).message).toContain(
+      "git config --global tasks.actor alice",
+    );
+
+    // Regenerating index.md records no actor: not refused.
+    expect((await sandbox.run("reindex")).code).toBe(0);
 
     const listed = await sandbox.runWith(
       { env: { [ACTOR_ENV]: "agent" } },
-      "ready",
+      "claim",
+      "a",
     );
     expect(listed.code).toBe(0);
     expect(listed.stderr).toBe("");
+    expect((await frontmatterOf(sandbox, "a")).claimed_by).toBe("agent");
   });
 
   it("hooks install refuses an actor the roster lacks and writes nothing", async () => {

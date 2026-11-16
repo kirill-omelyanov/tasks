@@ -65,7 +65,7 @@ tasks init
 
 ```txt
 ✓ Initialized .tasks/ at /Users/you/acme-api/.tasks
-  actor: alice (heads every log entry you write; TASKS_ACTOR or --as changes it)
+  actor: alice (heads every log entry you write; git config tasks.actor, TASKS_ACTOR or --as changes it)
   actors: none listed; uncomment actors: in config.yml to keep a roster
   .tasks/config.yml
   .tasks/README.md
@@ -80,8 +80,9 @@ tasks init
 
 `config.yml` declares `version: 2`; the `.gitignore` keeps the transient `.locks/`
 directory out of git. The **actor** is the name that will head every log entry you
-write — here the repository's `git config user.name`. An agent gets its own name through
-`TASKS_ACTOR`, so the log tells the two apart; see
+write — here the repository's `git config user.name`. A name with spaces cannot head a log
+entry and is skipped: name yourself once with `git config --global tasks.actor alice`. An
+agent gets its own name through `TASKS_ACTOR`, so the log tells the two apart; see
 [configuration](/docs/reference/configuration#the-actor).
 
 `init` also installs the [agent skill](/docs/guides/agent-protocol#the-skill) into

@@ -104,7 +104,7 @@ async function writeIfAbsent(file: string, contents: string): Promise<boolean> {
 
 function actorLine(identity: Identity): string {
   const via = identity.via === null ? "" : ` via ${identity.via}`;
-  return `  actor: ${ui.bold(identity.actor)}${via} ${ui.dim("(heads every log entry you write; TASKS_ACTOR or --as changes it)")}`;
+  return `  actor: ${ui.bold(identity.actor)}${via} ${ui.dim("(heads every log entry you write; git config tasks.actor, TASKS_ACTOR or --as changes it)")}`;
 }
 
 function actorsLine(roster: Roster | null): string {

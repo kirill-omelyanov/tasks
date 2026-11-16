@@ -277,7 +277,31 @@ describe("resolveIdentity", () => {
       });
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]).toContain('git user.name "Ada L" does not match');
-      expect(diagnostics[0]).toContain("for instance ada");
+      expect(diagnostics[0]).toContain("git config --global tasks.actor ada");
+    },
+  );
+
+  it.skipIf(!HAS_GIT)(
+    "takes git config tasks.actor over a git name, and refuses a bad one",
+    async () => {
+      const box = await emptyBox();
+      await git(box, "init", "-q");
+      await git(box, "config", "user.name", "Ada L");
+      await git(box, "config", "user.email", "ada@example.com");
+      await git(box, "config", "tasks.actor", "ada");
+      const { identity, diagnostics } = await identityIn(box);
+      expect(identity).toEqual({ actor: "ada", via: null, session: null });
+      expect(diagnostics).toEqual([]);
+
+      // The variable still wins.
+      const env = await identityIn(box, { env: { [ACTOR_ENV]: "agent" } });
+      expect(env.identity.actor).toBe("agent");
+
+      // A deliberate setting is refused when it fails the pattern, not skipped.
+      await git(box, "config", "tasks.actor", "Ada L");
+      const err = await caughtAsync(identityIn(box));
+      expect(err.code).toBe("USAGE");
+      expect(err.details).toMatchObject({ field: "git config tasks.actor" });
     },
   );
 

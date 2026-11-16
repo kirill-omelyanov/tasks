@@ -243,7 +243,8 @@ task's files: an input under `## Notes` of `task.md` (`tasks note`), a decision 
 ## Sessions and liveness
 
 An **actor** is the name an action is recorded under: `--as`, else `TASKS_ACTOR`, else
-the repository's git `user.name` or `user.email`, else the operating-system user. A
+`git config tasks.actor` (a person's name for the tool, set once), else the repository's
+git `user.name` or `user.email`, else the operating-system user. A
 **session** is one run of an agent, named by a token: `--session`, else `TASKS_SESSION`.
 A claim records both, and every log heading a session writes carries `s:<token>`.
 

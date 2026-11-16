@@ -7,10 +7,12 @@ icon: Activity
 ## Actors
 
 The acting identity is resolved, in order, from an explicit override (`--as`), the
-`TASKS_ACTOR` environment variable, the version-control identity of the working copy
-(`user.name`, then `user.email`), and the operating-system user. An implementation MUST document
-its resolution order, and `init` MUST print the actor it resolved, so the person sees the name
-that will head every log entry they write.
+`TASKS_ACTOR` environment variable, a name set for the tool in the version-control
+configuration (`git config tasks.actor`, once per machine or per repository), the
+version-control identity of the working copy (`user.name`, then `user.email`), and the
+operating-system user. An implementation MUST document its resolution order, and `init` MUST
+print the actor it resolved, so the person sees the name that will head every log entry they
+write. A person whose `user.name` has spaces names themselves once with `tasks.actor`.
 
 An actor and a session token are opaque to implementations but MUST match:
 
@@ -30,9 +32,12 @@ each with a line on who they are — what an agent reads to pick the right perso
 `handoff`. A non-empty list is a **roster**: a name typed for someone else — the actor of
 `assign`, `handoff` or `new --assign`, an `--as` on a command that opens the tree — MUST be on it, or the command fails as a
 usage error naming the listed actors, so a misspelt name cannot create an inbox nobody reads.
-The identity a command resolves for itself is never refused for being unlisted, since the
-remedy lies in the environment or the file, but an implementation SHOULD diagnose it on every
-command that opens the tree, where stderr is not reserved for the JSON envelope. An implementation
+The identity a command resolves for itself is diagnosed on every command that opens the tree,
+where stderr is not reserved for the JSON envelope, and a command that would **write** under it
+MUST be refused as a usage error naming the listed actors, the file and the remedy: a write under
+a name the roster lacks records a claimant or an author nobody finds, while a read lets a
+newcomer look around before naming themselves. Regenerating `index.md` records no actor and is
+not refused. The operator behind an `--as` is only diagnosed. An implementation
 SHOULD offer a command (`actors`) that lists the roster with each
 actor's description and open tasks, and names the actors open tasks carry that the roster lacks.
 

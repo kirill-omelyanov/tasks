@@ -61,7 +61,9 @@ version: 2
 # archive_resolved_after_days: 30
 
 # The actors tasks may be assigned to, each with a line on who they are. Once
-# any is listed, assign, handoff, new --assign and --as refuse other names.
+# any is listed, assign, handoff, new --assign and --as refuse other names, and
+# a write under a name the roster lacks is refused: name yourself once with
+# git config --global tasks.actor <name>.
 # A listed actor is a person unless it is \`agent\` or carries \`type: agent\`
 # (codex: { type: agent, description: a second coding agent }): a person's
 # pause keeps the task for them, an agent's leaves it free.

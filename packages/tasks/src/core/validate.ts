@@ -190,7 +190,7 @@ export async function reindexTree(context: CommandContext): Promise<string> {
     context.projects.local,
     async (fresh) =>
       writeIndex(fresh.tree, await deriveForIndex(context, fresh.load)),
-    { refreshIndex: false },
+    { refreshIndex: false, checkActor: false },
   );
 }
 
@@ -201,7 +201,7 @@ async function regenerateIndex(context: CommandContext): Promise<boolean> {
     context.projects.local,
     async (fresh) =>
       refreshIndex(fresh.tree, await deriveForIndex(context, fresh.load)),
-    { refreshIndex: false },
+    { refreshIndex: false, checkActor: false },
   );
 }
 

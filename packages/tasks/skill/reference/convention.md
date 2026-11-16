@@ -220,7 +220,8 @@ Once `actors` lists anyone, `assign`, `handoff`, `new --assign` and `--as` (on a
 command that opens the tree) refuse other names (exit `2`; `details.actors` lists
 the roster, `details.file` the `config.yml` to extend — the one of the tree that
 holds the task, the local one for `--as`), an unlisted acting identity is reported
-on stderr (not under `--json`) but not refused, and `validate`
+on stderr (not under `--json`) on reads and refused on writes (exit `2`; a person
+names themselves once with `git config --global tasks.actor <name>`), and `validate`
 warns `unknown-actor` for an open task whose assignee or claimant is unlisted.
 `tasks actors` shows the roster with each actor's open tasks, and
 `tasks init --actors [<names>]` writes the key from the start. Each actor has a

@@ -30,7 +30,9 @@ tasks mine --json
   `tasks init`** — creating a tree is the person's decision — and ask whom to
   list as actors: `tasks init --actors <person>,agent` writes the roster at
   once; without the flag it stays off until someone uncomments `actors:` in
-  `config.yml`.
+  `config.yml`. A person whose git name has spaces names themselves once with
+  `git config --global tasks.actor <name>`; with a roster on, a write under a
+  name it lacks is refused.
 - Exit `2` with `details.version` `1`, a v1 tree: tell the person; the one-time
   `tasks migrate` is theirs to run.
 - If `tasks` is not on PATH, use `npx @speekl/tasks` in its place everywhere.

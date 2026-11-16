@@ -1,4 +1,5 @@
 import type { CommandContext } from "../context.js";
+import { assertActingActorListed } from "./actors.js";
 import type { LockPayload } from "./lock.js";
 import { holderText, isLockBusy, withTreeLock } from "./lock.js";
 import type { LoadedTree } from "./projects.js";
@@ -17,6 +18,12 @@ export interface Fresh {
 export interface MutationOptions {
   /** Regenerate `index.md` afterwards when it exists; on by default. */
   refreshIndex?: boolean;
+  /**
+   * Refuse the write when the local roster does not list the acting
+   * identity; on by default. Off for a write that records no actor — the
+   * regeneration of `index.md`.
+   */
+  checkActor?: boolean;
 }
 
 /**
@@ -33,6 +40,13 @@ export async function withMutation<T>(
   fn: (fresh: Fresh) => Promise<T>,
   options: MutationOptions = {},
 ): Promise<T> {
+  if (options.checkActor !== false) {
+    assertActingActorListed(
+      context.tree.config,
+      context.project,
+      context.identity.actor,
+    );
+  }
   const result = await withTreeLock(load.project.tasksDir, async () => {
     const before = await context.projects.reload(load);
     context.gates.invalidate();

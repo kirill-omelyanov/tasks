@@ -169,10 +169,14 @@ them, an agent's leaves it free. With at least one actor listed:
 - `--as`, on every command that opens the tree, and `tasks hooks install --actor` refuse
   an unlisted name the same way. `--force` lifts none of these refusals.
 - The actor a command resolves for itself — from `TASKS_ACTOR`, git or the OS user — is
-  never refused for being unlisted, but every command that opens the tree says so on
-  stderr (not under `--json`, where `tasks actors --json` carries the fact as
-  `listed: false`) until you set `TASKS_ACTOR` to a listed name or add yours. The operator
-  behind an `--as` is diagnosed the same way.
+  reported on stderr by every command that opens the tree when it is unlisted (not under
+  `--json`, where `tasks actors --json` carries the fact as `listed: false`), and a command
+  that would write under it is refused with exit `2`, naming the listed actors, the file and
+  the remedy: name yourself once with `git config --global tasks.actor <name>` (or
+  `TASKS_ACTOR`), or add your name to the roster. A name off by case alone, or an e-mail
+  address whose local part is listed, is suggested. Reads go on, so you can look around
+  first; regenerating `index.md` records no actor and is not refused. The operator behind
+  an `--as` is only diagnosed.
 - A name YAML would read as a number or a boolean (`007`, `True`) is refused unless
   quoted (`"007":`), so a roster never holds a name nobody typed; `init --actors` quotes
   such names itself. A name that is a canonical integer (`42`, not `007`) sorts first in
@@ -236,9 +240,12 @@ The CLI resolves it, in order, from:
 1. `--as <actor>` — acting on someone's behalf. The identity that would otherwise have
    acted is recorded as the operator: `alice via agent`.
 2. `TASKS_ACTOR`.
-3. The repository's git identity: `git config user.name`, then `user.email`, read with
+3. `git config tasks.actor` — your name for `tasks`, set once: `git config --global
+   tasks.actor maria` for every repository on the machine, or without `--global` for one.
+   A value that fails the pattern is a usage error, like `TASKS_ACTOR`.
+4. The repository's git identity: `git config user.name`, then `user.email`, read with
    the project root as the working directory.
-4. The operating-system user.
+5. The operating-system user.
 
 An actor matches `^[A-Za-z0-9][A-Za-z0-9._@+-]*$` — no spaces — which is what keeps log
 headings parseable. A `--as` or `TASKS_ACTOR` that does not match is a usage error. A git

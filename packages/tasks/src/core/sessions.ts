@@ -51,6 +51,8 @@ const execFileAsync = promisify(execFile);
 const GIT_TIMEOUT_MS = 5_000;
 
 const GIT_IDENTITY_KEYS = ["user.name", "user.email"] as const;
+/** The name a person sets once, globally or per repository, for `tasks`. */
+export const ACTOR_GIT_KEY = "tasks.actor";
 
 export interface IdentityOptions {
   /** `--as`: the principal. */
@@ -161,12 +163,22 @@ async function searchOperator(
     return { operator: assertActor(explicit, ACTOR_ENV), osUser: null };
   }
 
+  // A name set for tasks itself, once per machine or per repository: as
+  // deliberate as the variable, so a bad value is refused, not skipped.
+  const configured = await gitConfig(ACTOR_GIT_KEY, options.projectRoot, env);
+  if (configured !== null) {
+    return {
+      operator: assertActor(configured, `git config ${ACTOR_GIT_KEY}`),
+      osUser: null,
+    };
+  }
+
   for (const key of GIT_IDENTITY_KEYS) {
     const value = await gitConfig(key, options.projectRoot, env);
     if (value === null) continue;
     if (ACTOR_PATTERN.test(value)) return { operator: value, osUser: null };
     options.diagnose?.(
-      `git ${key} ${JSON.stringify(value)} does not match ${ACTOR_PATTERN.source}; skipped (set ${ACTOR_ENV} to a short name${shortNameHint(value)}).`,
+      `git ${key} ${JSON.stringify(value)} does not match ${ACTOR_PATTERN.source}; skipped (set your name once: git config --global ${ACTOR_GIT_KEY} ${shortNameHint(value)}, or ${ACTOR_ENV}).`,
     );
   }
 
@@ -177,10 +189,10 @@ async function searchOperator(
   return { operator: null, osUser };
 }
 
-/** The first word of a skipped git name, lower-cased, when it would do. */
+/** The first word of a skipped git name, lower-cased, when it would do; else a placeholder. */
 function shortNameHint(value: string): string {
   const first = value.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-  return ACTOR_PATTERN.test(first) ? `, for instance ${first}` : "";
+  return ACTOR_PATTERN.test(first) ? first : "<name>";
 }
 
 /** Why the search found nobody, for the error and the `--as` diagnostic. */
@@ -189,19 +201,20 @@ function describeSearch(osUser: string | null): string {
     osUser === null
       ? "the operating-system user cannot be read"
       : `the operating-system user ${JSON.stringify(osUser)} is not a valid actor`;
-  return `${ACTOR_ENV} is not set, git has no usable user.name or user.email, and ${user}`;
+  return `${ACTOR_ENV} is not set, git has no ${ACTOR_GIT_KEY} and no usable user.name or user.email, and ${user}`;
 }
 
 function noActorError(osUser: string | null): TaskError {
   return TaskError.usage(
-    `No actor could be resolved: ${describeSearch(osUser)} (an actor must match ${ACTOR_PATTERN.source}). Set ${ACTOR_ENV} or pass --as <actor>.`,
+    `No actor could be resolved: ${describeSearch(osUser)} (an actor must match ${ACTOR_PATTERN.source}). Set your name once with git config --global ${ACTOR_GIT_KEY} <name>, set ${ACTOR_ENV}, or pass --as <actor>.`,
     { pattern: ACTOR_PATTERN.source, os_user: osUser },
   );
 }
 
 /**
  * The operator, from the first source that yields one: `TASKS_ACTOR` (a
- * value failing the pattern is a usage error), `git config user.name`, then
+ * value failing the pattern is a usage error), `git config tasks.actor` (as
+ * deliberate: a bad value is a usage error), `git config user.name`, then
  * `user.email` (read with the project root as cwd and `env` handed to git, so
  * repository and conditional includes apply; a value failing the pattern is
  * skipped with a diagnostic, an absent git silently), then the

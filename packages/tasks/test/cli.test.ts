@@ -707,6 +707,56 @@ describe("init", () => {
 /* ------------------------------------------------------------------------ */
 
 describe("show", () => {
+  it("reads an archived task with --archived, without restoring it", async () => {
+    sandbox = await treeSandbox({
+      tasks: { a: { depends_on: ["old/t"] } },
+      archived: {
+        "old/t": {
+          status: "DONE",
+          state: true,
+          log: "## 2026-01-02T00:00:00Z tester\ndone: IN_PROGRESS → DONE\nShipped.\n",
+          body: "# Old\n\nGone.\n",
+        },
+        "old/t/part": { status: "DONE" },
+      },
+    });
+    const result = await sandbox.run("show", "old/t", "--archived", "--json");
+    expect(result.code).toBe(0);
+    expect(result.json<ShowJson>()).toMatchObject({
+      id: "old/t",
+      status: "DONE",
+      situation: "done",
+      archived: true,
+      children: { open: 0, resolved: 1 },
+      referenced_by: ["a"],
+      workspace: ["state.md", "log.md"],
+      body: "# Old\n\nGone.",
+      last_entry: {
+        actor: "tester",
+        text: "done: IN_PROGRESS → DONE\nShipped.",
+      },
+    });
+    expect(await sandbox.exists(".tasks/.archive/old/t/task.md")).toBe(true);
+    expect(await sandbox.exists(".tasks/old/t/task.md")).toBe(false);
+
+    const human = plain(
+      (await sandbox.run("show", "old/t", "--archived")).stdout,
+    );
+    expect(human).toContain("archived");
+    expect(human).toContain("tasks restore old/t");
+
+    // Without the flag the archived path is not found, with the read as the hint.
+    const refused = await sandbox.run("show", "old/t", "--json");
+    expect(refused.code).toBe(3);
+    expect(envelope(refused).error.message).toContain(
+      "tasks show --archived old/t",
+    );
+    // The flag on a live path finds nothing in the archive.
+    const live = await sandbox.run("show", "a", "--archived", "--json");
+    expect(live.code).toBe(3);
+    expect(envelope(live).error.message).toContain("Nothing is archived at a");
+  });
+
   it("emits the task object with derived conditions, body, workspace and referrers", async () => {
     sandbox = await treeSandbox({
       tasks: {

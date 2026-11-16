@@ -91,6 +91,8 @@ An implementation:
 
 - MUST exclude archived tasks from every default query.
 - MUST treat an archived task as **not satisfying** any gate.
+- MAY let a query reach archived tasks on request, saying so: a `show` of one by its former path,
+  the log of one, a history query that includes the archive.
 - MUST treat an archived **task's** path as reserved: creating or moving a live task to a path at
   which `.archive/` holds a `task.md` MUST fail until that entry is purged. A directory under
   `.archive/` without `task.md` reserves nothing.

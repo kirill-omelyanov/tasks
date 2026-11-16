@@ -446,7 +446,7 @@ export function findTask(tree: Tree, id: string): Task {
   if (broken) throw malformedError(broken);
   if (isReservedPath(tree, id)) {
     throw TaskError.notFound(
-      `${id} is archived. Restore it with \`tasks restore ${id}\` first.`,
+      `${id} is archived. Read it with \`tasks show --archived ${id}\`; \`tasks restore ${id}\` brings it back.`,
       { id, archived: true },
     );
   }
@@ -504,7 +504,7 @@ export function resolveTaskId(
     if (archived === null) throw err;
     const shown = qualify(archived);
     throw TaskError.notFound(
-      `${shown} is archived. Restore it with \`tasks restore ${shown}\` first.`,
+      `${shown} is archived. Read it with \`tasks show --archived ${shown}\`; \`tasks restore ${shown}\` brings it back.`,
       { argument, id: shown, archived: true },
     );
   }

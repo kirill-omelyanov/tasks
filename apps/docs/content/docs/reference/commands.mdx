@@ -147,7 +147,7 @@ None of these write anything except the session heartbeat when a session is know
 ### `tasks show`
 
 ```sh
-tasks show <task> [--json]
+tasks show <task> [--archived] [--json]
 ```
 
 The task: its fields, its derived conditions (situation, blocked by, held by, liveness, …;
@@ -155,6 +155,12 @@ the JSON carries every one, `ready` and `last_entry` included), the workspace fi
 reference it through `depends_on` or `finishes_after` — here and in listed projects —
 and its body. **Fails** with exit `3` for an unknown or archived task, and with exit `4`
 when its `task.md` is malformed.
+
+`--archived` reads a task under `.archive/` without restoring it: `<task>` is then its former
+path in full (`alias:path` for a listed project), as `restore` takes it, and the output is the
+same with `archived: true` in the JSON and an `archived` line in the human form; the derived
+conditions are a resolved task's, judged among the archive. **Fails** with exit `3` when nothing
+is archived at the path, saying so when a live task sits there instead.
 
 ### `tasks resume`
 
@@ -288,13 +294,14 @@ search             open 0/3           high                              Full-tex
 ### `tasks log --since`
 
 ```sh
-tasks log --since <when> [--local] [--json]
+tasks log --since <when> [--local] [--archived] [--json]
 ```
 
 Log entries since a time, across the local tree and every listed project, oldest first.
 `<when>` is an ISO timestamp (`2026-09-21T09:14:00Z`), a UTC date (`2026-09-21`), or a
 duration back from now: `30m`, `12h`, `7d`, `2w`. `--local` reads the local tree only.
-Appending an entry is [`tasks log <task>`](#tasks-log).
+`--archived` includes the archived tasks' entries, under their former ids; the human form
+marks them `(archived)`. Appending an entry is [`tasks log <task>`](#tasks-log).
 
 ### `tasks dep list` and `tasks after list`
 
@@ -683,6 +690,15 @@ operator under `--as`, and the session. History, not state: the manifest and `up
 do not change. A line of text that would read as a log heading or a version-control
 conflict marker is refused (exit `2`). Listing entries is
 [`tasks log --since`](#tasks-log---since).
+
+```sh
+tasks log <task> [--archived] [--json]
+```
+
+Without text, the task's own entries, oldest first, in the shape of
+[`log --since`](#tasks-log---since): the way to read one task's history without opening
+`log.md`. `--archived` reads the log of a task under `.archive/`, by its former path in
+full; appending to an archived task is refused (exit `2`), restore it first.
 
 ### `tasks note`
 

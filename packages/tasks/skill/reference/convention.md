@@ -21,7 +21,7 @@ enough. The normative text is at https://agenttasks.dev/docs/spec.
     log.md            history, appended by the CLI
     <anything else>   workspace content, never parsed
     <segment>/        a child task, a group, or workspace content
-  .archive/           archived tasks at their former paths; the paths stay reserved
+  .archive/           archived tasks at their former paths; the paths stay reserved; read with --archived
   .locks/             tree.lock and sessions/<token>; never committed
 ```
 

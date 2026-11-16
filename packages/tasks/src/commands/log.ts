@@ -2,7 +2,7 @@ import { Command } from "commander";
 
 import type { CommandContext } from "../context.js";
 import { openContext } from "../context.js";
-import { addressTree } from "../core/archive.js";
+import { addressTree, readArchivedTask } from "../core/archive.js";
 import { compareIds } from "../core/ids.js";
 import { withMutation } from "../core/mutate.js";
 import type { LoadedTree } from "../core/projects.js";
@@ -23,6 +23,8 @@ import { emitJson, renderLogEntries, ui, writeOut } from "../output.js";
 interface LogOptions {
   since?: string;
   local?: boolean;
+  /** Read an archived task's log, or include the archive in `--since`. */
+  archived?: boolean;
   json?: boolean;
 }
 
@@ -79,6 +81,37 @@ async function appendNarrative(
   );
 }
 
+/**
+ * `tasks log <task>` without text: one task's entries, oldest first, as the
+ * entries object; with `--archived`, a task under `.archive/` by its former
+ * path in full. A read, so no lock and no `updated`.
+ */
+async function readTaskLog(
+  context: CommandContext,
+  taskArg: string,
+  archived: boolean,
+): Promise<void> {
+  const { load, path } = await addressTree(
+    context,
+    taskArg,
+    archived ? "path" : "task",
+  );
+  const task = archived
+    ? readArchivedTask(context, load, path)
+    : resolveTaskArg(load.tree, path);
+  const id = context.projects.qualify(load, task.id);
+  const entries = (await readLog(task.dir)).map((entry) =>
+    toLogEntryJson(entry, id),
+  );
+  const result: LogEntriesJson = { count: entries.length, entries };
+
+  if (context.json) {
+    emitJson(result);
+    return;
+  }
+  writeOut(renderLogEntries(entries, archived ? new Set([id]) : undefined));
+}
+
 /** Canonical timestamps order correctly as text. */
 function compareText(a: string, b: string): number {
   return a === b ? 0 : a < b ? -1 : 1;
@@ -95,17 +128,26 @@ interface Collected {
   index: number;
 }
 
+interface Since {
+  entries: LogEntryJson[];
+  /** Qualified ids of the archived tasks among them, for the human marker. */
+  archived: Set<string>;
+}
+
 /**
- * Entries at or after `since` from every live task of `trees`, oldest first.
- * Equal times order by tree (local first, then listed projects in
+ * Entries at or after `since` from every live task of `trees` — and, with
+ * `archived`, from every archived task too, under its former id — oldest
+ * first. Equal times order by tree (local first, then listed projects in
  * configuration order), then task id, then position in the log.
  */
 async function collectEntries(
   context: CommandContext,
   trees: LoadedTree[],
   since: string,
-): Promise<LogEntryJson[]> {
+  archived: boolean,
+): Promise<Since> {
   const found: Collected[] = [];
+  const fromArchive = new Set<string>();
   for (const [rank, load] of trees.entries()) {
     // A manifest that does not parse still has a history worth listing.
     const dirs = [
@@ -114,6 +156,16 @@ async function collectEntries(
         .filter((entry) => entry.id !== "")
         .map((entry) => ({ id: entry.id, dir: entry.dir })),
     ];
+    if (archived) {
+      for (const entry of [
+        ...load.tree.archived,
+        ...load.tree.archivedMalformed,
+      ]) {
+        if (entry.id === "") continue;
+        dirs.push({ id: entry.id, dir: entry.dir });
+        fromArchive.add(context.projects.qualify(load, entry.id));
+      }
+    }
     for (const { id, dir } of dirs) {
       const task = context.projects.qualify(load, id);
       (await readLog(dir)).forEach((entry, index) => {
@@ -130,7 +182,10 @@ async function collectEntries(
       compareIds(a.id, b.id) ||
       a.index - b.index,
   );
-  return found.map(({ entry, task }) => toLogEntryJson(entry, task));
+  return {
+    entries: found.map(({ entry, task }) => toLogEntryJson(entry, task)),
+    archived: fromArchive,
+  };
 }
 
 async function listSince(
@@ -141,33 +196,46 @@ async function listSince(
   const since = parseSince(arg);
   const trees =
     options.local === true ? [context.projects.local] : await context.trees();
-  const entries = await collectEntries(context, trees, since);
+  const { entries, archived } = await collectEntries(
+    context,
+    trees,
+    since,
+    options.archived === true,
+  );
   const result: LogEntriesJson = { count: entries.length, entries };
 
   if (context.json) {
     emitJson(result);
     return;
   }
-  writeOut(renderLogEntries(entries));
+  writeOut(renderLogEntries(entries, archived));
 }
 
 export function logCommand(): Command {
   return new Command("log")
     .summary(
-      "append a narrative log entry to a task, or list entries since a time (--since)",
+      "append a narrative log entry to a task, read a task's log, or list entries since a time (--since)",
     )
     .description(
       'append a narrative entry to a task\'s log.md (tasks log <task> "<text>"),\n' +
-        "or list the entries since a time across the local tree and every\n" +
-        "listed project, oldest first (tasks log --since 7d)",
+        "print a task's entries (tasks log <task>), or list the entries since a\n" +
+        "time across the local tree and every listed project, oldest first\n" +
+        "(tasks log --since 7d)",
     )
-    .argument("[task]", "the task whose log.md receives the entry")
+    .argument(
+      "[task]",
+      "the task whose log.md receives the entry, or whose log is read when no text follows",
+    )
     .argument("[text...]", "the entry's text")
     .option(
       "--since <when>",
       "list entries since a timestamp, a date, or a duration back from now (30m, 12h, 7d, 2w)",
     )
     .option("--local", "with --since: the local tree only")
+    .option(
+      "--archived",
+      "read the log of a task under .archive/ (by its former path in full), or include the archive in --since",
+    )
     .option("--json", "emit machine-readable JSON")
     .exitOverride()
     .action(
@@ -196,6 +264,20 @@ export function logCommand(): Command {
           throw TaskError.usage("--local applies to log --since only.", {
             task,
           });
+        }
+        if (words.length === 0) {
+          await readTaskLog(
+            await openContext(command),
+            task,
+            options.archived === true,
+          );
+          return;
+        }
+        if (options.archived === true) {
+          throw TaskError.usage(
+            "--archived reads a log; an archived task's log is not appended to. Restore the task first.",
+            { task },
+          );
         }
         const text = entryText(words);
         await appendNarrative(await openContext(command), task, text);

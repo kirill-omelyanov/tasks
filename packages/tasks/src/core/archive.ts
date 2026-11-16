@@ -538,6 +538,34 @@ export async function openReferrersOutside(
   );
 }
 
+/**
+ * The archived task an argument names, for a read (`show --archived`,
+ * `log --archived`): the former path in full, as `restore` and `purge` take
+ * it. A malformed archived manifest is the conflict it would be live; a path
+ * with nothing archived is not found, and the message says when the path is
+ * a live task's instead.
+ */
+export function readArchivedTask(
+  context: CommandContext,
+  load: LoadedTree,
+  archivePath: string,
+): Task {
+  const { tree } = load;
+  const shown = qualifierFor(context, load)(archivePath);
+  try {
+    return findArchivedTask(tree, archivePath);
+  } catch (err) {
+    if (!isTaskError(err) || err.code !== "NOT_FOUND") throw err;
+    const live = tree.byId.has(archivePath)
+      ? ` It is a live task: \`tasks show ${shown}\`.`
+      : "";
+    throw TaskError.notFound(`Nothing is archived at ${shown}.${live}`, {
+      id: shown,
+      archived: false,
+    });
+  }
+}
+
 /** The `task.md` files that did not parse, across `trees`, as absolute paths. */
 function unreadableManifests(trees: LoadedTree[]): string[] {
   return trees.flatMap((load) =>

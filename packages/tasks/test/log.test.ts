@@ -135,13 +135,99 @@ describe("log <task> <text>", () => {
 
     expect((await s.run("log", "a", "<<<<<<< HEAD")).code).toBe(2);
     expect((await s.run("log", "a", "   ")).code).toBe(2);
-    expect((await s.run("log", "a")).code).toBe(2);
+    // No text is a read of the log, which writes nothing.
+    expect((await s.run("log", "a")).code).toBe(0);
     expect((await s.run("log")).code).toBe(2);
     expect((await s.run("log", "a", "x", "--since", "1d")).code).toBe(2);
     expect((await s.run("log", "a", "x", "--local")).code).toBe(2);
     expect(await s.exists(".tasks/a/log.md")).toBe(false);
 
     expect((await s.run("log", "nope", "text")).code).toBe(3);
+  });
+});
+
+describe("log <task> (read)", () => {
+  it("prints one task's entries, oldest first, as the entries object", async () => {
+    const s = await box({
+      tasks: {
+        a: {
+          log:
+            entry(ago(60), "bob", "first") +
+            "\n" +
+            entry(ago(5), "alice", "second\ntwo lines"),
+        },
+        b: {},
+      },
+    });
+    const result = await s.run("log", "a", "--json");
+    expect(result.code).toBe(0);
+    const json = result.json<LogEntriesJson>();
+    expect(json.count).toBe(2);
+    expect(json.entries.map((e) => [e.task, e.actor, e.text])).toEqual([
+      ["a", "bob", "first"],
+      ["a", "alice", "second\ntwo lines"],
+    ]);
+    // Nothing was written: a read.
+    expect(await s.read(".tasks/a/log.md")).toBe(
+      entry(ago(60), "bob", "first") +
+        "\n" +
+        entry(ago(5), "alice", "second\ntwo lines"),
+    );
+
+    const human = await s.run("log", "a");
+    expect(stripVTControlCharacters(human.stdout)).toContain("bob  a\n  first");
+    const empty = await s.run("log", "b", "--json");
+    expect(empty.json<LogEntriesJson>()).toEqual({ count: 0, entries: [] });
+    expect(
+      stripVTControlCharacters((await s.run("log", "b")).stdout),
+    ).toContain("No log entries.");
+  });
+
+  it("reads an archived task's log with --archived, and refuses to append to one", async () => {
+    const s = await box({
+      tasks: { live: {} },
+      archived: {
+        "old/t": {
+          status: "DONE",
+          log: entry(
+            "2026-01-02T00:00:00Z",
+            "bob",
+            "done: IN_PROGRESS → DONE\nShipped.",
+          ),
+        },
+      },
+    });
+    const result = await s.run("log", "old/t", "--archived", "--json");
+    expect(result.code).toBe(0);
+    expect(result.json<LogEntriesJson>().entries).toEqual([
+      {
+        task: "old/t",
+        time: "2026-01-02T00:00:00Z",
+        actor: "bob",
+        via: null,
+        session: null,
+        text: "done: IN_PROGRESS → DONE\nShipped.",
+      },
+    ]);
+    expect(
+      stripVTControlCharacters(
+        (await s.run("log", "old/t", "--archived")).stdout,
+      ),
+    ).toContain("old/t (archived)");
+
+    // Without the flag an archived path is not found, and the hint names the read.
+    const plain = await s.run("log", "old/t", "--json");
+    expect(plain.code).toBe(3);
+    expect(errorOf(plain).message).toContain("tasks show --archived old/t");
+    // The flag on a live path: nothing is archived there.
+    const live = await s.run("log", "live", "--archived", "--json");
+    expect(live.code).toBe(3);
+    expect(errorOf(live).message).toContain("Nothing is archived at live");
+    expect(errorOf(live).message).toContain("tasks show live");
+    // Appending to the archive is refused.
+    const append = await s.run("log", "old/t", "--archived", "text", "--json");
+    expect(append.code).toBe(2);
+    expect(errorOf(append).message).toContain("--archived reads a log");
   });
 });
 
@@ -208,6 +294,40 @@ describe("log --since", () => {
       "b an hour ago",
       "x an hour ago",
     ]);
+  });
+
+  it("includes the archive on request, marking its tasks for a person", async () => {
+    const s = await box({
+      tasks: { a: { log: entry(ago(10), "alice", "live entry") } },
+      archived: {
+        "old/t": {
+          status: "DONE",
+          log: entry(ago(20), "bob", "archived entry"),
+        },
+      },
+    });
+    const without = await s.run("log", "--since", "1d", "--json");
+    expect(without.json<LogEntriesJson>().entries.map((e) => e.task)).toEqual([
+      "a",
+    ]);
+    const withArchive = await s.run(
+      "log",
+      "--since",
+      "1d",
+      "--archived",
+      "--json",
+    );
+    expect(
+      withArchive.json<LogEntriesJson>().entries.map((e) => [e.task, e.text]),
+    ).toEqual([
+      ["old/t", "archived entry"],
+      ["a", "live entry"],
+    ]);
+    const human = stripVTControlCharacters(
+      (await s.run("log", "--since", "1d", "--archived")).stdout,
+    );
+    expect(human).toContain("old/t (archived)");
+    expect(human).not.toContain("a (archived)");
   });
 
   it("restricts to the local tree with --local", async () => {

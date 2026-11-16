@@ -170,7 +170,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 | --- | --- |
 | `init` | Scaffold a tree: `config.yml` with `version: 2`, `README.md`, `.gitignore`. The caller asks before creating; the command never prompts. Print the resolved actor; MAY write the roster on request (`--actors`). |
 | `new <path> <title…> [--backlog] [--assign <actor>] [--priority <level>]` | Create a task; groups on demand; an existing group at the path becomes the task; refuse an existing task, a resolved parent, a reserved path; `--assign` names a listed actor when the tree lists actors. |
-| `show <task>` | The task object with derived conditions and the body. |
+| `show <task> [--archived]` | The task object with derived conditions and the body; `--archived` reads a task under `.archive/` by its former path in full, the object carrying `archived: true`. |
 | `resume <task>` | The task object; one line per ancestor (id, title, status, workspace files); children with statuses and conditions; the workspace file list; the documentation locations `config.yml` lists, each with whether it exists here; `state.md` in full; the last log entry. |
 | `ready [--scope <path>] [--all] [--local]` | The ready set for the calling actor in ready order: effective priority, `PAUSED` first, oldest first. |
 | `mine [--as <actor>] [--local]` | Open tasks whose assignee or claimant is the actor, each with its situation, liveness and last log entry. |
@@ -181,7 +181,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 | `move <task\|group> <destination>` | Relocate with reference rewriting in this tree and in listed trees; list the trees it could not write and the references it could not rewrite. |
 | `archive <task> [--force]`, `archive --resolved-before [<when>] \| --all-resolved`, `restore <path>`, `purge <path>` | Archive a resolved subtree, or every resolved subtree of this tree whose root was resolved before a time (a timestamp, a date or a duration back from now), skipping and naming the roots open tasks reference; restore one to a free path, never under a resolved parent; purge an archive entry (see [`.archive/`](/docs/spec/layout#archive)). |
 | `delete <task>` | OPTIONAL: remove a never-worked task without archiving it, under the conditions in [`.archive/`](/docs/spec/layout#archive). |
-| `log <task> "<text>"`, `log --since <duration\|timestamp> [--local]` | Append a narrative entry; list entries across the tree(s) by time as [log entries](/docs/spec/cli#log-entries). |
+| `log <task> "<text>"`, `log <task> [--archived]`, `log --since <duration\|timestamp> [--local] [--archived]` | Append a narrative entry; print one task's entries; list entries across the tree(s) by time as [log entries](/docs/spec/cli#log-entries), the archive's included on request. |
 | `note <task> "<text>"` | Append a dated, attributed note under `## Notes` of the task's body — an input for whoever works on it next — and log it as `note`; no transition, no authorization (see [Body](/docs/spec/task-file)). |
 | `state <task> [--edit]` | OPTIONAL, RECOMMENDED: replace `state.md` with standard input, or open it in the caller's editor with `--edit`; no transition, no log entry (see [`state.md`](/docs/spec/workspace#statemd)). |
 | `heartbeat` | Touch the current session's registry file; usage error without a session. |

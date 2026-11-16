@@ -436,6 +436,8 @@ export interface ShowExtras {
   body: string;
   workspace: string[];
   referenced_by: string[];
+  /** Read from `.archive/` with `--archived`. */
+  archived?: boolean;
 }
 
 /** `show`: the stored fields and the situation, then the body. */
@@ -457,6 +459,12 @@ export function renderShow(d: DerivedTask, extras: ShowExtras): string {
       ["created", json.created],
       ["updated", json.updated],
       ["path", json.path],
+      [
+        "archived",
+        extras.archived === true
+          ? `yes; tasks restore ${json.id} brings it back`
+          : null,
+      ],
     ]),
     ...blockedSection(d),
   ];
@@ -588,12 +596,19 @@ export function renderResume(d: DerivedTask, extras: ResumeExtras): string {
 }
 
 /** Log entries, oldest first as given, each under its heading. */
-export function renderLogEntries(entries: LogEntryJson[]): string {
+/**
+ * Log entries for a person, oldest first; a task read from the archive is
+ * marked, since its id looks like a live one.
+ */
+export function renderLogEntries(
+  entries: LogEntryJson[],
+  archived: ReadonlySet<string> = new Set(),
+): string {
   if (entries.length === 0) return ui.dim("No log entries.");
   return entries
     .map((entry) =>
       [
-        `${pc.dim(entryHeading(entry))}  ${pc.bold(entry.task)}`,
+        `${pc.dim(entryHeading(entry))}  ${pc.bold(entry.task)}${archived.has(entry.task) ? pc.dim(" (archived)") : ""}`,
         ...indentLines(entry.text, "  "),
       ].join("\n"),
     )

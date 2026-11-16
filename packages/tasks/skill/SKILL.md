@@ -37,14 +37,16 @@ tasks mine --json
 
 ## Your name and session token
 
-You act as **`agent`** (unless `tasks actors` lists another name of type
-`agent`) with **one session token on every command** of this session: a claim
-without one has unknown liveness, so nobody takes it over without force, and
-your own next session can only `pause` it as the same actor and claim it again.
-Subagents use the same name and token.
+Your name is `TASKS_ACTOR` when the harness set it, else **`agent`**; a team
+that named its agent otherwise (an actor of `type: agent` in `tasks actors`)
+tells you so. `tasks actors` is for choosing a person, not for finding your own
+name. You act with **one session token on every command** of this session: a
+claim without one has unknown liveness, so nobody takes it over without force,
+and your own next session can only `pause` it as the same actor and claim it
+again. Subagents use the same name and token.
 
 - **With the harness hooks**, `TASKS_SESSION` and `TASKS_ACTOR` are already set
-  (`echo $TASKS_SESSION`), and you pass nothing.
+  (`echo $TASKS_SESSION`), you pass nothing, and every tool call heartbeats.
 - **Without them**, generate a token once (`uuidgen`, or `date +%s`; it must
   match `^[A-Za-z0-9][A-Za-z0-9._@+-]*$`, which an ISO timestamp's colons fail),
   then prefix every command with
@@ -54,26 +56,40 @@ Subagents use the same name and token.
   not survive between tool calls, so prefer the prefix and the flag to an
   `export`. Never `--as agent`: `--as` records the person as the operator.
   Without the name you act under the person's git identity, and nothing tells
-  your work from theirs.
+  your work from theirs. A long stretch without any `tasks` command — reading
+  code, running tests — lets your claim go `orphaned` for everyone else after
+  `session_timeout_minutes` (30 by default), and another agent may take it:
+  run `tasks heartbeat` in such a stretch, or any command (a `state` write
+  counts).
 
 ## Entry
 
-1. **`tasks mine`.** Continue a task claimed by this session. Take over a task
-   claimed by you in an older session once it is `orphaned` (an ordinary
-   `tasks claim <task>`) before taking new work. A task held by another
-   **live** session is not yours. A claim of **unknown** liveness is reported to
-   the person, never forced. Another actor's orphaned claim is taken over only
-   on the person's instruction. A task merely assigned to you is your inbox; what
-   was left for you is in its files: `## Notes` of `task.md`, `design.md`, `state.md`.
-2. **`tasks resume <task>`**, then read, in order: `task.md`, `state.md`,
+1. **`tasks mine`**, first. In this order: a task claimed by this session —
+   continue it; then, among the tasks claimed by you in older sessions that are
+   now `orphaned` and the tasks assigned to you (your inbox), the one with the
+   highest effective priority — at equal priority finish your orphan before
+   starting inbox work — unless a person's instruction, in the conversation or
+   under `## Notes`, names what comes first; only then new work. Take over an
+   orphan with an ordinary `tasks claim <task>`, one at a time, and only what
+   you will work on now: the others stay orphaned, which is no breakage. A task
+   held by another **live** session is not yours. A claim of **unknown**
+   liveness is reported to the person, never forced. Another actor's orphaned
+   claim is taken over only on the person's instruction. What was left for you
+   is in a task's files: `## Notes` of `task.md`, `design.md`, `state.md`.
+2. **Claim before working, read before changing.** Your own orphan: `claim` it
+   first (that restores your hold), then `resume`. New work: `tasks claim --next`
+   (the first task of your ready set, in one step) and then `resume`, or
+   `resume` the candidates and `tasks claim <task>` by id when choosing. A
+   conflict (exit `4`) means another agent was first: take the next ready task.
+3. **`tasks resume <task>`**, then read, in order: `task.md`, `state.md`,
    `design.md`, `plan.md`, then for each ancestor as far as needed its
    `task.md`, `design.md` and `plan.md` — an epic's design and plan live on the
    epic. **Never read `log.md` on entry**; its last entry, the last activity, is
    already in the `resume` output. A person's text that reached you only there
-   goes under `## Notes` (`tasks note`) before you claim.
-3. **Claim before working**, not after: `tasks claim --next` (the first task of
-   your ready set, claimed in one step) or `tasks claim <task>`. A conflict
-   (exit `4`) means another agent was first: take the next ready task.
+   goes under `## Notes` (`tasks note`).
+4. **Listed projects you cannot see** — `not shown` on stderr, `unavailable` in
+   the JSON: a v1 tree, a repository not checked out here — are a person's to
+   migrate or check out. Say so once in your report and go on.
 
 ## During work
 
@@ -106,6 +122,13 @@ criteria` in place; an input received after the start goes to `## Notes`; a
 
 ## Exit
 
+- **A turn is not a session.** A turn ends with the claim kept and `state.md`
+  fresh whenever you expect to continue in this conversation — waiting for the
+  person's answer included. The session ends with `pause`, `handoff` or `done`:
+  the conversation closes, the harness stops you, or the task passes to someone.
+  A task that cannot move without a person's decision is a `handoff` to them,
+  the question in the message and under `## Notes`. Not sure you will be back?
+  `pause`: your pause frees the task; an orphan is what to avoid.
 - End work on a task deliberately with **`pause`**, **`handoff`** or **`done`**,
   each with `-m`, the history line; the resume point is `state.md`. Never end a
   session deliberately with a task `IN_PROGRESS`. Your `pause` releases the task
@@ -181,7 +204,7 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | `tasks actors`                                                                  | Who tasks may be assigned to, with their open tasks.                                                                                                          |
 | `tasks resume <task>`                                                           | Ancestors, children, `state.md`, last log entry, docs locations.                                                                                              |
 | `tasks show <task>`                                                             | Fields, derived conditions, references, body.                                                                                                                 |
-| `tasks ready [--scope <path>] [--all] [--local]`                                | What you may take now, best first; a scope keeps to this tree.                                                                                                |
+| `tasks ready [--scope <path>] [--all] [--local]`                                | What you may take now, best first; a scope keeps to this tree, `--local` does without one.                                                                    |
 | `tasks list [--<situation>…] [--active] [--all] [--top]` / `tasks tree [--top]` | Open tasks by situation; `--blocked`, `--waiting`, `--parked`, …; `--active`: work in progress beneath; `--top`: the top level alone, `--depth <n>` for more. |
 | `tasks claim <task>` / `tasks claim --next`                                     | Start working; takes over an orphaned claim.                                                                                                                  |
 | `tasks state <task> [--edit]`                                                   | Replace `state.md` from stdin.                                                                                                                                |

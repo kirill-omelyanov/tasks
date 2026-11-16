@@ -54,6 +54,14 @@ Subagents act under the same name and token as the agent that spawned them.
 The actor names who acted; the session names which run. Two sessions of the same agent
 are the same actor, and the log, the liveness rules and `mine` tell them apart by token.
 
+Your name comes from the environment, not from the roster: `TASKS_ACTOR` when the harness
+set it, else `agent`. `tasks actors` is for choosing a person to hand a task to; a team
+that named its agent otherwise (an actor of `type: agent`) tells you so. Without the hooks,
+a long stretch with no `tasks` command — reading code, running tests — lets your claim go
+orphaned for everyone else after `session_timeout_minutes` (30 by default), and another
+agent may take it: run `tasks heartbeat --session <token>` in such a stretch, or any
+command; a `state` write counts.
+
 ## Entry
 
 <Steps>
@@ -72,11 +80,16 @@ for you is in the task's files: `## Notes` of `task.md`, `design.md`, `state.md`
 shows them.
 
 - **Continue** a task claimed by this session.
-- **Take over** a task claimed by you in an older session once it is orphaned
-  (`liveness: "orphaned"`): `tasks claim <task>` succeeds and records the takeover.
+- **Then the highest effective priority** among your orphaned claims (`liveness:
+  "orphaned"`, from an older session of yours) and your inbox; at equal priority finish
+  your orphan before starting inbox work, and a person's instruction — in the conversation
+  or under `## Notes` — names what comes first. **Take over** an orphan with an ordinary
+  `tasks claim <task>`, which records the takeover: one at a time, only what you will work
+  on now; the others stay orphaned, which is no breakage.
 - A task held by another **live** session is not yours.
 - A claim of **unknown** liveness is reported to the person, never forced.
 - Another actor's orphaned claim is taken over only on the person's instruction.
+- **New work** comes last: `tasks claim --next`.
 
 </Step>
 
@@ -109,8 +122,21 @@ tasks claim <task>          # a specific task
 ```
 
 The claim is what stops a second agent starting the same task, and it is only useful if
-it happens first. A conflict (exit `4`) means another agent was first: move on to the
-next ready task. Never reach for `--force` to win a claim.
+it happens first. Claim before working, read before changing: your own orphan is claimed
+first — the takeover restores your hold — and resumed after; new work is `claim --next`
+then `resume`, or `resume` the candidates and `claim <task>` by id when you choose. A
+conflict (exit `4`) means another agent was first: move on to the next ready task. Never
+reach for `--force` to win a claim.
+
+</Step>
+
+<Step>
+
+### Leave unavailable projects to the person
+
+A listed project the commands cannot read — `not shown` on stderr, `unavailable` in the
+JSON: a v1 tree, a repository not checked out here — is a person's to migrate or check
+out. Say so once in your report and go on.
 
 </Step>
 
@@ -157,6 +183,12 @@ next ready task. Never reach for `--force` to win a claim.
 - **An input for whoever works next — a decision taken, a fact learned, a link — goes under
   `## Notes` of `task.md`:** `tasks note <task> "<text>"` appends it dated and attributed, and
   logs it. A message alone is history: the next entry displaces it.
+- **A turn is not a session.** A turn ends with the claim kept and `state.md` fresh whenever
+  you expect to continue in this conversation — waiting for the person's answer included.
+  The session ends with `pause`, `handoff` or `done`: the conversation closes, the harness
+  stops you, or the task passes to someone. A task that cannot move without a person's
+  decision is a `handoff` to them, the question in the message and under `## Notes`. Not
+  sure you will be back? `pause`: your pause frees the task; an orphan is what to avoid.
 - **A deliberate end of work is `pause`, `handoff` or `done`, each with a message.** The
   message is the history line; the resume point is `state.md`. Never end a session deliberately
   with a task `IN_PROGRESS`.

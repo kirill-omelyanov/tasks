@@ -16,21 +16,34 @@ agent spawns act under the same token.
 
 An agent SHOULD act as the actor `agent` unless its harness or the tree's roster names it
 otherwise: the harness hooks export `TASKS_ACTOR=agent`, and without them the agent sets
-`TASKS_ACTOR=agent` on every command itself, never `--as`, which records an operator. An agent
-that sets no name acts under the working copy's git identity, the person's, and nothing tells
-its work from theirs.
+`TASKS_ACTOR=agent` on every command itself, never `--as`, which records an operator. The name
+comes from the environment, not from the roster: `TASKS_ACTOR` when set, else `agent`; the
+roster is read to choose people, and a tree whose agent bears another name (an actor of
+`type: agent`) is a fact the person states. An agent that sets no name acts under the working
+copy's git identity, the person's, and nothing tells its work from theirs.
+
+Without the harness hooks, an agent SHOULD run `heartbeat` (any command counts) during a
+stretch with no command that nears `session_timeout_minutes`, or its claim reads as orphaned to
+everyone else and may be taken over.
 
 ## Entry
 
-1. Run `mine`. Continue any task claimed by this session, and take over any orphaned task claimed
-   by this actor, before taking new work; a task held by another live session is not yours, a
-   claim of unknown liveness is reported to the person, never forced, and another actor's orphaned
-   claim is taken over only on the person's instruction.
-2. For the task at hand, run `resume` and read, in order, `task.md`, `state.md`, `design.md`,
+1. Run `mine`. Continue any task claimed by this session; then take, among the orphaned tasks
+   claimed by this actor and the tasks assigned to it, the one with the highest effective priority
+   — at equal priority an orphan before an assigned task — unless a person's instruction names
+   what comes first; only then new work. An orphan is taken over one at a time, only what the agent
+   will work on now; a task held by another live session is not the agent's, a claim of unknown
+   liveness is reported to the person, never forced, and another actor's orphaned claim is taken
+   over only on the person's instruction.
+2. Claim before working, read before changing: an own orphan is claimed first (the takeover
+   restores the hold) and resumed after; new work is claimed with `claim --next` and then resumed,
+   or resumed and then claimed by id when the agent chooses among candidates. When a claim
+   conflicts, another agent was first: the agent moves on to the next ready task.
+3. For the task at hand, run `resume` and read, in order, `task.md`, `state.md`, `design.md`,
    `plan.md`, then for each ancestor as far as needed its `task.md`, `design.md` and `plan.md` —
    an epic's design and plan live on the epic. Do not read `log.md` on entry.
-3. `claim` before working, not after. Take work with `claim --next`, or move on to the next ready
-   task when a claim conflicts: another agent was first.
+4. A listed project the commands cannot read — not checked out, a v1 tree — is reported to the
+   person once and left alone: migration and checkout are a person's actions.
 
 ## During work
 
@@ -59,6 +72,12 @@ its work from theirs.
 
 ## Exit
 
+- A turn is not a session: a turn ends with the claim kept and `state.md` fresh whenever the
+  agent expects to continue in the same conversation, waiting for the person's answer included;
+  the session ends with `pause`, `handoff` or `done` when the conversation closes, the harness
+  stops the agent, or the task passes to someone. A task that cannot move without a person's
+  decision is handed off to that person with the question; an agent unsure of returning pauses,
+  since an agent's pause frees the task and an orphan is what it must avoid.
 - A deliberate end of work on a task is `pause`, `handoff` or `done`, each with a message; the
   message is the history line, and the resume point is `state.md`. An agent MUST NOT end a
   session deliberately with a task `IN_PROGRESS`.

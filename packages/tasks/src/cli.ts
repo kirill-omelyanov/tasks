@@ -17,6 +17,7 @@ import { migrateCommand } from "./commands/migrate.js";
 import { mineCommand } from "./commands/mine.js";
 import { moveCommand } from "./commands/move.js";
 import { newCommand } from "./commands/new.js";
+import { noteCommand } from "./commands/note.js";
 import { readyCommand } from "./commands/ready.js";
 import { reindexCommand } from "./commands/reindex.js";
 import { resumeCommand } from "./commands/resume.js";
@@ -92,6 +93,7 @@ export function buildCli(): Command {
   program.addCommand(depCommand());
   program.addCommand(afterCommand());
   program.addCommand(logCommand());
+  program.addCommand(noteCommand());
   program.addCommand(stateCommand());
   program.addCommand(archiveCommand());
   program.addCommand(restoreCommand());

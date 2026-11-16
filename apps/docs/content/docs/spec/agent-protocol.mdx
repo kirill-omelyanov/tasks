@@ -60,8 +60,11 @@ its work from theirs.
 ## Exit
 
 - A deliberate end of work on a task is `pause`, `handoff` or `done`, each with a message; the
-  message is the closing note. An agent MUST NOT end a session deliberately with a task
-  `IN_PROGRESS`.
+  message is the history line, and the resume point is `state.md`. An agent MUST NOT end a
+  session deliberately with a task `IN_PROGRESS`.
+- An input for whoever works on the task next — a decision taken, a fact learned — goes under
+  `## Notes` of `task.md` (`note`), never only into a message: a later entry displaces a message
+  from the last entry, a note stays where the next reader looks first.
 - `state.md` names, under *Open*, every uncommitted file and branch the work leaves behind.
 - An agent MUST name every commit it made for the task in the task's log before the work ends —
   in the `pause`, `handoff` or `done` message, or earlier through `log` when a turn produced one

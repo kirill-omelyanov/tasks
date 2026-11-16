@@ -171,6 +171,12 @@ const TABLE: Entry[] = [
     options: ["--since <when>", "--local"],
   },
   {
+    row: 'note <task> "<text>"',
+    path: ["note"],
+    args: ["<task>", "<text...>"],
+    options: [],
+  },
+  {
     row: "state <task> [--edit]",
     path: ["state"],
     args: ["<task>"],
@@ -527,6 +533,7 @@ const RUNS: Run[] = [
       expect(await s.exists(".tasks/todo")).toBe(false),
   },
   { argv: ["log", "todo", "a", "narrative", "note"], log: taskLog("todo") },
+  { argv: ["note", "todo", "an", "input", "for", "next"], log: taskLog("todo") },
   {
     argv: ["log", "--since", "1h"],
     setup: async (s) => {

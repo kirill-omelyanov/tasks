@@ -10,7 +10,7 @@ content.
 
 | File | Concern | Mode |
 | --- | --- | --- |
-| `task.md` | Definition and acceptance; inputs after the start in `## Notes`. | Edited in place; frontmatter machine-owned. |
+| `task.md` | Definition and acceptance; inputs after the start in `## Notes`, which `note` appends to. | Edited in place; frontmatter machine-owned. |
 | `state.md` | Where the work is now: done, verified, open, next. | Overwritten in full — by its author or through `state` — never appended. |
 | `design.md` | Decisions and why; rejected alternatives. | Edited in place. |
 | `plan.md` | How: steps, files, verification. May be superseded. | Edited in place. |
@@ -81,14 +81,18 @@ Applied: commit abc123 on main.
 - An implementation SHOULD offer a way to append a narrative entry without a transition.
 - Entries are never edited. A `log.md` containing version-control conflict markers is a validation
   error; the resolution is mechanical — keep both entries in time order.
-- The log is not read on entry; the tooling surfaces only a task's **last entry** (see
-  [Task object](/docs/spec/cli#task-object)), because a handoff's closing note is written for the next reader
-  and must reach them without opening the file.
+- The log is not read on entry: the present is described by the other files. The tooling
+  surfaces a task's **last entry** (see [Task object](/docs/spec/cli#task-object)) as its last
+  activity — who touched the task last, and how — never as a channel: what one actor leaves for
+  the next goes into the task's files, an input under `## Notes` of `task.md` (`note`), a
+  decision into `design.md`, the resume point into `state.md`.
 
 <Callout type="info" title="Non-normative">
   Splitting the journal from `task.md` keeps the manifest a definition and lets
   the tooling stamp every significant transition with a message — a commit message for task
   state. The reading protocol never opens the log because the present is fully described by the
-  other files; the last entry rides along as the note one actor left for the next, and the log
-  exists for audit and for "what happened yesterday across the tree".
+  other files; the last entry rides along as the last activity, and the log exists for audit and
+  for "what happened yesterday across the tree". A message is history, not a channel: the next
+  claim or priority change displaces it from the last entry, which is why an input for the next
+  actor goes under `## Notes` instead.
 </Callout>

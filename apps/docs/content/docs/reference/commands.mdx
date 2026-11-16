@@ -202,8 +202,9 @@ tasks mine [--local] [--json]
 
 Open tasks whose claimant or assignee is you: first the claims of this session, then
 your other claims (orphaned ones are yours to take over), then the tasks merely assigned
-to you — your inbox. Each row carries its situation, liveness and last log entry, which
-is where a handoff's note is read. Not restricted by `scope`. Use `--as <actor>` to see
+to you — your inbox. Each row carries its situation, liveness and last log entry, its
+last activity; what was left for you is in the task's files (`## Notes` of `task.md`,
+`design.md`, `state.md`). Not restricted by `scope`. Use `--as <actor>` to see
 someone else's.
 
 ### `tasks actors`
@@ -312,7 +313,7 @@ takes the task as its first argument and these options:
 
 | Option                 | Effect                                                                                       |
 | ---------------------- | -------------------------------------------------------------------------------------------- |
-| `-m`, `--message <text>` | The note for the log entry. **Required** by `pause`, `handoff`, `done`, `cancel` and `reopen`: it is the closing note the next reader finds. |
+| `-m`, `--message <text>` | The text of the log entry: history. **Required** by `pause`, `handoff`, `done`, `cancel` and `reopen`. An input for whoever works next goes under `## Notes` with [`tasks note`](#tasks-note), not only here. |
 | `--force`              | Override what the command's row below lists, and nothing else. Recorded in the log entry.   |
 | `--json`               | Print the task object with its derived conditions; see [transition results](/docs/reference/json-contract#transition-results). |
 
@@ -676,6 +677,23 @@ operator under `--as`, and the session. History, not state: the manifest and `up
 do not change. A line of text that would read as a log heading or a version-control
 conflict marker is refused (exit `2`). Listing entries is
 [`tasks log --since`](#tasks-log---since).
+
+### `tasks note`
+
+```sh
+tasks note <task> "<text>" [--json]
+```
+
+Append a note under `## Notes` of the task's `task.md`, dated and attributed —
+`- 2026-11-15, maria: option (b), digest only by default`, `maria via agent` under `--as` —
+and log it as `note` with the text. The one edit of a body the CLI makes: the heading is
+created at the end of the body when it is missing, a list under it is continued, prose gets
+a blank line first, and the rest of the body is left as it is; `updated` is stamped. A note
+is an input for whoever works on the task next — a decision taken, a fact learned, a link —
+so it needs no authorization: anyone may leave one on any live task, a claimed one included,
+and it is no transition. A line that would read as a markdown heading, a log heading or a
+version-control conflict marker is refused (exit `2`). `--json` prints the task object with
+its derived conditions, as a transition does.
 
 ## Archive
 

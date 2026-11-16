@@ -185,7 +185,10 @@ s:<session> (<liveness>, last seen <time>)`. Entries are never edited; merge con
 entries in time order. A commit made for the task is named in an entry's text as
 `commit <hash> on <branch>` (with the repository when it is not this one), in
 the closing message or a `tasks log` entry, so `tasks log --since` and a grep
-find it.
+find it. The log is history, never a channel: an input for whoever works on the
+task next goes under `## Notes` of `task.md` through `tasks note <task> "<text>"`,
+which appends `- <date>, <actor>: <text>` there and logs `note`; it is the one
+edit of a body the CLI makes, needs no authorization and is no transition.
 
 ## `config.yml`
 

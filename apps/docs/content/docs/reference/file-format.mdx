@@ -124,8 +124,11 @@ follows it:
 - **Notes** collects inputs received after the start: findings, links, external facts,
   the provenance of decisions ("2026-09-21, alice: keep the legacy route"). Progress
   never goes here; it goes into `state.md` and the log.
+  [`tasks note`](/docs/reference/commands#tasks-note) appends one, dated and attributed —
+  the one edit of the body the CLI makes.
 
-The CLI never rewrites or reorders the body, except to normalize leading and trailing
+The CLI never rewrites or reorders the body — `tasks note` appends under `## Notes` and
+nothing else — except to normalize leading and trailing
 whitespace when it writes the file.
 
 ## The workspace files
@@ -222,8 +225,9 @@ when `--force` went past live work.
 Entries are never edited. Two branches that both appended merge mechanically — keep
 both entries, in time order — and a `log.md` left with conflict markers is a validation
 error. Nobody reads the log on entry: the CLI surfaces only the most recent entry, as
-`last_entry` in `show`, `resume` and `mine`, because a handoff's closing note is written
-for the next reader.
+`last_entry` in `show`, `resume` and `mine`, the task's last activity. The log is history,
+not a channel: an input for the next reader goes under `## Notes` of `task.md`
+([`tasks note`](/docs/reference/commands#tasks-note)).
 
 ## `index.md`
 

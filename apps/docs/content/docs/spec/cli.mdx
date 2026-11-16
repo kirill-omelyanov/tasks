@@ -103,8 +103,9 @@ list of `{ref, reason, status}`; empty for a resolved task), `ready` (for the ca
 (`{open, resolved}`), `active` (an `IN_PROGRESS` descendant exists), `waiting_for`, `closable`,
 `liveness` and `last_seen` (`null` unless the task is `IN_PROGRESS`; `last_seen` is `null` too for a
 claim without a session), and `last_entry`: the task's most recent log entry
-in the shape of [log entries](/docs/spec/cli#log-entries) without `task`, or `null`. `mine` MUST render
-`last_entry`: it is where a handoff's note is read. `cancel` adds `dependents`: the open tasks,
+in the shape of [log entries](/docs/spec/cli#log-entries) without `task`, or `null`: the task's last
+activity, not a message channel (see [`log.md`](/docs/spec/workspace)). `mine` MUST render
+`last_entry`. `cancel` adds `dependents`: the open tasks,
 qualified by alias where foreign, whose `depends_on` names a task it cancelled (see
 [Cancellation and deletion interaction](/docs/spec/dependencies#cancellation-and-deletion-interaction)). `show` and `resume` SHOULD add `referenced_by`: the live tasks, in
 the local tree and in the trees reachable through `projects:`, whose `depends_on` or
@@ -180,6 +181,7 @@ directory for [discovery](/docs/spec/layout#discovery).
 | `archive <task> [--force]`, `archive --resolved-before [<when>] \| --all-resolved`, `restore <path>`, `purge <path>` | Archive a resolved subtree, or every resolved subtree of this tree whose root was resolved before a time (a timestamp, a date or a duration back from now), skipping and naming the roots open tasks reference; restore one to a free path, never under a resolved parent; purge an archive entry (see [`.archive/`](/docs/spec/layout#archive)). |
 | `delete <task>` | OPTIONAL: remove a never-worked task without archiving it, under the conditions in [`.archive/`](/docs/spec/layout#archive). |
 | `log <task> "<text>"`, `log --since <duration\|timestamp> [--local]` | Append a narrative entry; list entries across the tree(s) by time as [log entries](/docs/spec/cli#log-entries). |
+| `note <task> "<text>"` | Append a dated, attributed note under `## Notes` of the task's body — an input for whoever works on it next — and log it as `note`; no transition, no authorization (see [Body](/docs/spec/task-file)). |
 | `state <task> [--edit]` | OPTIONAL, RECOMMENDED: replace `state.md` with standard input, or open it in the caller's editor with `--edit`; no transition, no log entry (see [`state.md`](/docs/spec/workspace#statemd)). |
 | `heartbeat` | Touch the current session's registry file; usage error without a session. |
 | `session-end` | Mark the current session ended, orphaning its claims at once, and report them; usage error without a session (see [Heartbeats](/docs/spec/sessions#heartbeats)). |

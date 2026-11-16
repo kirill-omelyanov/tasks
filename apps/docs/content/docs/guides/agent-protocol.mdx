@@ -67,7 +67,9 @@ tasks mine --json
 ```
 
 It lists your claims first — this session's, then older ones — and then the tasks merely
-assigned to you, each with its last log entry, which is where a handoff's note is read.
+assigned to you — your inbox — each with its last log entry, its last activity. What was left
+for you is in the task's files: `## Notes` of `task.md`, `design.md`, `state.md`; `resume`
+shows them.
 
 - **Continue** a task claimed by this session.
 - **Take over** a task claimed by you in an older session once it is orphaned
@@ -92,7 +94,8 @@ plan live on the epic. `resume` lists the ancestors outermost first, with the wo
 files each one has.
 
 **Do not read `log.md` on entry.** The present is fully described by the other files;
-the last entry — the note the previous actor left — is already in the `resume` output.
+the last entry — the last activity — is already in the `resume` output. If a person's text
+reached you only there, put it under `## Notes` with `tasks note` before you claim.
 
 </Step>
 
@@ -151,9 +154,12 @@ next ready task. Never reach for `--force` to win a claim.
 
 ## Exit
 
+- **An input for whoever works next — a decision taken, a fact learned, a link — goes under
+  `## Notes` of `task.md`:** `tasks note <task> "<text>"` appends it dated and attributed, and
+  logs it. A message alone is history: the next entry displaces it.
 - **A deliberate end of work is `pause`, `handoff` or `done`, each with a message.** The
-  message is the closing note the next reader sees. Never end a session deliberately with
-  a task `IN_PROGRESS`.
+  message is the history line; the resume point is `state.md`. Never end a session deliberately
+  with a task `IN_PROGRESS`.
 
   ```sh
   tasks pause <task> -m "Parser done and tested, commit 4f1c2e on parser; the CLI flag is next (see state.md)."
@@ -198,8 +204,10 @@ tasks handoff auth-rework alice -m "Plan ready for review."
 
 While the epic is claimed or assigned, nothing beneath it is ready. The approver either
 releases the children with `tasks unassign auth-rework -m "APPLY"`, or sends the plan back
-with `tasks assign auth-rework agent -m "Split the refresh work in two."`, which keeps
-them held until the planner reworks it and hands it off again.
+with `tasks note auth-rework "Split the refresh work in two."` and
+`tasks assign auth-rework agent`, which keeps them held until the planner reworks it and hands
+it off again: the instruction sits under `## Notes`, where the planner reads it, and the
+assignment is the history line.
 
 ## A task that is not being worked
 

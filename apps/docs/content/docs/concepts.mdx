@@ -234,8 +234,10 @@ The exit protocol is part of the contract, not advice:
 - The **freshness rule**: every turn in which the work progressed ends with `state.md`
   updated. The status stays `IN_PROGRESS` between turns.
 
-The log is history and is never read on entry; the task's last entry — the note one
-actor left for the next — rides along in `show`, `resume` and `mine`.
+The log is history and is never read on entry; the task's last entry — its last activity —
+rides along in `show`, `resume` and `mine`. What one actor leaves for the next goes into the
+task's files: an input under `## Notes` of `task.md` (`tasks note`), a decision into
+`design.md`, the resume point into `state.md`.
 
 ## Sessions and liveness
 

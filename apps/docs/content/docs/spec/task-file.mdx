@@ -82,7 +82,8 @@ Constraints:
 
 Everything after the closing `---` is the body: freeform markdown owned by the author. An
 implementation MUST NOT rewrite, reformat or reorder it, except to normalize leading and trailing
-whitespace when writing the file.
+whitespace when writing the file, and to append a note under `## Notes` when asked to
+([`note`](/docs/spec/cli)).
 
 An implementation that scaffolds a body SHOULD provide `## Description`, `## Acceptance criteria`
 and `## Notes`. The intended split, RECOMMENDED for authors and for agent skills:
@@ -91,7 +92,10 @@ and `## Notes`. The intended split, RECOMMENDED for authors and for agent skills
   later changes these in place; it is not filed beside them as a contradicting note.
 - **Notes** — inputs received after the start: findings, links, external facts, the provenance of
   decisions ("2026-09-21, alice: keep the legacy route"). Progress never goes into Notes; it goes
-  into `state.md` and the log.
+  into `state.md` and the log. An implementation SHOULD offer a command that appends a note,
+  dated and attributed (`- 2026-09-21, alice: keep the legacy route`), as the one edit of the
+  body the tooling makes: an input for whoever works next is then one command away, like a log
+  message, and lands where the next reader looks rather than in the log.
 
 ## Serialization
 

@@ -63,13 +63,14 @@ Subagents use the same name and token.
    `tasks claim <task>`) before taking new work. A task held by another
    **live** session is not yours. A claim of **unknown** liveness is reported to
    the person, never forced. Another actor's orphaned claim is taken over only
-   on the person's instruction. A task merely assigned to you is your inbox; its
-   last log entry is the note left for you.
+   on the person's instruction. A task merely assigned to you is your inbox; what
+   was left for you is in its files: `## Notes` of `task.md`, `design.md`, `state.md`.
 2. **`tasks resume <task>`**, then read, in order: `task.md`, `state.md`,
    `design.md`, `plan.md`, then for each ancestor as far as needed its
    `task.md`, `design.md` and `plan.md` — an epic's design and plan live on the
-   epic. **Never read `log.md` on entry**; its last entry is already in the
-   `resume` output.
+   epic. **Never read `log.md` on entry**; its last entry, the last activity, is
+   already in the `resume` output. A person's text that reached you only there
+   goes under `## Notes` (`tasks note`) before you claim.
 3. **Claim before working**, not after: `tasks claim --next` (the first task of
    your ready set, claimed in one step) or `tasks claim <task>`. A conflict
    (exit `4`) means another agent was first: take the next ready task.
@@ -106,8 +107,11 @@ criteria` in place; an input received after the start goes to `## Notes`; a
 ## Exit
 
 - End work on a task deliberately with **`pause`**, **`handoff`** or **`done`**,
-  each with `-m` — the closing note the next reader sees. Never end a session
-  deliberately with a task `IN_PROGRESS`.
+  each with `-m`, the history line; the resume point is `state.md`. Never end a
+  session deliberately with a task `IN_PROGRESS`.
+- An input for whoever works next — a decision, a fact, a link — goes under
+  `## Notes` of `task.md`: `tasks note <task> "<text>"`, dated and attributed,
+  logged. A message alone is history; the next entry displaces it.
 - `pause` and `handoff` are refused without a `state.md`; write it first.
   `release` is only for a claim that produced nothing.
 - `state.md` names, under _Open_, every uncommitted file and branch you leave.
@@ -190,7 +194,8 @@ full path, an unambiguous suffix, or `alias:path` in a listed project.
 | `tasks new <path> <title…>`                                                     | Create a task.                                                                                                                                                |
 | `tasks dep add\|rm\|list` / `tasks after add\|rm\|list`                         | Edit and inspect the gates.                                                                                                                                   |
 | `tasks move <source> <destination>`                                             | Relocate a task or group, rewriting every reference.                                                                                                          |
-| `tasks log <task> "<text>"` / `tasks log --since 1d`                            | Narrative entry (a commit made, a decision); recent history across trees.                                                                                     |
+| `tasks log <task> "<text>"` / `tasks log --since 1d`                            | Narrative entry (a commit made, what happened); recent history across trees.                                                                                  |
+| `tasks note <task> "<text>"`                                                    | An input for whoever works next, under `## Notes` of `task.md`; logged.                                                                                       |
 | `tasks archive`, `restore`, `purge`, `delete`                                   | Archive a resolved subtree (`--resolved-before 30d`: all older ones); undo; release a path; remove unworked.                                                  |
 | `tasks session-check` / `heartbeat` / `session-end`                             | Exit invariant; liveness (run by the harness).                                                                                                                |
 | `tasks validate [--fix]` / `tasks reindex`                                      | Check the tree; regenerate `index.md`.                                                                                                                        |

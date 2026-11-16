@@ -214,8 +214,9 @@ tasks actors [--local] [--json]
 ```
 
 Who is around: the actors `config.yml` lists under
-[`actors`](/docs/reference/configuration#actors), in their order, each with its
-description and how many open tasks it has claimed and is assigned; then, by name, every
+[`actors`](/docs/reference/configuration#actors), in their order, each with its type
+(`person` or `agent`), its description and how many open tasks it has claimed and is
+assigned; then, by name, every
 other actor an open task names — a name to add to the roster, or to correct — and you,
 marked `(you)`. The counts span the listed projects unless `--local`; `listed` is judged by
 this tree's roster alone, so an actor a listed project names in its own `config.yml` shows
@@ -320,7 +321,12 @@ takes the task as its first argument and these options:
 **Writes** the task's frontmatter (status, claim fields, assignee or priority, and
 `updated`) and one log entry whose first line names the command —
 `pause: IN_PROGRESS → PAUSED`, `handoff alice: IN_PROGRESS → PAUSED`, `assign: alice`,
-`unassign`, `priority: high` — with ` (forced)` appended to it when forced; then a
+`unassign`, `priority: high` — with ` (forced)` appended to it when forced. A `pause` by a
+person ([`type`](/docs/reference/configuration#actors) in the roster; any unlisted name but
+`agent`) on a task with no assignee sets the assignee to the caller — the task waits for
+them, `waiting for tom`, until they `unassign` or `handoff` it — and its first line reads
+`pause tom: IN_PROGRESS → PAUSED`; an agent's pause leaves the task free, first in `ready`.
+The human output says which happened. Then a
 `supersedes …` line when the command went past a claim that was not the caller's (an
 orphaned one, or a live or unknown one under `--force`); then, on the task a cascade was
 ordered on, a `reached: …` line; then the message. A cascade writes every task it

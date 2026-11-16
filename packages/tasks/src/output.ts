@@ -339,7 +339,7 @@ export function renderMine(
  */
 export function renderActors(result: ActorsJson): string {
   const lines: Array<string[] | string> = [
-    ["ACTOR", "DESCRIPTION", "OPEN"].map((head) => pc.bold(head)),
+    ["ACTOR", "TYPE", "DESCRIPTION", "OPEN"].map((head) => pc.bold(head)),
   ];
   for (const row of result.actors) {
     const name =
@@ -355,6 +355,7 @@ export function renderActors(result: ActorsJson): string {
     ];
     lines.push([
       name,
+      row.type,
       description,
       open.length === 0 ? pc.dim("—") : open.join(" · "),
     ]);

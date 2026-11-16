@@ -1,7 +1,7 @@
 import type { CommandContext } from "../context.js";
 import { resolveScope } from "../context.js";
 import { TaskError } from "../errors.js";
-import { assertListedActor } from "./actors.js";
+import { actorTypeOf, assertListedActor } from "./actors.js";
 import type { SupersededClaim } from "./authorization.js";
 import {
   authorizationDetailsOf,
@@ -63,6 +63,7 @@ import {
   fieldLine,
   handoffLine,
   logEntryFor,
+  pauseLine,
   reachedLine,
   takeoverLine,
   transitionLine,
@@ -1015,11 +1016,18 @@ async function write(
 
   const next = nextFrontmatter(run, task, to);
   if (next !== null) await writeTask({ ...task, frontmatter: next });
+  // A pause that set the assignee kept the task for the caller.
+  const kept =
+    run.command === "pause" &&
+    task.frontmatter.assignee === null &&
+    next?.assignee != null
+      ? next.assignee
+      : null;
   const ids = reached.map((reach) => reach.task.id).sort(compareIds);
   await appendLogEntry(
     task.dir,
     logEntryFor(run.identity, now, [
-      firstLine(run, from, to, options),
+      firstLine(run, from, to, options, kept),
       supersededLine(superseded),
       ids.length > 0 ? reachedLine(ids) : null,
       message,
@@ -1059,10 +1067,27 @@ function nextFrontmatter(run: Run, task: Task, to: Status): Frontmatter | null {
       };
     case "handoff":
       return { ...fm, status: to, ...NO_CLAIM, assignee: value, updated: now };
+    case "pause":
+      // A person comes back to their own work: the task waits for them. An
+      // agent is any run under its name, so its pause leaves the task free.
+      return {
+        ...fm,
+        status: to,
+        ...NO_CLAIM,
+        assignee: fm.assignee ?? keptFor(run),
+        updated: now,
+      };
     default:
       // Every other status is unclaimed: the claim fields go with the claim.
       return { ...fm, status: to, ...NO_CLAIM, updated: now };
   }
+}
+
+/** The caller, when their pause would keep the task; `null` for an agent. */
+function keptFor(run: Run): string | null {
+  return actorTypeOf(run.tree.config, run.identity.actor) === "person"
+    ? run.identity.actor
+    : null;
 }
 
 function firstLine(
@@ -1070,9 +1095,12 @@ function firstLine(
   from: Status,
   to: Status,
   options: LineOptions,
+  kept: string | null,
 ): string {
   const value = run.prepared.value ?? "";
   switch (run.command) {
+    case "pause":
+      return pauseLine(kept, options);
     case "handoff":
       return handoffLine(value, options);
     case "assign":

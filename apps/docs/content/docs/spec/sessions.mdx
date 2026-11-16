@@ -36,6 +36,15 @@ command that opens the tree, where stderr is not reserved for the JSON envelope.
 SHOULD offer a command (`actors`) that lists the roster with each
 actor's description and open tasks, and names the actors open tasks carry that the roster lacks.
 
+Each actor has a **type**, `person` or `agent`. An entry written as a description or nothing
+is a person; the name `agent` is an agent, by the convention above; an entry written as a
+mapping says so itself (`codex: { type: agent, description: a second coding agent }`). An
+unlisted name is a person, `agent` excepted. The type tells an actor who comes back to their
+own work from one whose every run acts under the same name, and it decides what a `pause`
+leaves behind: a person's keeps the task for them, an agent's leaves it free
+([Transitions](/docs/spec/lifecycle#transitions)). An implementation MUST report the type in
+the [actors object](/docs/spec/cli#actors-object).
+
 <Callout type="info" title="Non-normative">
   Two actors share one machine in the target mode: the maintainer's terminal
   takes the git identity, the agent's harness exports `TASKS_ACTOR`. By convention the agent's
@@ -84,7 +93,8 @@ For an `IN_PROGRESS` task, the claim's liveness is:
 | **orphaned** | `claimed_session` is non-null and its heartbeat is older than the timeout, or its registry file is marked `ended`. |
 | **unknown** | `claimed_session` is null, or no heartbeat file exists for it (another machine, or a cleaned `.locks/`). |
 
-A null session is the normal state of a claim taken by a person at a terminal, not a finding. A
+A null session is the normal state of a claim taken at a terminal without a harness — nothing
+will heartbeat for it, whoever took it — and not a finding. A
 non-null session without a heartbeat file came from another machine or survived a cleaned
 registry, and is worth a warning. Overview commands MUST label every `IN_PROGRESS` task that has a
 session with its liveness and, when the claim is orphaned, with the time last seen; a claim

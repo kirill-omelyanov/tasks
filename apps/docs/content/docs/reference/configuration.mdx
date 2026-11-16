@@ -150,11 +150,17 @@ actors:
   alice: maintainer; approves plans and does releases
   agent: the coding agent
   bob:
+  codex: { type: agent, description: a second coding agent }
 ```
 
 The roster: who tasks may be assigned to, each with a line on who they are — what an
 agent reads to pick the right person for a `handoff`. Names match the actor pattern; a
-bare name (`bob:`) needs no description. With at least one actor listed:
+bare name (`bob:`) needs no description. Each actor has a **type**: an entry written as a
+description or nothing is a `person`, the name `agent` is an `agent` by convention, and an
+entry written as a mapping says so itself (`codex: { type: agent, description: … }`); an
+unlisted name is a person, `agent` excepted. The type decides what a `pause` leaves behind
+(see [`tasks pause`](/docs/reference/commands#transitions)): a person's keeps the task for
+them, an agent's leaves it free. With at least one actor listed:
 
 - `tasks assign`, `tasks handoff` and `tasks new --assign` refuse a name that is not
   listed, with exit `2`, naming the listed actors and the file; a name that differs in
@@ -262,8 +268,8 @@ and Windows refuses its reserved names (`CON`, `NUL`) as tokens.
 With a session known, the CLI records it in `claimed_session` on `claim`, in every log
 heading it writes (`s:<token>`), and touches the session's heartbeat in this tree and in
 every listed tree before doing anything else. A claim taken without a session is normal
-for a person at a terminal; its liveness is `unknown`, so nobody else can take it over
-without `--force`.
+at a terminal without a harness; its liveness is `unknown`, since nothing heartbeats for
+it, so nobody else can take it over without `--force`.
 
 An agent uses one token for the whole session, on every command. With the harness
 hooks, `TASKS_SESSION` is exported for it; without them, generate a token once at the

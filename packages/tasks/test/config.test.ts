@@ -74,12 +74,52 @@ actors:
   carol.d@example.com: "  reviews: everything  "
 `);
     expect(Object.entries(config.actors)).toEqual([
-      ["alice", "maintainer; approves plans and does releases"],
-      ["bob", null],
-      ["agent", null],
-      ["carol.d@example.com", "reviews: everything"],
+      [
+        "alice",
+        {
+          type: "person",
+          description: "maintainer; approves plans and does releases",
+        },
+      ],
+      ["bob", { type: "person", description: null }],
+      // The conventional name is an agent without saying so.
+      ["agent", { type: "agent", description: null }],
+      [
+        "carol.d@example.com",
+        { type: "person", description: "reviews: everything" },
+      ],
     ]);
     expect(Object.hasOwn(config.actors, "constructor")).toBe(false);
+  });
+
+  it("reads an actor's type from the mapping form, and refuses what it does not know", () => {
+    const config = v2(`version: 2
+actors:
+  codex: { type: agent, description: a second coding agent }
+  bot:
+    type: agent
+  agent: { type: person, description: "a person who took the name" }
+  dana: { description: "" }
+`);
+    expect(Object.entries(config.actors)).toEqual([
+      ["codex", { type: "agent", description: "a second coding agent" }],
+      ["bot", { type: "agent", description: null }],
+      ["agent", { type: "person", description: "a person who took the name" }],
+      ["dana", { type: "person", description: null }],
+    ]);
+    expect(
+      usage(() => v2("version: 2\nactors:\n  codex: { type: robot }\n"))
+        .message,
+    ).toContain('actor "codex" has type "robot"; expected person or agent');
+    expect(
+      usage(() => v2("version: 2\nactors:\n  codex: { kind: agent }\n"))
+        .message,
+    ).toContain('actor "codex" has an unknown key "kind"');
+    expect(
+      usage(() =>
+        v2("version: 2\nactors:\n  codex: { type: agent, description: 3 }\n"),
+      ).message,
+    ).toContain("must carry a one-line description or nothing");
   });
 
   it("refuses a name YAML would read as something else, and takes it quoted", () => {
@@ -90,8 +130,8 @@ actors:
     }
     const config = v2('version: 2\nactors:\n  "007": someone\n  "true":\n');
     expect(Object.entries(config.actors)).toEqual([
-      ["007", "someone"],
-      ["true", null],
+      ["007", { type: "person", description: "someone" }],
+      ["true", { type: "person", description: null }],
     ]);
     expect(renderConfig(config)).toBe(
       'version: 2\nactors:\n  "007": someone\n  "true":\n',
@@ -415,9 +455,21 @@ projects:
 
   it("writes the actors, then the docs, then the projects, a bare name without a value", () => {
     const config = defaultConfig();
-    config.actors.alice = "maintainer; approves plans and does releases";
-    config.actors.bob = null;
-    config.actors.agent = "the coding agent: Claude";
+    config.actors.alice = {
+      type: "person",
+      description: "maintainer; approves plans and does releases",
+    };
+    config.actors.bob = { type: "person", description: null };
+    config.actors.agent = {
+      type: "agent",
+      description: "the coding agent: Claude",
+    };
+    // A type the name does not imply is written out; the others go without.
+    config.actors.codex = {
+      type: "agent",
+      description: "a second coding agent",
+    };
+    config.actors.bot = { type: "agent", description: null };
     config.docs.engineering = "docs/engineering";
     config.docs.api = "../api docs";
     config.projects.backend = "../backend";
@@ -426,6 +478,11 @@ actors:
   alice: "maintainer; approves plans and does releases"
   bob:
   agent: "the coding agent: Claude"
+  codex:
+    type: agent
+    description: "a second coding agent"
+  bot:
+    type: agent
 docs:
   engineering: docs/engineering
   api: "../api docs"

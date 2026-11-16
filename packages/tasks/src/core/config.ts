@@ -8,8 +8,11 @@ import { findProject } from "./discovery.js";
 import { yamlScalar } from "./frontmatter.js";
 import { errnoCode, isDirectory } from "./fs-utils.js";
 import { isMachineBoundPath, isTaskPath } from "./ids.js";
+import type { ActorEntry, ActorType } from "./types.js";
 import {
   ACTOR_PATTERN,
+  ACTOR_TYPES,
+  AGENT_ACTOR,
   CONFIG_FILENAME,
   CONVENTION_VERSION,
   DEFAULT_SESSION_TIMEOUT_MINUTES,
@@ -24,10 +27,10 @@ export interface Config {
   /** Days after which a resolved task is expected to be archived; `null` unset. */
   archiveResolvedAfterDays: number | null;
   /**
-   * Actor → a one-line description or `null`, in configured order: the
+   * Actor → its type and one-line description, in configured order: the
    * roster of who tasks may be assigned to. Has no prototype.
    */
-  actors: Record<string, string | null>;
+  actors: Record<string, ActorEntry>;
   /**
    * Name → path relative to the project root, a directory or a file, inside
    * the repository or beside it: where the project's documentation lives,
@@ -76,7 +79,7 @@ export function defaultConfig(): Config {
     scope: null,
     sessionTimeoutMinutes: DEFAULT_SESSION_TIMEOUT_MINUTES,
     archiveResolvedAfterDays: null,
-    actors: Object.create(null) as Record<string, string | null>,
+    actors: Object.create(null) as Record<string, ActorEntry>,
     docs: Object.create(null) as Record<string, string>,
     projects: Object.create(null) as Record<string, string>,
   };
@@ -167,6 +170,74 @@ function rawActorKeys(source: string): string[] {
   }
 }
 
+/** `person`, unless the name is the agent's by convention. */
+export function defaultActorType(actor: string): ActorType {
+  return actor === AGENT_ACTOR ? "agent" : "person";
+}
+
+function isActorType(value: unknown): value is ActorType {
+  return typeof value === "string" && ACTOR_TYPES.includes(value as ActorType);
+}
+
+/** A one-line description, trimmed; `null` for nothing. */
+function actorDescription(
+  file: string,
+  actor: string,
+  value: unknown,
+): string | null {
+  if (value !== null && value !== undefined && typeof value !== "string") {
+    throw invalid(
+      file,
+      `actor "${actor}" must carry a one-line description or nothing, got ${describe(value)}.`,
+      "actors",
+    );
+  }
+  const line = value?.trim() ?? "";
+  if (/[\r\n]/.test(line)) {
+    throw invalid(
+      file,
+      `actor "${actor}" must carry a one-line description, got several lines.`,
+      "actors",
+    );
+  }
+  return line === "" ? null : line;
+}
+
+/**
+ * The value of an `actors:` entry: a description or nothing (the common
+ * form, a person unless the name is `agent`), or a mapping with `type` and
+ * `description` for an agent under another name.
+ */
+function actorEntry(file: string, actor: string, value: unknown): ActorEntry {
+  if (!isMapping(value)) {
+    return {
+      type: defaultActorType(actor),
+      description: actorDescription(file, actor, value),
+    };
+  }
+  for (const key of Object.keys(value)) {
+    if (key !== "type" && key !== "description") {
+      throw invalid(
+        file,
+        `actor "${actor}" has an unknown key "${key}"; an actor carries type and description.`,
+        "actors",
+      );
+    }
+  }
+  const type = value.type ?? defaultActorType(actor);
+  if (!isActorType(type)) {
+    throw invalid(
+      file,
+      `actor "${actor}" has type ${describe(value.type)}; expected ${ACTOR_TYPES.join(" or ")}.`,
+      "actors",
+    );
+  }
+  return {
+    type,
+    description: actorDescription(file, actor, value.description),
+  };
+}
+
 function parseV2(
   doc: Record<string, unknown>,
   file: string,
@@ -239,7 +310,7 @@ function parseV2(
         "actors",
       );
     }
-    for (const [actor, description] of Object.entries(actors)) {
+    for (const [actor, value] of Object.entries(actors)) {
       if (!ACTOR_PATTERN.test(actor)) {
         throw invalid(
           file,
@@ -247,22 +318,7 @@ function parseV2(
           "actors",
         );
       }
-      if (description !== null && typeof description !== "string") {
-        throw invalid(
-          file,
-          `actor "${actor}" must carry a one-line description or nothing, got ${describe(description)}.`,
-          "actors",
-        );
-      }
-      const line = description?.trim() ?? "";
-      if (/[\r\n]/.test(line)) {
-        throw invalid(
-          file,
-          `actor "${actor}" must carry a one-line description, got several lines.`,
-          "actors",
-        );
-      }
-      config.actors[actor] = line === "" ? null : line;
+      config.actors[actor] = actorEntry(file, actor, value);
     }
     for (const raw of rawActors) {
       if (!Object.hasOwn(config.actors, raw)) {
@@ -471,12 +527,20 @@ export function renderConfig(config: Config): string {
   const actors = Object.entries(config.actors);
   if (actors.length > 0) {
     lines.push("actors:");
-    for (const [actor, description] of actors) {
-      lines.push(
-        description === null
-          ? `  ${yamlScalar(actor)}:`
-          : `  ${yamlScalar(actor)}: ${yamlScalar(description)}`,
-      );
+    for (const [actor, entry] of actors) {
+      const description =
+        entry.description === null ? null : yamlScalar(entry.description);
+      if (entry.type === defaultActorType(actor)) {
+        // The common form: the type goes without saying.
+        lines.push(
+          description === null
+            ? `  ${yamlScalar(actor)}:`
+            : `  ${yamlScalar(actor)}: ${description}`,
+        );
+      } else {
+        lines.push(`  ${yamlScalar(actor)}:`, `    type: ${entry.type}`);
+        if (description !== null) lines.push(`    description: ${description}`);
+      }
     }
   }
   const docs = Object.entries(config.docs);

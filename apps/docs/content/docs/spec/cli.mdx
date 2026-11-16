@@ -148,13 +148,14 @@ with its alias for a foreign tree, `via` and `session` are `null` when the headi
 ## Actors object
 
 ```json
-{ "actor": "agent", "via": null, "projects": ["backend"], "actors": [ { "actor": "alice", "description": "maintainer; approves plans and does releases", "listed": true, "claimed": 1, "assigned": 2 } ], "unavailable": [] }
+{ "actor": "agent", "via": null, "projects": ["backend"], "actors": [ { "actor": "alice", "type": "person", "description": "maintainer; approves plans and does releases", "listed": true, "claimed": 1, "assigned": 2 } ], "unavailable": [] }
 ```
 
 `actor` and `via` are the caller's identity as `init` reports it. `actors` lists the roster in its
 configured order, then by name every other actor an open task of the spanned trees names, and the
-caller; each row carries `description` (the roster's line, or `null`), `listed`, and the open
-tasks the actor is `claimed` on and `assigned` to. `projects` and `unavailable` are as in the
+caller; each row carries `type` (`person` or `agent`, see [Actors](/docs/spec/sessions#actors)),
+`description` (the roster's line, or `null`), `listed`, and the open tasks the actor is `claimed`
+on and `assigned` to. `projects` and `unavailable` are as in the
 [collection object](/docs/spec/cli#collection-object).
 
 ## Commands

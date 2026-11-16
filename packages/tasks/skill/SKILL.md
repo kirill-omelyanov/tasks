@@ -37,8 +37,8 @@ tasks mine --json
 
 ## Your name and session token
 
-You act as **`agent`** (unless `tasks actors` lists another name for the
-agent) with **one session token on every command** of this session: a claim
+You act as **`agent`** (unless `tasks actors` lists another name of type
+`agent`) with **one session token on every command** of this session: a claim
 without one has unknown liveness, so nobody takes it over without force, and
 your own next session can only `pause` it as the same actor and claim it again.
 Subagents use the same name and token.
@@ -108,7 +108,9 @@ criteria` in place; an input received after the start goes to `## Notes`; a
 
 - End work on a task deliberately with **`pause`**, **`handoff`** or **`done`**,
   each with `-m`, the history line; the resume point is `state.md`. Never end a
-  session deliberately with a task `IN_PROGRESS`.
+  session deliberately with a task `IN_PROGRESS`. Your `pause` releases the task
+  to whoever is free, first in `ready`; a person's `pause` keeps the task for
+  them (`waiting for tom`), so such a task is not yours to take.
 - An input for whoever works next — a decision, a fact, a link — goes under
   `## Notes` of `task.md`: `tasks note <task> "<text>"`, dated and attributed,
   logged. A message alone is history; the next entry displaces it.

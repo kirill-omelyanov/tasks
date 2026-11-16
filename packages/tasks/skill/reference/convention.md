@@ -124,7 +124,7 @@ is effective priority, then `PAUSED` before `TODO`, then `created`.
 | `schedule`                       | `BACKLOG` → `PAUSED` with a `state.md`, else `TODO`                                           | no `BACKLOG` ancestor; cascades                      |
 | `defer`                          | `TODO`, `PAUSED` → `BACKLOG`                                                                  | no live claim beneath; cascades                      |
 | `claim`                          | `BACKLOG`, `TODO`, `PAUSED` → `IN_PROGRESS`                                                   | start gate; parent open; no held or backlog ancestor |
-| `pause`                          | `IN_PROGRESS` → `PAUSED`                                                                      | `state.md`; message                                  |
+| `pause`                          | `IN_PROGRESS` → `PAUSED`; a person's sets `assignee`                                          | `state.md`; message                                  |
 | `release`                        | `IN_PROGRESS` → `TODO`                                                                        | no `state.md`                                        |
 | `done`                           | open → `DONE`                                                                                 | start and finish gates; message                      |
 | `cancel`                         | open → `CANCELLED`                                                                            | no live claim beneath; message; cascades             |
@@ -200,6 +200,7 @@ archive_resolved_after_days: 30 # resolved this long ago and still live: reporte
 actors: # who tasks may be assigned to, each with a line on who they are
   alice: maintainer; approves plans and does releases
   agent: the coding agent
+  codex: { type: agent, description: a second coding agent }
 docs: # where the project's documentation lives; brought up to date before done
   engineering: docs/engineering
   api: ../api-docs
@@ -220,7 +221,12 @@ holds the task, the local one for `--as`), an unlisted acting identity is report
 on stderr (not under `--json`) but not refused, and `validate`
 warns `unknown-actor` for an open task whose assignee or claimant is unlisted.
 `tasks actors` shows the roster with each actor's open tasks, and
-`tasks init --actors [<names>]` writes the key from the start.
+`tasks init --actors [<names>]` writes the key from the start. Each actor has a
+`type`, `person` or `agent`: a bare entry is a person, the name `agent` an agent,
+a mapping (`codex: { type: agent, description: … }`) says so itself; an unlisted
+name is a person, `agent` excepted. A person's `pause` keeps the task for them
+(assignee set, `pause tom: IN_PROGRESS → PAUSED` in the log); an agent's leaves
+it free.
 
 `docs` names where the project's documentation lives: name → path relative to
 the project root, a directory or a file, inside the repository or beside it

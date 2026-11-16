@@ -357,6 +357,7 @@ describe("tasks actors", () => {
       actors: [
         {
           actor: "alice",
+          type: "person",
           description: ROSTER.alice,
           listed: true,
           claimed: 1,
@@ -364,6 +365,7 @@ describe("tasks actors", () => {
         },
         {
           actor: "tester",
+          type: "person",
           description: null,
           listed: true,
           claimed: 1,
@@ -371,6 +373,7 @@ describe("tasks actors", () => {
         },
         {
           actor: "agent",
+          type: "agent",
           description: ROSTER.agent,
           listed: true,
           claimed: 0,
@@ -378,6 +381,7 @@ describe("tasks actors", () => {
         },
         {
           actor: "yuri",
+          type: "person",
           description: null,
           listed: false,
           claimed: 0,
@@ -385,6 +389,7 @@ describe("tasks actors", () => {
         },
         {
           actor: "zed",
+          type: "person",
           description: null,
           listed: false,
           claimed: 0,
@@ -412,12 +417,12 @@ describe("tasks actors", () => {
     expect(result.code).toBe(0);
     const out = plain(result.stdout);
     expect(out).toMatch(
-      /^alice +maintainer; approves plans and does releases +1 claimed · 2 assigned$/m,
+      /^alice +person +maintainer; approves plans and does releases +1 claimed · 2 assigned$/m,
     );
-    expect(out).toMatch(/^tester \(you\) +1 claimed$/m);
-    expect(out).toMatch(/^agent +the coding agent +—$/m);
+    expect(out).toMatch(/^tester \(you\) +person +1 claimed$/m);
+    expect(out).toMatch(/^agent +agent +the coding agent +—$/m);
     expect(out).toMatch(
-      /^zed +not listed in this tree's config.yml +1 assigned$/m,
+      /^zed +person +not listed in this tree's config.yml +1 assigned$/m,
     );
     expect(out).toContain("3 listed actors · projects backend");
   });
@@ -428,6 +433,7 @@ describe("tasks actors", () => {
     expect(result.json<ActorsJson>().actors).toEqual([
       {
         actor: "alice",
+        type: "person",
         description: null,
         listed: false,
         claimed: 0,
@@ -435,6 +441,7 @@ describe("tasks actors", () => {
       },
       {
         actor: "tester",
+        type: "person",
         description: null,
         listed: false,
         claimed: 0,

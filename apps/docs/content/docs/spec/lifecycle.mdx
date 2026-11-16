@@ -128,7 +128,7 @@ marked `(inherited)` when it is an ancestor's.
 | `schedule` | `BACKLOG` | `PAUSED` when `state.md` exists, else `TODO` | authorization; no ancestor in `BACKLOG` | cascades to `BACKLOG` descendants ([Containment](/docs/spec/containment)) |
 | `defer` | `TODO`, `PAUSED` | `BACKLOG` | authorization; cascade liveness rule | `state.md` is kept; cascades to open descendants ([Containment](/docs/spec/containment)) |
 | `claim` | `BACKLOG`, `TODO`, `PAUSED` | `IN_PROGRESS` | authorization; start gate satisfied; the task's parent is open; no ancestor in `BACKLOG`; no ancestor claimed or assigned | sets `claimed_by`, `claimed_at`, `claimed_session` |
-| `pause` | `IN_PROGRESS` | `PAUSED` | claimant; `state.md` exists; message | clears the claim |
+| `pause` | `IN_PROGRESS` | `PAUSED` | claimant; `state.md` exists; message | clears the claim; when the task has no assignee and the caller is a person ([Actors](/docs/spec/sessions#actors)), sets `assignee` to the caller — the task waits for them; an agent's pause leaves it free |
 | `release` | `IN_PROGRESS` | `TODO` | claimant; no `state.md` exists | clears the claim |
 | `done` | any open | `DONE` | authorization; start gate satisfied; finish gate satisfied; message | clears the claim |
 | `cancel` | any open | `CANCELLED` | authorization; cascade liveness rule; message | clears the claim; cascades to open descendants ([Containment](/docs/spec/containment)) |

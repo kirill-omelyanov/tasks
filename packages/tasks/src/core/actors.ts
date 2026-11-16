@@ -2,7 +2,9 @@ import path from "node:path";
 
 import { TaskError } from "../errors.js";
 import type { Config } from "./config.js";
+import { defaultActorType } from "./config.js";
 import type { Project } from "./discovery.js";
+import type { ActorType } from "./types.js";
 import { ACTOR_ENV, CONFIG_FILENAME } from "./types.js";
 
 /**
@@ -29,7 +31,17 @@ export function isListed(config: Config, actor: string): boolean {
 
 /** The line `config.yml` gives a listed actor, else `null`. */
 export function descriptionOf(config: Config, actor: string): string | null {
-  return isListed(config, actor) ? (config.actors[actor] ?? null) : null;
+  return isListed(config, actor)
+    ? (config.actors[actor]?.description ?? null)
+    : null;
+}
+
+/**
+ * What the actor is: the roster's `type` when it lists the actor, else
+ * `agent` for the conventional name and `person` for any other.
+ */
+export function actorTypeOf(config: Config, actor: string): ActorType {
+  return config.actors[actor]?.type ?? defaultActorType(actor);
 }
 
 function configFileOf(project: Project): string {

@@ -494,6 +494,18 @@ export function handoffLine(actor: string, options?: LineOptions): string {
   return `handoff ${actor}: IN_PROGRESS ${ARROW} PAUSED${forcedMark(options)}`;
 }
 
+/**
+ * `pause: IN_PROGRESS → PAUSED`, or `pause tom: IN_PROGRESS → PAUSED` when the
+ * pause kept the task for `keptFor`, in the form of a handoff to oneself.
+ */
+export function pauseLine(
+  keptFor: string | null,
+  options?: LineOptions,
+): string {
+  const who = keptFor === null ? "" : ` ${keptFor}`;
+  return `pause${who}: IN_PROGRESS ${ARROW} PAUSED${forcedMark(options)}`;
+}
+
 /** `assign: alice`, `priority: high`. */
 export function fieldLine(
   command: "assign" | "priority",

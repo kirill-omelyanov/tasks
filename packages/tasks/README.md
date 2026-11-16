@@ -139,6 +139,7 @@ archive_resolved_after_days: 30 # resolved this long ago and still live: validat
 actors: # who tasks may be assigned to; once any is listed, other names are refused
   alice: maintainer; approves plans and does releases
   agent: the coding agent
+  codex: { type: agent, description: a second coding agent }
 docs: # where the project's documentation lives; an agent brings it up to date before done
   engineering: docs/engineering
   api: ../api-docs
@@ -161,7 +162,10 @@ assigned to under `actors:` — `assign`, `handoff`, `new --assign` and `--as` t
 refuse other names, `validate` flags an unlisted assignee or claimant, and
 `tasks actors` shows who is around. `tasks init --actors` writes the list from
 the start; without the flag the scaffold carries your name and `agent`
-commented out, ready to switch on.
+commented out, ready to switch on. Each actor has a `type`, `person` or `agent`
+(a bare entry is a person, the name `agent` an agent, `codex: { type: agent }`
+says so itself): a person's `pause` keeps the task for them, an agent's leaves
+it free for whoever is next.
 
 The **session** is `--session <token>`, else `TASKS_SESSION`. A claim records it,
 every command with a session keeps its heartbeat fresh, and a claim whose session

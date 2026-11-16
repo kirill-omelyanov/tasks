@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { Config } from "../src/core/config.js";
 import {
+  defaultActorType,
   defaultConfig,
   parseConfigText,
   renderConfig,
@@ -10,6 +11,7 @@ import {
 import { renderTaskFile } from "../src/core/frontmatter.js";
 import { idToNative, nameOf } from "../src/core/ids.js";
 import type {
+  ActorType,
   ExtraKeys,
   Frontmatter,
   Priority,
@@ -70,7 +72,10 @@ export interface TreeSpec {
   scope?: string | null;
   session_timeout_minutes?: number;
   /** The roster: actor → description or `null`. */
-  actors?: Record<string, string | null>;
+  actors?: Record<
+    string,
+    string | null | { type?: ActorType; description?: string | null }
+  >;
   /** Documentation locations: name → path relative to the project root. */
   docs?: Record<string, string>;
   projects?: Record<string, string>;
@@ -159,7 +164,15 @@ export function specConfig(spec: TreeSpec): Config {
   if (spec.session_timeout_minutes !== undefined) {
     config.sessionTimeoutMinutes = spec.session_timeout_minutes;
   }
-  Object.assign(config.actors, spec.actors ?? {});
+  for (const [actor, value] of Object.entries(spec.actors ?? {})) {
+    config.actors[actor] =
+      value === null || typeof value === "string"
+        ? { type: defaultActorType(actor), description: value }
+        : {
+            type: value.type ?? defaultActorType(actor),
+            description: value.description ?? null,
+          };
+  }
   Object.assign(config.docs, spec.docs ?? {});
   Object.assign(config.projects, spec.projects ?? {});
   return config;

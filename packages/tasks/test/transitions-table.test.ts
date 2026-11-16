@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { TransitionJson } from "../src/core/transitions.js";
+import type { CollectionJson } from "../src/core/types.js";
 import { DEFAULT_STATE, FIXTURE_TIME } from "./fixtures.js";
-import type { Sandbox } from "./helpers.js";
+import type { CliResult, Sandbox } from "./helpers.js";
 import { treeSandbox } from "./helpers.js";
 import {
   errorOf,
@@ -150,16 +151,104 @@ describe("pause", () => {
       "--json",
     );
     expect(result.code).toBe(0);
+    // A person's pause keeps the task for them: the assignee is set.
     expect(await frontmatterOf(sandbox, "a")).toMatchObject({
       status: "PAUSED",
       claimed_by: null,
       claimed_at: null,
       claimed_session: null,
+      assignee: "tester",
     });
     await expectStamped("a");
     expect(await logTexts(sandbox, "a")).toEqual([
-      "pause: IN_PROGRESS → PAUSED\ntests green",
+      "pause tester: IN_PROGRESS → PAUSED\ntests green",
     ]);
+    expect(result.json<TransitionJson>()).toMatchObject({
+      situation: "waiting",
+      waiting_for: "tester",
+    });
+  });
+
+  it("keeps the task for a person and releases it for an agent", async () => {
+    sandbox = await treeSandbox({
+      actors: {
+        tester: null,
+        maria: null,
+        codex: { type: "agent" },
+        agent: null,
+      },
+      tasks: {
+        mine: { status: "IN_PROGRESS", state: true },
+        hers: { status: "IN_PROGRESS", claimed_by: "maria", state: true },
+        bot: { status: "IN_PROGRESS", claimed_by: "codex", state: true },
+        conv: { status: "IN_PROGRESS", claimed_by: "agent", state: true },
+        held: {
+          status: "IN_PROGRESS",
+          claimed_by: "tester",
+          assignee: "maria",
+          state: true,
+        },
+      },
+    });
+    const human = await sandbox.run("pause", "mine", "-m", "back tomorrow");
+    expect(human.code).toBe(0);
+    expect(plain(human.stdout)).toContain(
+      "kept for you: tasks unassign mine releases it, handoff passes it on",
+    );
+    expect((await frontmatterOf(sandbox, "mine")).assignee).toBe("tester");
+
+    // A person acting through an operator keeps it for the person.
+    const viaAgent = await sandbox.session("s1")(
+      "--as",
+      "maria",
+      "pause",
+      "hers",
+      "-m",
+      "later",
+    );
+    expect(viaAgent.code).toBe(0);
+    expect((await frontmatterOf(sandbox, "hers")).assignee).toBe("maria");
+    expect(await logTexts(sandbox, "hers")).toEqual([
+      "pause maria: IN_PROGRESS → PAUSED\nlater",
+    ]);
+
+    // An agent, listed as one or by its conventional name, leaves it free.
+    for (const [id, actor] of [
+      ["bot", "codex"],
+      ["conv", "agent"],
+    ] as const) {
+      const result = await sandbox.session("s2")(
+        "--as",
+        actor,
+        "pause",
+        id,
+        "-m",
+        "session over",
+      );
+      expect(result.code).toBe(0);
+      expect(plain(result.stdout)).toContain(
+        "released: first in ready for whoever is free",
+      );
+      expect((await frontmatterOf(sandbox, id)).assignee).toBeNull();
+      expect(await logTexts(sandbox, id)).toEqual([
+        "pause: IN_PROGRESS → PAUSED\nsession over",
+      ]);
+    }
+
+    // An assignee already set stays, whoever pauses.
+    expect((await sandbox.run("pause", "held", "-m", "x")).code).toBe(0);
+    expect((await frontmatterOf(sandbox, "held")).assignee).toBe("maria");
+
+    // The kept task waits for its person: ready for them, for nobody else.
+    const ids = (result: CliResult) =>
+      result.json<CollectionJson>().tasks.map((task) => task.id);
+    expect(ids(await sandbox.run("ready", "--json"))).toContain("mine");
+    expect(
+      ids(await sandbox.run("--as", "maria", "ready", "--json")),
+    ).not.toContain("mine");
+    expect(ids(await sandbox.run("--as", "maria", "ready", "--json"))).toEqual(
+      expect.arrayContaining(["bot", "conv", "hers", "held"]),
+    );
   });
 
   it("refuses without a state.md as a conflict naming the missing file", async () => {

@@ -254,7 +254,7 @@ Every command run with a session touches its heartbeat file under
 | ---------- | -------------------------------------------------------------------------------------- |
 | `live`     | the claim's session was active within `session_timeout_minutes` (30) and has not ended  |
 | `orphaned` | the session went silent for longer, or said goodbye with `session-end`                  |
-| `unknown`  | the claim has no session (a person at a terminal), or no heartbeat file exists for it   |
+| `unknown`  | the claim has no session (a terminal without a harness: nothing heartbeats), or no heartbeat file exists for it |
 
 A live or unknown claim is protected: only its claimant — the same actor, in the same
 session — may transition it. An orphaned claim protects nothing: the actor's next

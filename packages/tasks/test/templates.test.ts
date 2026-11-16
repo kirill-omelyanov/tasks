@@ -30,8 +30,11 @@ describe("configTemplate", () => {
     expect(detected.config.scope).toBe("auth-rework");
     expect(detected.config.sessionTimeoutMinutes).toBe(30);
     expect({ ...detected.config.actors }).toEqual({
-      alice: "maintainer; approves plans and does releases",
-      agent: "the coding agent",
+      alice: {
+        type: "person",
+        description: "maintainer; approves plans and does releases",
+      },
+      agent: { type: "agent", description: "the coding agent" },
     });
     expect({ ...detected.config.docs }).toEqual({
       engineering: "docs/engineering",
@@ -55,8 +58,8 @@ describe("configTemplate", () => {
     expect(detected.kind).toBe("v2");
     if (detected.kind !== "v2") return;
     expect(Object.entries(detected.config.actors)).toEqual([
-      ["ada", null],
-      ["agent", "the coding agent"],
+      ["ada", { type: "person", description: null }],
+      ["agent", { type: "agent", description: "the coding agent" }],
     ]);
   });
 

@@ -437,12 +437,13 @@ a live, readable task.
 ### `actors`
 
 ```json
-{ "actor": "agent", "via": null, "projects": ["backend"], "actors": [ { "actor": "alice", "description": "maintainer; approves plans and does releases", "listed": true, "claimed": 1, "assigned": 2 }, { "actor": "agent", "description": "the coding agent", "listed": true, "claimed": 0, "assigned": 0 }, { "actor": "zed", "description": null, "listed": false, "claimed": 0, "assigned": 1 } ], "unavailable": [] }
+{ "actor": "agent", "via": null, "projects": ["backend"], "actors": [ { "actor": "alice", "type": "person", "description": "maintainer; approves plans and does releases", "listed": true, "claimed": 1, "assigned": 2 }, { "actor": "agent", "type": "agent", "description": "the coding agent", "listed": true, "claimed": 0, "assigned": 0 }, { "actor": "zed", "type": "person", "description": null, "listed": false, "claimed": 0, "assigned": 1 } ], "unavailable": [] }
 ```
 
 `actor` and `via` are the caller, as `init` reports them. `actors` lists the roster in
 its configured order, then by name every other actor an open task names and the caller;
-`description` is the roster's line or `null`, `listed` whether `config.yml` names the
+`type` is `person` or `agent` (the roster's, or by the name convention for an unlisted
+one), `description` is the roster's line or `null`, `listed` whether `config.yml` names the
 actor, `claimed` and `assigned` count the open tasks across the spanned trees. `projects`
 and `unavailable` are as in the collection object.
 

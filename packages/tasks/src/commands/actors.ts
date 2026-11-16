@@ -1,6 +1,11 @@
 import { Command } from "commander";
 
-import { descriptionOf, isListed, listedActors } from "../core/actors.js";
+import {
+  actorTypeOf,
+  descriptionOf,
+  isListed,
+  listedActors,
+} from "../core/actors.js";
 import { hasOpenStatus } from "../core/derive.js";
 import type { ActorJson, ActorsJson } from "../core/types.js";
 import { emitJson, renderActors, ui, writeOut } from "../output.js";
@@ -61,6 +66,7 @@ export function actorsCommand(): Command {
       const names = new Set([...listedActors(config), ...others]);
       const rows: ActorJson[] = [...names].map((actor) => ({
         actor,
+        type: actorTypeOf(config, actor),
         description: descriptionOf(config, actor),
         listed: isListed(config, actor),
         claimed: counts.get(actor)?.claimed ?? 0,

@@ -305,6 +305,16 @@ function report(context: CommandContext, result: TransitionResult): void {
   for (const claim of result.superseded) {
     lines.push(`  ${ui.dim(supersededText(claim))}`);
   }
+  if (result.command === "pause") {
+    const assignee = result.task.assignee;
+    if (assignee === null) {
+      lines.push(`  ${ui.dim("released: first in ready for whoever is free")}`);
+    } else if (assignee === context.identity.actor) {
+      lines.push(
+        `  ${ui.dim(`kept for you: tasks unassign ${result.task.id} releases it, handoff passes it on`)}`,
+      );
+    }
+  }
   if (result.unchanged) {
     lines.push(`  ${ui.dim("already so: only the log entry was written")}`);
   }

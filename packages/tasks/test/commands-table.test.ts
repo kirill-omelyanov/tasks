@@ -533,7 +533,10 @@ const RUNS: Run[] = [
       expect(await s.exists(".tasks/todo")).toBe(false),
   },
   { argv: ["log", "todo", "a", "narrative", "note"], log: taskLog("todo") },
-  { argv: ["note", "todo", "an", "input", "for", "next"], log: taskLog("todo") },
+  {
+    argv: ["note", "todo", "an", "input", "for", "next"],
+    log: taskLog("todo"),
+  },
   {
     argv: ["log", "--since", "1h"],
     setup: async (s) => {

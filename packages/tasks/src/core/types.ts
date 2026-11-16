@@ -147,6 +147,21 @@ export const SESSION_ENV = "TASKS_SESSION";
 export const AGENT_ACTOR = "agent";
 export const AGENT_DESCRIPTION = "the coding agent";
 
+/**
+ * What a listed actor is. A person comes back to their own work, so their
+ * `pause` keeps the task for them; an agent is any run under its name, so
+ * its `pause` leaves the task free for the next run or anyone else.
+ */
+export type ActorType = "person" | "agent";
+export const ACTOR_TYPES: readonly ActorType[] = ["person", "agent"];
+
+/** One entry of the roster under `actors:`. */
+export interface ActorEntry {
+  type: ActorType;
+  /** The one-line description, or `null` for a bare name. */
+  description: string | null;
+}
+
 /* ------------------------------------------------------------------------ */
 /* The manifest                                                             */
 /* ------------------------------------------------------------------------ */
@@ -394,6 +409,8 @@ export interface DocsLocationJson {
 
 export interface ActorJson {
   actor: string;
+  /** `person` or `agent`: the roster's `type`, else by the name convention. */
+  type: ActorType;
   /** The line `config.yml` gives the actor; `null` without one, or unlisted. */
   description: string | null;
   /** Whether `config.yml` lists the actor under `actors:`. */

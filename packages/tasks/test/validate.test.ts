@@ -196,6 +196,26 @@ describe("validate", () => {
 });
 
 describe("errors", () => {
+  it("names the merge when a task.md holds conflict markers", async () => {
+    sandbox = await treeSandbox({ tasks: { a: {} } });
+    const source = await sandbox.read(".tasks/a/task.md");
+    await sandbox.write(
+      ".tasks/a/task.md",
+      source.replace(
+        "status: TODO\n",
+        "<<<<<<< HEAD\nstatus: IN_PROGRESS\n=======\nstatus: TODO\n>>>>>>> main\n",
+      ),
+    );
+
+    const { code, result } = await validate();
+    expect(code).toBe(4);
+    expect(summary(result)).toEqual([error("malformed", "a")]);
+    expect(result.findings[0]!.message).toContain(
+      ".tasks/a/task.md: holds version-control conflict markers from line 2",
+    );
+    expect(result.findings[0]!.message).not.toContain("YAML");
+  });
+
   it("reports a manifest that cannot be parsed, live, archived or at the root", async () => {
     sandbox = await treeSandbox({ tasks: { fine: {} } });
     await sandbox.write(".tasks/broken/task.md", "# no frontmatter\n");
@@ -639,11 +659,41 @@ describe("warnings", () => {
     const { code, result } = await validate();
     expect(code).toBe(0);
     expect(summary(result)).toEqual([warning("resolved-unarchived", null)]);
-    expect(result.findings[0]!.message).toMatch(
-      /^2 resolved tasks are older than 30 days and not archived \(old\)/,
+    expect(result.findings[0]!.message).toBe(
+      "2 resolved tasks are older than 30 days and not archived (old); `tasks archive --resolved-before` archives them",
     );
-    expect(result.findings[0]!.message).toContain(
-      "`tasks archive --resolved-before`",
+  });
+
+  it("calls due only the resolved subtrees archive --resolved-before would take", async () => {
+    sandbox = await treeSandbox({
+      tasks: {
+        due: { status: "DONE" },
+        held: { status: "DONE" },
+        "held/x": { status: "DONE" },
+        // An open task's reference keeps the subtree: archive skips it.
+        keeper: { depends_on: ["held/x"] },
+        // An open descendant under a resolved root is an error of its own.
+        broken: { status: "DONE" },
+        "broken/open": {},
+      },
+    });
+    await sandbox.write(
+      ".tasks/config.yml",
+      "version: 2\narchive_resolved_after_days: 30\n",
+    );
+    const { result } = await validate();
+    expect(summary(result)).toEqual([
+      error("resolved-with-open-descendant", "broken"),
+      warning("resolved-unarchived", null),
+    ]);
+    expect(ofKind(result, "resolved-unarchived")[0]!.message).toBe(
+      "1 resolved task is older than 30 days and not archived (due); `tasks archive --resolved-before` archives them; one more is referenced by open tasks and stays live until those resolve (held)",
+    );
+
+    // Nothing the command would take: nothing to hint at.
+    await sandbox.run("archive", "due");
+    expect(ofKind((await validate()).result, "resolved-unarchived")).toEqual(
+      [],
     );
   });
 

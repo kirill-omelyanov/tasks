@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { CommandContext } from "../context.js";
 import { hasRoster, isListed, listedActors } from "./actors.js";
-import { resolvedRoots } from "./archive.js";
+import { openReferrersOutside, resolvedRoots } from "./archive.js";
 import type { DerivedTask } from "./derive.js";
 import { docsDir, docsLocations } from "./docs.js";
 import { errnoCode, isDirectory, mapBatched } from "./fs-utils.js";
@@ -152,7 +152,7 @@ export async function validateTree(
     ...(await referenceFindings(context, load)),
     ...(await livenessFindings(tree)),
     ...actorFindings(tree),
-    ...archiveFindings(tree),
+    ...(await archiveFindings(context, load)),
     ...(await projectFindings(context)),
     ...(await docsFindings(tree)),
     ...(await indexFindings(context, load)),
@@ -843,23 +843,42 @@ async function docsFindings(tree: Tree): Promise<FindingJson[]> {
 
 /**
  * Resolved subtrees older than `archive_resolved_after_days`, when the
- * configuration sets it: the hint to run `tasks archive --resolved-before`,
- * never an action of validation itself.
+ * configuration sets it, that `tasks archive --resolved-before` would
+ * archive: the hint to run it, never an action of validation itself. A root
+ * the command would skip is not due — one an open task references from
+ * outside, named here so the count adds up, or one with an open descendant,
+ * which is an error of its own.
  */
-function archiveFindings(tree: Tree): FindingJson[] {
+async function archiveFindings(
+  context: CommandContext,
+  load: LoadedTree,
+): Promise<FindingJson[]> {
+  const tree = load.tree;
   const days = tree.config.archiveResolvedAfterDays;
   if (days === null) return [];
-  const roots = resolvedRoots(tree, daysBefore(days));
-  if (roots.length === 0) return [];
-  const count = roots.reduce(
+  const openBelow = openDescendantsOfResolved(tree);
+  const due: Task[] = [];
+  const held: string[] = [];
+  for (const root of resolvedRoots(tree, daysBefore(days))) {
+    if (openBelow.has(root.id)) continue;
+    const referrers = await openReferrersOutside(context, load, root.id);
+    if (referrers.length > 0) held.push(root.id);
+    else due.push(root);
+  }
+  if (due.length === 0) return [];
+  const count = due.reduce(
     (sum, root) => sum + 1 + descendantsOf(tree, root.id).length,
     0,
   );
+  const kept =
+    held.length === 0
+      ? ""
+      : `; ${held.length === 1 ? "one more is" : `${held.length} more are`} referenced by open tasks and ${held.length === 1 ? "stays" : "stay"} live until those resolve (${listed(held)})`;
   return [
     finding(
       "resolved-unarchived",
       null,
-      `${count} resolved ${count === 1 ? "task is" : "tasks are"} older than ${days} days and not archived (${listed(roots.map((root) => root.id))}); \`tasks archive --resolved-before\` archives them`,
+      `${count} resolved ${count === 1 ? "task is" : "tasks are"} older than ${days} days and not archived (${listed(due.map((root) => root.id))}); \`tasks archive --resolved-before\` archives them${kept}`,
     ),
   ];
 }

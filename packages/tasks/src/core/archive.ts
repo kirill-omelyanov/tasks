@@ -49,11 +49,7 @@ import type {
   Status,
   TaskWithDerivedJson,
 } from "./types.js";
-import {
-  LOG_FILENAME,
-  TASK_FILENAME,
-  isResolved,
-} from "./types.js";
+import { LOG_FILENAME, TASK_FILENAME, isResolved } from "./types.js";
 import {
   appendLogEntry,
   forcedSuffix,
@@ -522,6 +518,26 @@ async function referrersOf(
   return [...out];
 }
 
+/**
+ * The open tasks, in this tree and every listed one, that reference a task
+ * of the subtree at `rootId` from outside it: what makes an archive of that
+ * root refuse without `--force`, and what keeps `validate` from calling the
+ * subtree due.
+ */
+export async function openReferrersOutside(
+  context: CommandContext,
+  load: LoadedTree,
+  rootId: string,
+): Promise<string[]> {
+  return referrersOf(
+    context,
+    load,
+    (id) => isWithin(id, rootId),
+    (id) => isWithin(id, rootId),
+    true,
+  );
+}
+
 /** The `task.md` files that did not parse, across `trees`, as absolute paths. */
 function unreadableManifests(trees: LoadedTree[]): string[] {
   return trees.flatMap((load) =>
@@ -611,13 +627,7 @@ export async function archiveTask(
     const plan = await planMove(task.dir, destination, shown, [LOG_FILENAME]);
 
     // Overridable last, so a forced retry cannot run into another refusal.
-    const dependents = await referrersOf(
-      context,
-      fresh.load,
-      (id) => isWithin(id, task.id),
-      (id) => isWithin(id, task.id),
-      true,
-    );
+    const dependents = await openReferrersOutside(context, fresh.load, task.id);
     // A manifest that does not parse may hold references nobody can see.
     if (options.reportUnreadable !== false) {
       await reportUnreadable(context);

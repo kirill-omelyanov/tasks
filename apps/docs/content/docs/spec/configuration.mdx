@@ -27,7 +27,7 @@ projects:                        # aliases for sibling trees
 | `version` | `2` | — | Convention version; REQUIRED. |
 | `scope` | path | none | Default scope for `list`, `ready`, `tree` and `claim --next` when the caller gives none; never restricts addressing by id, gate resolution or validation. |
 | `session_timeout_minutes` | integer ≥ 1 | 30 | Liveness threshold for claims. |
-| `archive_resolved_after_days` | integer ≥ 1 | none | Resolved subtrees whose root's `updated` is older than this are reported by validation as not yet archived; `archive --resolved-before` without a value uses it. |
+| `archive_resolved_after_days` | integer ≥ 1 | none | Resolved subtrees whose root's `updated` is older than this, and that `archive --resolved-before` would take (no open task references them from outside), are reported by validation as not yet archived; `archive --resolved-before` without a value uses it. |
 | `actors` | map actor → one-line description or `null` | `{}` | The roster: who tasks may be assigned to, each with a line on who they are. See [Actors](/docs/spec/sessions#actors). |
 | `docs` | map name → relative path | `{}` | Where the project's documentation lives, by name: the locations an agent brings up to date before `done`. See [Documentation](#documentation). |
 | `projects` | map alias → relative path | `{}` | See [Projects](/docs/spec/projects). |

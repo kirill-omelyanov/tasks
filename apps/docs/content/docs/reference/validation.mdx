@@ -34,7 +34,7 @@ status survives in a `task.md` is a person's decision.
 
 | `kind`                           | What it means                                                                                          |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `malformed`                      | A `task.md` cannot be parsed as a manifest: no frontmatter, not a mapping, a field of the wrong type. The task blocks everything that references it and is never ready. |
+| `malformed`                      | A `task.md` cannot be parsed as a manifest: no frontmatter, not a mapping, a field of the wrong type. A file a merge left with conflict markers is reported here with the merge named, not the YAML error the markers cause. The task blocks everything that references it and is never ready. |
 | `unknown-status`                 | `status` is not one of the six statuses.                                                               |
 | `unknown-priority`               | `priority` is not `urgent`, `high`, `normal` or `low`.                                                 |
 | `claim-fields`                   | The claim fields disagree with the status: `claimed_by` and `claimed_at` are set exactly while `IN_PROGRESS`, `claimed_session` never outside it. |
@@ -60,7 +60,7 @@ status survives in a `task.md` is a person's decision.
 | `project-unavailable`  | A project listed in `config.yml` is not checked out, leads to no tree, or is a v1 or unsupported-version tree. |
 | `duplicate-project`    | Two aliases in `config.yml` lead to the same tree, which is then listed once under each. Drop one alias. |
 | `docs-missing`         | A documentation location under `docs:` in `config.yml` does not exist on this machine: a sibling repository not checked out here, or an entry that went stale when the documentation moved. Check it out, or fix the path. |
-| `resolved-unarchived`  | Resolved subtrees older than `archive_resolved_after_days` are still live; one finding with the count and the roots. `tasks archive --resolved-before` archives them. |
+| `resolved-unarchived`  | Resolved subtrees older than `archive_resolved_after_days` are still live; one finding with the count and the roots `tasks archive --resolved-before` would archive, and the roots it would skip because open tasks reference them, named apart. Nothing due: no finding. |
 | `index-stale`          | `index.md` no longer matches the tree. Regenerate it with `tasks reindex` or `--fix`.                     |
 
 Gate, containment and liveness rules cover live tasks; the rules about a single file —

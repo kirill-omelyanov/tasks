@@ -217,7 +217,43 @@ export function normalizeBody(body: string): string {
   return body.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/\s+$/, "");
 }
 
+/**
+ * The line of the first `<<<<<<<` marker when a `>>>>>>>` marker follows it,
+ * else `null`: a merge that left both versions in the file. Stricter than
+ * the log rule, which refuses any marker line, because a body is free text.
+ */
+function conflictStart(source: string): number | null {
+  const lines = source.split("\n").map((line) => line.replace(/\r$/, ""));
+  const start = lines.findIndex((line) => /^<{7}(?: |$)/.test(line));
+  if (start < 0) return null;
+  const end = lines.findIndex(
+    (line, index) => index > start && /^>{7}(?: |$)/.test(line),
+  );
+  return end < 0 ? null : start + 1;
+}
+
+/**
+ * A manifest that does not parse because a merge left conflict markers in
+ * it is reported as that, not as the YAML error the markers cause.
+ */
+function conflictedFailure(source: string): TaskFileParse | null {
+  const line = conflictStart(source);
+  if (line === null) return null;
+  return failure([
+    {
+      field: null,
+      message: `holds version-control conflict markers from line ${line}: a merge left both versions in the file; keep one by hand (which status or claim survives is a person's decision), then run \`tasks validate\``,
+    },
+  ]);
+}
+
 export function safeParseTaskFile(source: string): TaskFileParse {
+  const result = parseSource(source);
+  if (result.ok) return result;
+  return conflictedFailure(source) ?? result;
+}
+
+function parseSource(source: string): TaskFileParse {
   const split = splitFrontmatter(source);
   if ("error" in split) return failure([{ field: null, message: split.error }]);
 

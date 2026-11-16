@@ -353,6 +353,16 @@ describe("malformed manifests", () => {
       `---\nstatus: TODO\nstatus: DONE\n${TIMES}\n---\n`,
       "duplicated mapping key",
     ],
+    [
+      "merge conflict markers",
+      `---\n<<<<<<< HEAD\nstatus: IN_PROGRESS\n=======\nstatus: TODO\n>>>>>>> main\n${TIMES}\n---\n`,
+      "holds version-control conflict markers from line 2",
+    ],
+    [
+      "an opening marker alone as the YAML error it is",
+      `---\n<<<<<<< HEAD\nstatus: TODO\n${TIMES}\n---\n`,
+      "not valid YAML",
+    ],
   ])("reports %s", (_label, source, message) => {
     const result = expectMalformed(source);
     expect(result.message).toContain(message);

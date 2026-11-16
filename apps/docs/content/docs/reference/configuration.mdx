@@ -137,7 +137,9 @@ archive_resolved_after_days: 30
 How long a resolved subtree may stay in the live tree before it counts as due for
 archiving. With it set, `tasks validate` warns `resolved-unarchived` with the count and the
 roots, and `tasks archive --resolved-before` without a value archives exactly those (see
-[archive](/docs/reference/commands#tasks-archive)). Nothing is archived on its own: the
+[archive](/docs/reference/commands#tasks-archive)). The warning names only what the command
+would take: a root that open tasks still reference is listed apart as staying live, and
+when every due root is such a one there is no warning. Nothing is archived on its own: the
 warning is the signal, the command the action. Unset, neither applies.
 
 ### `actors`

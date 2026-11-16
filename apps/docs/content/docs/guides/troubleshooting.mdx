@@ -282,7 +282,9 @@ the task as present twice (`duplicate-id`), and moving the marked copy again is 
 
 **A merge that touched `.tasks/`.** Task state belongs on one branch, but when it merges
 anyway: `log.md` conflicts are resolved by keeping both entries in time order; which
-status survives in a `task.md` is a person's decision. Run `tasks validate` afterwards.
+status survives in a `task.md` is a person's decision. `tasks validate` names both: a
+`task.md` still holding conflict markers is `malformed` with the merge named and its line,
+a `log.md` is `log-conflict-markers`. Run it afterwards too.
 
 **A stale `index.md`.** It is derived and never read, so it is cosmetic — but committed.
 `tasks reindex` or `tasks validate --fix` regenerates it.

@@ -1,0 +1,130 @@
+---
+title: Agent protocol
+description: What a conforming agent does on entry, during work, and on exit.
+icon: Bot
+---
+
+This section is normative for an implementation that claims the **Agent** conformance role — an
+agent skill, harness integration or autonomous tool that works tasks on behalf of an actor.
+
+## Identity
+
+An agent MUST act with a session token (see [Session tokens](/docs/spec/sessions#session-tokens)) on every command:
+a claim without one has unknown liveness, so it is never taken over without force, and even the
+agent's own next session can only pause it, as the same actor, and claim it again. Subagents the
+agent spawns act under the same token.
+
+An agent SHOULD act as the actor `agent` unless its harness or the tree's roster names it
+otherwise: the harness hooks export `TASKS_ACTOR=agent`, and without them the agent sets
+`TASKS_ACTOR=agent` on every command itself, never `--as`, which records an operator. The name
+comes from the environment, not from the roster: `TASKS_ACTOR` when set, else `agent`; the
+roster is read to choose people, and a tree whose agent bears another name (an actor of
+`type: agent`) is a fact the person states. An agent that sets no name acts under the working
+copy's git identity, the person's, and nothing tells its work from theirs.
+
+Without the harness hooks, an agent SHOULD run `heartbeat` (any command counts) during a
+stretch with no command that nears `session_timeout_minutes`, or its claim reads as orphaned to
+everyone else and may be taken over.
+
+## Entry
+
+1. Run `mine`. Continue any task claimed by this session; then take, among the orphaned tasks
+   claimed by this actor and the tasks assigned to it, the one with the highest effective priority
+   — at equal priority an orphan before an assigned task — unless a person's instruction names
+   what comes first; only then new work. An orphan is taken over one at a time, only what the agent
+   will work on now; a task held by another live session is not the agent's, a claim of unknown
+   liveness is reported to the person, never forced, and another actor's orphaned claim is taken
+   over only on the person's instruction.
+2. Claim before working, read before changing: an own orphan is claimed first (the takeover
+   restores the hold) and resumed after; new work is claimed with `claim --next` and then resumed,
+   or resumed and then claimed by id when the agent chooses among candidates. When a claim
+   conflicts, another agent was first: the agent moves on to the next ready task.
+3. For the task at hand, run `resume` and read, in order, `task.md`, `state.md`, `design.md`,
+   `plan.md`, then for each ancestor as far as needed its `task.md`, `design.md` and `plan.md` —
+   an epic's design and plan live on the epic. Do not read `log.md` on entry.
+4. A listed project the commands cannot read — not checked out, a v1 tree — is reported to the
+   person once and left alone: migration and checkout are a person's actions.
+
+## During work
+
+- Never hand-edit frontmatter; every field has a command. Never move a task directory by hand.
+- `state.md` is written through `state` wherever the implementation offers it, so the write is
+  fenced like a transition; only without that command is the file written directly.
+- A clarification of the statement changes `Description` / `Acceptance criteria`; an input
+  received after the start goes to `Notes`; a decision goes to `design.md`; a plan change goes to
+  `plan.md`.
+- A follow-up that is not part of the task's deliverable becomes a separate `BACKLOG` task
+  **outside** the parent, linking to the context in its body.
+- A step that a person must take — a review, an approval, a deploy — is a `handoff` to that person
+  when it concerns this task, and a separate task assigned to that person only when other tasks
+  must depend on it. The tree's roster (`actors`) says who the people are and how they are named;
+  an agent corrects a refused name and never extends the roster on its own initiative.
+- A child is never created for a phase of the task's own work — planning, review, verification:
+  the plan is `plan.md`, the review is a `handoff`. Children are parts of the deliverable
+  ([Containment](/docs/spec/containment)).
+- A task with open children is never cancelled, deferred or archived on the agent's own
+  initiative; such a decision comes as a person's instruction, quoted in the message.
+- `--as` is used only on an explicit instruction from that actor given in the current session,
+  and the message quotes it. An agent MUST NOT use `--as` to satisfy an assignee rule on its own
+  initiative.
+- **Freshness rule:** every turn in which the work progressed ends with `state.md` updated. The
+  status stays `IN_PROGRESS` between turns.
+
+## Exit
+
+- A turn is not a session: a turn ends with the claim kept and `state.md` fresh whenever the
+  agent expects to continue in the same conversation, waiting for the person's answer included;
+  the session ends with `pause`, `handoff` or `done` when the conversation closes, the harness
+  stops the agent, or the task passes to someone. A task that cannot move without a person's
+  decision is handed off to that person with the question; an agent unsure of returning pauses,
+  since an agent's pause frees the task and an orphan is what it must avoid.
+- A deliberate end of work on a task is `pause`, `handoff` or `done`, each with a message; the
+  message is the history line, and the resume point is `state.md`. An agent MUST NOT end a
+  session deliberately with a task `IN_PROGRESS`.
+- An input for whoever works on the task next — a decision taken, a fact learned — goes under
+  `## Notes` of `task.md` (`note`), never only into a message: a later entry displaces a message
+  from the last entry, a note stays where the next reader looks first.
+- `state.md` names, under *Open*, every uncommitted file and branch the work leaves behind.
+- An agent MUST name every commit it made for the task in the task's log before the work ends —
+  in the `pause`, `handoff` or `done` message, or earlier through `log` when a turn produced one
+  — by hash and branch (`commit <hash> on <branch>`), with the repository when it is not the
+  project's own, so the task leads to its commits whatever session made them. A commit made for a
+  task SHOULD name the task's id in its message, in the form the project's commit convention
+  allows (a `Task: <id>` trailer where trailers are used, otherwise in the subject), so the link
+  holds in both directions; where the convention allows none, the log alone carries it.
+- Knowledge that must outlive the task is promoted to the project's documentation before `done`;
+  the task directory is working memory, not documentation. When `config.yml` lists `docs`
+  ([Configuration](/docs/spec/configuration#documentation); `resume` reports the locations), the
+  agent MUST, before `done`, bring the listed documentation that describes what the task changed
+  up to date — within the task's scope only: never a general revision, never task-level detail —
+  and the `done` message MUST say what changed in it, or that nothing needed to. A listed
+  location absent on this machine is named in the message and never blocks `done`; a change in
+  another repository that has not landed is named too, and stays under *Open* in `state.md`,
+  with its branch, while the task is open.
+- Project state lives only in the tree. An agent's private memory keeps preferences and reference
+  facts, never the state of a task.
+
+<Callout type="info" title="Non-normative — a task that is not being worked">
+  Every situation maps to a stored status plus
+  what the tooling shows:
+
+  | Case | Stored | Shown |
+  | --- | --- | --- |
+  | not started, free | `TODO` | ready |
+  | not started, waits for a task | `TODO` + `depends_on` | blocked by X |
+  | not started, not scheduled | `BACKLOG` | backlog |
+  | a specific person's own step (deploy, release) | `TODO` + `assignee` | assigned alice |
+  | being worked | `IN_PROGRESS` | working, live |
+  | session ended deliberately, work unfinished | `pause` → `PAUSED` (an agent's pause leaves the task free) | ready · started, first in `ready` |
+  | a person stops, meaning to come back | `pause` → `PAUSED` + assignee (a person's pause keeps the task) | waiting for alice; her `unassign` or `handoff` releases it |
+  | session ended without `pause`, or crashed | `IN_PROGRESS` | working, orphaned since T — at once when the harness reported the end, after the timeout otherwise; the same actor's next session takes over |
+  | started, waits for a task — another agent's, a person's, or an external event modelled as a task assigned to whoever observes it | `pause` + `dep add` → `PAUSED` | blocked by X · started |
+  | started, needs a decision or review | `handoff alice` → `PAUSED` | waiting for alice |
+  | started, deferred until after Y | `pause` + `dep add Y` | blocked by Y · started |
+  | started, set aside — until the maintainer says, or without a date | `pause`, then `defer` → `BACKLOG` | parked; in nobody's inbox, found by `list --parked`; `schedule` returns it to `PAUSED`, first in `ready` |
+  | started, decided not to do | `cancel` | cancelled |
+  | finished, awaits confirmation | `handoff alice` → `PAUSED` | waiting for alice; her `done` is the confirmation |
+  | an epic whose child is being worked | `TODO` or `PAUSED` | open 2/5 · active |
+  | an epic whose plan awaits approval, children already created | `handoff alice` → `PAUSED` + assignee; children `TODO` | waiting for alice; children held by the epic until her `unassign` |
+  | an epic parked with everything under it | `defer` → `BACKLOG`, children `BACKLOG` | parked; children backlog or parked |
+</Callout>
